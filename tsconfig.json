@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@dapp/ui": ["packages/ui"],
+      "@dapp/ui/*": ["packages/ui/*"],
+      "@dapp/hooks": ["packages/hooks"],
+      "@dapp/hooks/*": ["packages/hooks/*"],
+      "@dapp/utils": ["packages/utils"],
+      "@dapp/utils/*": ["packages/utils/*"],
+      "@dapp/contracts": ["packages/contracts"],
+      "@dapp/contracts/*": ["packages/contracts/*"]
+    }
+  }
+}
