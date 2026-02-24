@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "strict": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["."],
+  "paths": {
+  "@/*": ["apps/web/src/*"],
+  "@dapp/ui/*": ["packages/ui/*"],
+  "@dapp/hooks/*": ["packages/hooks/*"],
+  "@dapp/utils/*": ["packages/utils/*"],
+  "@dapp/contracts/*": ["packages/contracts/*"]
+}
+}
