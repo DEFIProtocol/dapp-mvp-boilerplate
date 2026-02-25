@@ -8,12 +8,6 @@ import {
   useSwitchChain,
 } from "wagmi";
 
-import {
-  metaMask,
-  injected,
-  coinbaseWallet,
-  walletConnect,
-} from "wagmi/connectors";
 import styles from "./WalletModal.module.css";
 
 export default function WalletModal({
@@ -49,24 +43,39 @@ export default function WalletModal({
   // -----------------------------
   // EVM CONNECT HANDLER
   // -----------------------------
-  const connectEVM = async (connector: any, walletName: string) => {
+  const connectEVM = async (walletName: string) => {
     try {
       setConnectingWallet(walletName);
+
       const chainId = Number(selectedLocal) || 1;
 
-      await connect({ connector, chainId });
+      const connector = connectors.find((c) =>
+        c.name.toLowerCase().includes(walletName.toLowerCase())
+      );
 
-      // Switch if needed
-      if (switchChain && chain?.id !== chainId) {
-        try {
-          switchChain({ chainId });
-        } catch {}
+      if (!connector) {
+        console.error("Connector not found:", walletName);
+        setConnectingWallet(null);
+        return;
       }
 
-      // Update global chain
-      try {
-        setSelectedChain?.(chainId);
-      } catch {}
+
+      // Log the request to MetaMask (connector info)
+      console.log("[WalletModal] Connecting with connector:", connector);
+
+      // ❌ DO NOT pass chainId here
+      await connect({ connector });
+
+      // ✔ Switch chain AFTER connecting
+      if (switchChain && chain?.id !== chainId) {
+        try {
+          await switchChain({ chainId });
+        } catch (err) {
+          console.error("switchChain error", err);
+        }
+      }
+
+      setSelectedChain?.(chainId);
 
       setTimeout(() => {
         onClose();
@@ -85,11 +94,13 @@ export default function WalletModal({
     try {
       setConnectingWallet("solana");
       const provider = (window as any).solana;
+
       if (provider?.isPhantom) {
         const resp = await provider.connect();
         const addr = resp.publicKey.toString();
         setSolanaAddress(addr);
         localStorage.setItem("solanaAddress", addr);
+
         setTimeout(() => {
           onClose();
           setConnectingWallet(null);
@@ -104,9 +115,8 @@ export default function WalletModal({
     }
   };
 
-  const isWalletConnecting = (walletName: string) => {
-    return connectingWallet === walletName;
-  };
+  const isWalletConnecting = (walletName: string) =>
+    connectingWallet === walletName;
 
   return (
     <div className={styles.modalOverlay}>
@@ -130,7 +140,7 @@ export default function WalletModal({
                     onClick={() => setSelectedLocal(chain.id)}
                     className={
                       styles.chainButton +
-                      (selectedLocal === chain.id ? ' ' + styles.selectedChain : '')
+                      (selectedLocal === chain.id ? " " + styles.selectedChain : "")
                     }
                   >
                     <span>{chain.label}</span>
@@ -150,9 +160,9 @@ export default function WalletModal({
               <button
                 className={
                   styles.walletButton +
-                  (isWalletConnecting('metamask') ? ' ' + styles.loadingWallet : '')
+                  (isWalletConnecting("metamask") ? " " + styles.loadingWallet : "")
                 }
-                onClick={() => connectEVM(metaMask(), 'metamask')}
+                onClick={() => connectEVM("metamask")}
                 disabled={!!connectingWallet}
               >
                 <span className={styles.walletIcon}>🦊</span>
@@ -165,16 +175,9 @@ export default function WalletModal({
               <button
                 className={
                   styles.walletButton +
-                  (isWalletConnecting('coinbase') ? ' ' + styles.loadingWallet : '')
+                  (isWalletConnecting("coinbase") ? " " + styles.loadingWallet : "")
                 }
-                onClick={() =>
-                  connectEVM(
-                    coinbaseWallet({
-                      appName: "DexStarter",
-                    }),
-                    'coinbase'
-                  )
-                }
+                onClick={() => connectEVM("coinbase")}
                 disabled={!!connectingWallet}
               >
                 <span className={styles.walletIcon}>🔵</span>
@@ -187,16 +190,9 @@ export default function WalletModal({
               <button
                 className={
                   styles.walletButton +
-                  (isWalletConnecting('walletconnect') ? ' ' + styles.loadingWallet : '')
+                  (isWalletConnecting("walletconnect") ? " " + styles.loadingWallet : "")
                 }
-                onClick={() =>
-                  connectEVM(
-                    walletConnect({
-                      projectId: "example-project-id",
-                    }),
-                    'walletconnect'
-                  )
-                }
+                onClick={() => connectEVM("walletconnect")}
                 disabled={!!connectingWallet}
               >
                 <span className={styles.walletIcon}>🔗</span>
@@ -209,9 +205,9 @@ export default function WalletModal({
               <button
                 className={
                   styles.walletButton +
-                  (isWalletConnecting('injected') ? ' ' + styles.loadingWallet : '')
+                  (isWalletConnecting("injected") ? " " + styles.loadingWallet : "")
                 }
-                onClick={() => connectEVM(injected(), 'injected')}
+                onClick={() => connectEVM("injected")}
                 disabled={!!connectingWallet}
               >
                 <span className={styles.walletIcon}>🌐</span>
@@ -233,7 +229,7 @@ export default function WalletModal({
               <button
                 className={
                   styles.walletButton +
-                  (isWalletConnecting('solana') ? ' ' + styles.loadingWallet : '')
+                  (isWalletConnecting("solana") ? " " + styles.loadingWallet : "")
                 }
                 onClick={handleSolana}
                 disabled={!!connectingWallet}
@@ -246,6 +242,13 @@ export default function WalletModal({
               </button>
             </div>
 
+            {/* Connection status and errors */}
+            {isPending && (
+              <div className={styles.statusMessage}>
+                <span className={styles.statusIcon}>⏳</span>
+                <span>Connecting...</span>
+              </div>
+            )}
             {error && (
               <div className={styles.errorMessage}>
                 <span className={styles.errorIcon}>⚠️</span>

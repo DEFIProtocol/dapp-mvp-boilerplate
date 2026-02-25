@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
 import { NAV_ITEMS } from "@dapp/ui/navigation";
 
 import WalletModal from "./WalletModal";
@@ -12,7 +12,7 @@ import WalletModal from "./WalletModal";
 import {useChainContext} from "../../src/contexts/ChainContext"; 
 import { useTheme } from "../../src/contexts/ThemeContext";
 // If not, I can generate one for you.
-import "./header.css";  
+import styles from "./header.module.css";
 
 export function Header() {
   const { address, isConnected } = useAccount();
@@ -32,6 +32,15 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [screenSize, setScreenSize] = useState<number | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [chainLoading, setChainLoading] = useState(false);
+  const [chainSwitched, setChainSwitched] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // wagmi chain switch
+  const { switchChain, isPending } = useSwitchChain();
+
+  
 
   // Handle screen size
   useEffect(() => {
@@ -47,13 +56,13 @@ export function Header() {
   }, [screenSize]);
 
   return (
-    <header className="header">
+    <header className={styles.header}>
       {/* LEFT SIDE */}
-      <div className="leftSection">
+      <div className={styles.leftSection}>
         {/* Mobile menu button */}
         {!activeMenu && (
           <button 
-            className="menuButton"
+            className={styles.menuButton}
             onClick={() => setIsOpen(!isOpen)}
           >
             ☰
@@ -62,35 +71,35 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/">
-          <div className="logo">My DApp</div>
+          <div className={styles.logo}>My DApp</div>
         </Link>
 
         {/* MOBILE NAV OVERLAY */}
         {!activeMenu && isOpen && (
           <div
-            className="mobileNavOverlay"
+            className={styles.mobileNavOverlay}
             onClick={() => setIsOpen(false)}
           >
             <div
-              className="mobileNavWindow"
+              className={styles.mobileNavWindow}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mobileNavHeader">
-                <div className="mobileNavTitle">Menu</div>
+              <div className={styles.mobileNavHeader}>
+                <div className={styles.mobileNavTitle}>Menu</div>
                 <button 
-                  className="mobileNavClose"
+                  className={styles.mobileNavClose}
                   onClick={() => setIsOpen(false)}
                 >
                   ✕
                 </button>
               </div>
 
-              <nav className="mobileNavLinks">
+              <nav className={styles.mobileNavLinks}>
                 {NAV_ITEMS.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="mobileNavLink"
+                    className={styles.mobileNavLink}
                     onClick={() => setIsOpen(false)}
                   >
                     {item.label}
@@ -103,12 +112,12 @@ export function Header() {
 
         {/* DESKTOP NAV */}
         {activeMenu && (
-          <nav className="desktopNav">
+          <nav className={styles.desktopNav}>
             {NAV_ITEMS.map((item) => (
               <Link 
                 key={item.href} 
                 href={item.href}
-                className="navLink"
+                className={styles.navLink}
               >
                 {item.label}
               </Link>
@@ -118,23 +127,44 @@ export function Header() {
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="rightSection">
+      <div className={styles.rightSection}>
         <button
           onClick={toggleTheme}
-          className="themeToggle"
+          className={styles.themeToggle}
         >
-          <span className="themeIcon">{theme === "light" ? "🌙" : "☀️"}</span>
-          <span>{theme === "light" ? "Dark" : "Light"}</span>
+          <span className={styles.themeIcon}>{theme === "light" ? "☀️" : "🌙"}</span>
+          <span>{theme === "light" ? "Light" : "Dark"}</span>
         </button>
 
         {/* CHAIN SELECTOR */}
-        <div className="chainSelector">
-          <span className="chainIcon">⛓</span>
+        <div className={styles.chainSelector}>
+          <span className={styles.chainIcon}>⛓</span>
           {activeMenu ? (
             <select
-              className="chainSelect"
+              className={styles.chainSelect}
               value={selectedChain}
-              onChange={(e) => setSelectedChain(Number(e.target.value))}
+              onChange={async (e) => {
+                const newChainId = Number(e.target.value);
+                setChainLoading(true);
+                setChainSwitched(null);
+                setSelectedChain(newChainId);
+                setToastMessage("Changing Chains...");
+                setShowToast(true);
+                try {
+                  await switchChain({ chainId: newChainId });
+                  const label = getChainLabel?.(newChainId) || `Chain ${newChainId}`;
+                  setChainSwitched(label);
+                  setToastMessage(`Switched to ${label}`);
+                  setTimeout(() => setShowToast(false), 5000);
+                } catch (err) {
+                  setChainSwitched("Failed to switch chain");
+                  setToastMessage("Failed to switch chain");
+                  setTimeout(() => setShowToast(false), 5000);
+                } finally {
+                  setChainLoading(false);
+                }
+              }}
+              disabled={chainLoading || isPending}
             >
               {availableChains.map((chain) => (
                 <option key={chain.id} value={chain.id}>
@@ -143,10 +173,20 @@ export function Header() {
               ))}
             </select>
           ) : (
-            <span className="chainLabel">
+            <span className={styles.chainLabel}>
               {getChainLabel?.(selectedChain) || "Chain"}
             </span>
           )}
+          {/* Chain switching status (only show loading inline) */}
+          {chainLoading || isPending ? (
+            <span className={styles.chainStatus}>Switching Chains...</span>
+          ) : null}
+              {/* Toast overlay for chain switch */}
+              {showToast && toastMessage && (
+                <div className="chain-toast">
+                  {toastMessage}
+                </div>
+              )}
         </div>
 
         {/* CONNECT BUTTON */}
@@ -156,7 +196,7 @@ export function Header() {
               ? () => setShowWalletModal(true)
               : () => disconnect()
           }
-          className="connectButton"
+          className={styles.connectButton}
         >
           {address
             ? `${address.slice(0, 5)}...${address.slice(-4)}`
