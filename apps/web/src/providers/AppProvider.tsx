@@ -2,20 +2,21 @@
 
 import { ReactNode } from "react";
 import { WagmiProviderWrapper } from "./wagmi";
-import  ChainProvider  from "../contexts/ChainContext";
+import ChainProvider from "../contexts/ChainContext";
 import ThemeProvider from "../contexts/ThemeContext";
-// import { ThemeProvider } from "../contexts/ThemeContext";
-// import { UserProvider } from "../contexts/UserContext";
+import { UserProvider } from "../contexts/UserContext";
+import { TokenProvider } from "../contexts/TokenContext";
 
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <WagmiProviderWrapper>
       <ChainProvider>
-        {/* Add more providers here as your app grows */}
         <ThemeProvider>
-        {/* <UserProvider> */}
-        {children}
-        {/* </UserProvider> */}
+          <TokenProvider>
+            <UserProvider>
+              {children}
+            </UserProvider>
+          </TokenProvider>
         </ThemeProvider>
       </ChainProvider>
     </WagmiProviderWrapper>

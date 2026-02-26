@@ -51,7 +51,7 @@ export default function usersRouter(pool: Pool) {
     }
   });
 
-  // PUT update user
+  // PUT update user by ID
   router.put("/db/:id", async (req: Request, res: Response) => {
     try {
       const user = await userHelpers.updateUser(pool, req.params.id, req.body);
@@ -61,6 +61,19 @@ export default function usersRouter(pool: Pool) {
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  // PUT update user by wallet address
+  router.put("/db/wallet/:address", async (req: Request, res: Response) => {
+    try {
+      const user = await userHelpers.updateUserByWallet(pool, req.params.address, req.body);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user by wallet address" });
     }
   });
 

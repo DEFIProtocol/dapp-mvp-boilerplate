@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
+import { useUser } from "../../src/contexts/UserContext";
+import { updateUserByWallet } from "../../src/lib/api/users";
 import { NAV_ITEMS } from "@dapp/ui/navigation";
 
 import WalletModal from "./WalletModal";
@@ -18,6 +20,9 @@ export function Header() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
 
+  // User context
+  const { user, createUser, refreshUser } = useUser();
+
   // Chain context (your custom hook)
   const {
     selectedChain,
@@ -25,6 +30,42 @@ export function Header() {
     availableChains,
     getChainLabel,
   } = useChainContext();
+
+  // --- User/Chain sync logic ---
+  // On wallet connect, create user if needed
+  useEffect(() => {
+    if (!isConnected && !address) return;
+    if (user || !address) return;
+    // Determine chain label
+    const chainLabel = getChainLabel?.(selectedChain) || "Ethereum";
+    if (selectedChain === 1 || chainLabel === "Ethereum") {
+      createUser(); // will use address as wallet_address
+    } else {
+      // createUser expects wallet_address, so we call update after creation
+      createUser().then(() => {
+        updateUserByWallet(address, { chain_addresses: { [chainLabel]: address } });
+      });
+    }
+  }, [isConnected, address, user, selectedChain, getChainLabel, createUser]);
+
+  // On chain switch, update user wallet_address or chain_addresses
+  useEffect(() => {
+    if (!user || !address) return;
+    const chainLabel = getChainLabel?.(selectedChain) || "Ethereum";
+    if (selectedChain === 1 || chainLabel === "Ethereum") {
+      // If not already set, update wallet_address
+      if (user.wallet_address !== address) {
+        updateUserByWallet(address, { wallet_address: address }).then(refreshUser);
+      }
+    } else {
+      // Merge with existing chain_addresses
+      const prev = user.chain_addresses || {};
+      if (prev[chainLabel] !== address) {
+        const updated = { ...prev, [chainLabel]: address };
+        updateUserByWallet(address, { chain_addresses: updated }).then(refreshUser);
+      }
+    }
+  }, [selectedChain, address, user, getChainLabel, refreshUser]);
 
   // UI state
   const { theme, toggleTheme } = useTheme();
