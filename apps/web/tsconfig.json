@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": [".", "..ts"],
+  "include": [".", "env.d.ts"],
   "paths": {
   "@/*": ["apps/web/src/*"],
   "@dapp/ui/*": ["packages/ui/*"],
