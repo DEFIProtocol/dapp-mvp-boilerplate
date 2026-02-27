@@ -4,26 +4,23 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
-import { useUser } from "../../src/contexts/UserContext";
-import { updateUserByWallet } from "../../src/lib/api/users";
+import { useUser } from "../src/contexts/UserContext";
+import { updateUserByWallet } from "../src/lib/api/users";
 import { NAV_ITEMS } from "@dapp/ui/navigation";
 
 import WalletModal from "./WalletModal";
-
-// If you have a chain context, import it here:
-import {useChainContext} from "../../src/contexts/ChainContext"; 
-import { useTheme } from "../../src/contexts/ThemeContext";
-// If not, I can generate one for you.
+import {useChainContext} from "../src/contexts/ChainContext"; 
+import { useTheme } from "../src/contexts/ThemeContext";
 import styles from "./header.module.css";
 
 export function Header() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
 
-  // User context
-  const { user, createUser, refreshUser } = useUser();
+  // User context - let it handle user creation automatically
+  const { user, refreshUser } = useUser(); // Remove createUser from here!
 
-  // Chain context (your custom hook)
+  // Chain context
   const {
     selectedChain,
     setSelectedChain,
@@ -31,34 +28,19 @@ export function Header() {
     getChainLabel,
   } = useChainContext();
 
-  // --- User/Chain sync logic ---
-  // On wallet connect, create user if needed
-  useEffect(() => {
-    if (!isConnected && !address) return;
-    if (user || !address) return;
-    // Determine chain label
-    const chainLabel = getChainLabel?.(selectedChain) || "Ethereum";
-    if (selectedChain === 1 || chainLabel === "Ethereum") {
-      createUser(); // will use address as wallet_address
-    } else {
-      // createUser expects wallet_address, so we call update after creation
-      createUser().then(() => {
-        updateUserByWallet(address, { chain_addresses: { [chainLabel]: address } });
-      });
-    }
-  }, [isConnected, address, user, selectedChain, getChainLabel, createUser]);
-
-  // On chain switch, update user wallet_address or chain_addresses
+  // ONLY handle chain switching updates, NOT user creation
   useEffect(() => {
     if (!user || !address) return;
+    
     const chainLabel = getChainLabel?.(selectedChain) || "Ethereum";
+    
     if (selectedChain === 1 || chainLabel === "Ethereum") {
-      // If not already set, update wallet_address
+      // Update wallet_address if needed
       if (user.wallet_address !== address) {
         updateUserByWallet(address, { wallet_address: address }).then(refreshUser);
       }
     } else {
-      // Merge with existing chain_addresses
+      // Update chain_addresses if needed
       const prev = user.chain_addresses || {};
       if (prev[chainLabel] !== address) {
         const updated = { ...prev, [chainLabel]: address };
@@ -67,7 +49,7 @@ export function Header() {
     }
   }, [selectedChain, address, user, getChainLabel, refreshUser]);
 
-  // UI state
+  // UI state and rendering (keep all the existing UI code below)
   const { theme, toggleTheme } = useTheme();
   const [activeMenu, setActiveMenu] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -78,10 +60,7 @@ export function Header() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // wagmi chain switch
   const { switchChain, isPending } = useSwitchChain();
-
-  
 
   // Handle screen size
   useEffect(() => {
@@ -98,9 +77,8 @@ export function Header() {
 
   return (
     <header className={styles.header}>
-      {/* LEFT SIDE */}
+      {/* ... keep all your existing JSX exactly the same ... */}
       <div className={styles.leftSection}>
-        {/* Mobile menu button */}
         {!activeMenu && (
           <button 
             className={styles.menuButton}
@@ -110,12 +88,10 @@ export function Header() {
           </button>
         )}
 
-        {/* Logo */}
         <Link href="/">
           <div className={styles.logo}>My DApp</div>
         </Link>
 
-        {/* MOBILE NAV OVERLAY */}
         {!activeMenu && isOpen && (
           <div
             className={styles.mobileNavOverlay}
@@ -151,7 +127,6 @@ export function Header() {
           </div>
         )}
 
-        {/* DESKTOP NAV */}
         {activeMenu && (
           <nav className={styles.desktopNav}>
             {NAV_ITEMS.map((item) => (
@@ -167,7 +142,6 @@ export function Header() {
         )}
       </div>
 
-      {/* RIGHT SIDE */}
       <div className={styles.rightSection}>
         <button
           onClick={toggleTheme}
@@ -177,7 +151,6 @@ export function Header() {
           <span>{theme === "light" ? "Light" : "Dark"}</span>
         </button>
 
-        {/* CHAIN SELECTOR */}
         <div className={styles.chainSelector}>
           <span className={styles.chainIcon}>⛓</span>
           {activeMenu ? (
@@ -218,19 +191,16 @@ export function Header() {
               {getChainLabel?.(selectedChain) || "Chain"}
             </span>
           )}
-          {/* Chain switching status (only show loading inline) */}
           {chainLoading || isPending ? (
             <span className={styles.chainStatus}>Switching Chains...</span>
           ) : null}
-              {/* Toast overlay for chain switch */}
-              {showToast && toastMessage && (
-                <div className="chain-toast">
-                  {toastMessage}
-                </div>
-              )}
+          {showToast && toastMessage && (
+            <div className="chain-toast">
+              {toastMessage}
+            </div>
+          )}
         </div>
 
-        {/* CONNECT BUTTON */}
         <button
           onClick={
             !isConnected
@@ -245,7 +215,6 @@ export function Header() {
         </button>
       </div>
 
-      {/* WALLET MODAL */}
       <WalletModal
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}

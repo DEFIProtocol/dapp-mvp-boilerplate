@@ -1,0 +1,653 @@
+/* AdminTokenManager.css */
+
+.admin-token-manager {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    color: var(--text);
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: var(--text-muted);
+}
+
+/* Header Styles */
+.manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 4px var(--overlay);
+}
+
+.header-left h2 {
+    margin: 0 0 10px 0;
+    color: var(--text);
+}
+
+.stats {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+}
+
+.stat-item {
+    padding: 4px 8px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.header-right {
+    display: flex;
+    gap: 10px;
+}
+
+/* Status Messages */
+.status-message {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-message.success {
+    background: color-mix(in srgb, var(--success) 15%, var(--surface) 85%);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border) 70%);
+}
+
+.status-message.error {
+    background: color-mix(in srgb, var(--danger) 15%, var(--surface) 85%);
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border) 70%);
+}
+
+.status-message.warning {
+    background: color-mix(in srgb, var(--warning) 15%, var(--surface) 85%);
+    color: var(--warning);
+    border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border) 70%);
+}
+
+/* Action Buttons */
+.action-btn {
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.action-btn.primary {
+    background: var(--info);
+    color: var(--accent-contrast);
+}
+
+.action-btn.primary:hover {
+    background: color-mix(in srgb, var(--info) 80%, var(--bg) 20%);
+}
+
+.action-btn.secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.action-btn.secondary:hover {
+    background: color-mix(in srgb, var(--surface-2) 80%, var(--bg) 20%);
+}
+
+.action-btn.danger {
+    background: var(--danger);
+    color: var(--accent-contrast);
+}
+
+.action-btn.danger:hover {
+    background: color-mix(in srgb, var(--danger) 80%, var(--bg) 20%);
+}
+
+.action-btn.success {
+    background: var(--success);
+    color: var(--accent-contrast);
+}
+
+.action-btn.success:hover {
+    background: color-mix(in srgb, var(--success) 80%, var(--bg) 20%);
+}
+
+.action-btn.small {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin: 0 2px;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Search Bar */
+.search-bar {
+    margin-bottom: 20px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 16px;
+    color: var(--text);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Table Container */
+.table-container {
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 4px var(--overlay);
+    overflow: auto;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+/* Token Table */
+.tokens-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    min-width: 800px;
+}
+
+.tokens-table th {
+    padding: 12px;
+    background: var(--surface-2);
+    border-bottom: 2px solid var(--border);
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.tokens-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tokens-table th.sortable:hover {
+    background: color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%);
+}
+
+.tokens-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+}
+
+.checkbox-col {
+    width: 40px;
+    text-align: center;
+}
+
+.checkbox-col input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Token Rows */
+.token-row {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.token-row:hover {
+    background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+}
+
+.token-row.expanded {
+    background: color-mix(in srgb, var(--info) 15%, var(--surface) 85%);
+}
+
+.token-row.selected {
+    background: color-mix(in srgb, var(--accent) 15%, var(--surface) 85%);
+}
+
+.token-row.selected:hover {
+    background: color-mix(in srgb, var(--accent) 20%, var(--surface) 80%);
+}
+
+/* Cell Styles */
+.symbol-cell {
+    font-weight: 600;
+    color: var(--accent);
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.price-cell {
+    font-family: monospace;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.price-cell .price-value {
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.source-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+.source-badge.binance {
+    background: #f0b90b20;
+    color: #f0b90b;
+    border: 1px solid #f0b90b40;
+}
+
+.source-badge.coinbase {
+    background: #0052ff20;
+    color: #0052ff;
+    border: 1px solid #0052ff40;
+}
+
+.source-badge.coinranking {
+    background: #8a2be220;
+    color: #8a2be2;
+    border: 1px solid #8a2be240;
+}
+
+.source-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+.source-indicator.binance {
+    background: #f0b90b;
+    box-shadow: 0 0 0 2px #f0b90b40;
+}
+
+.source-indicator.coinbase {
+    background: #0052ff;
+    box-shadow: 0 0 0 2px #0052ff40;
+}
+
+.source-indicator.coinranking {
+    background: #8a2be2;
+    box-shadow: 0 0 0 2px #8a2be240;
+}
+
+.marketcap-cell {
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* Details Row */
+.details-row td {
+    padding: 20px;
+    background: var(--surface-2);
+    border-bottom: 2px solid var(--border);
+}
+
+/* No Results */
+.no-results {
+    padding: 60px;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+}
+
+/* Token Details Component */
+.token-details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.details-header h4 {
+    margin: 0;
+    color: var(--text);
+    font-size: 16px;
+}
+
+.price-info {
+    display: flex;
+    gap: 10px;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-item label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.detail-item .value {
+    padding: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.edit-input {
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Token Addresses Component */
+.token-addresses {
+    margin: 20px 0;
+}
+
+.token-addresses h4 {
+    margin: 0 0 10px 0;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.addresses-list {
+    margin-bottom: 15px;
+}
+
+.address-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.chain-name {
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 100px;
+    font-size: 13px;
+}
+
+.address {
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+    flex: 1;
+    color: var(--text-muted);
+}
+
+.address-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.icon-btn {
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.icon-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.icon-btn.danger:hover {
+    background: var(--danger);
+    color: var(--accent-contrast);
+    border-color: var(--danger);
+}
+
+.no-addresses {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+}
+
+.add-address-form {
+    display: flex;
+    gap: 10px;
+}
+
+.chain-input {
+    width: 150px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.address-input {
+    flex: 1;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.add-btn {
+    padding: 8px 16px;
+    background: var(--success);
+    color: var(--accent-contrast);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.add-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--success) 80%, var(--bg) 20%);
+}
+
+.add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Details Actions */
+.details-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* Save Status */
+.save-status {
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.save-status.success {
+    background: color-mix(in srgb, var(--success) 15%, var(--surface) 85%);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border) 70%);
+}
+
+.save-status.error {
+    background: color-mix(in srgb, var(--danger) 15%, var(--surface) 85%);
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border) 70%);
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.pagination-btn {
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    padding: 0 15px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.page-size-select {
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.page-size-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .manager-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .stats {
+        flex-wrap: wrap;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .add-address-form {
+        flex-direction: column;
+    }
+    
+    .chain-input, .address-input {
+        width: 100%;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .address-item {
+        flex-wrap: wrap;
+    }
+    
+    .chain-name {
+        min-width: auto;
+    }
+}

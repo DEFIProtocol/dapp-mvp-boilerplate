@@ -5,14 +5,15 @@
     "strict": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./app/src/*"]
+    }
   },
-  "include": [".", "env.d.ts"],
-  "paths": {
-  "@/*": ["apps/web/src/*"],
-  "@dapp/ui/*": ["packages/ui/*"],
-  "@dapp/hooks/*": ["packages/hooks/*"],
-  "@dapp/utils/*": ["packages/utils/*"],
-  "@dapp/contracts/*": ["packages/contracts/*"]
-}
+  "include": [
+    ".",
+    "env.d.ts",
+    "app/src/**/*"
+  ]
 }

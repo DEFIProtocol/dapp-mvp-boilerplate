@@ -1,5 +1,3 @@
-// backend/binance/pricing.ts
-
 import WebSocket from 'ws';
 import axios from 'axios';
 import { 
@@ -39,7 +37,8 @@ const tokenPriceStore = new Map<string, TokenPrice>();
 // Track WebSocket connections
 const wsConnections = new Map<string, WebSocket>();
 
-// Initialize with all prices from REST
+// In initializeTokenPrices(), after populating tokenPriceStore, add:
+
 export const initializeTokenPrices = async (): Promise<void> => {
   try {
     console.log('📊 Initializing all token prices from Binance...');
@@ -47,6 +46,8 @@ export const initializeTokenPrices = async (): Promise<void> => {
 
     const response = await axios.get<BinancePriceResponse[]>(`${BINANCE_BASE_URL}/ticker/price`);
     const list = Array.isArray(response.data) ? response.data : [];
+    
+    const allPrices: Array<{ symbol: string; price: number }> = []; // Add this
     
     for (const item of list) {
       const symbolPair = item?.symbol;
@@ -64,9 +65,17 @@ export const initializeTokenPrices = async (): Promise<void> => {
         lastUpdated: Date.now(),
         pair: symbolPair
       });
+      
+      allPrices.push({ symbol: base, price }); // Add this
     }
     
     console.log(`✅ Initialized ${tokenPriceStore.size} token prices`);
+    
+    // 🔥 Send initial batch to global store
+    if (allPrices.length > 0) {
+      globalPriceStore.updateFromBinance(allPrices);
+      console.log(`📤 Sent ${allPrices.length} Binance prices to global store`);
+    }
     
     // After initialization, connect WebSockets for top symbols
     connectWebSocketsForTopTokens();
@@ -95,7 +104,7 @@ const setupBinanceWebSocket = (symbol: string): void => {
     ws.on('open', () => {
       console.log(`✅ WebSocket connected: ${normalizedSymbol}`);
     });
-    
+
 ws.on('message', (data: WebSocket.Data) => {
   try {
     const message = JSON.parse(data.toString());
