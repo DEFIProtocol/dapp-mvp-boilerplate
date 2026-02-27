@@ -60,6 +60,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!address || !isConnected) return;
     try {
       setLoading(true);
+      // Check if user already exists
+      const existingUser = await getUserByWallet(address);
+      if (existingUser) {
+        setUser(existingUser);
+        return;
+      }
+      // Only create if not found
       const userData = await createUser(address);
       setUser(userData);
     } catch (error) {

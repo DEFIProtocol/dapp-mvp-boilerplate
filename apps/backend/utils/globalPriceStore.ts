@@ -51,8 +51,6 @@ class GlobalPriceStore {
       });
       overrides++;
     });
-    
-    console.log(`🔄 Binance overrides: ${overrides} tokens`);
     this.notifyListeners();
   }
 
@@ -74,8 +72,6 @@ class GlobalPriceStore {
         overrides++;
       }
     });
-    
-    console.log(`🔄 Coinbase overrides: ${overrides} tokens`);
     this.notifyListeners();
   }
 

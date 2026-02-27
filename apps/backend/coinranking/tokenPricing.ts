@@ -1,7 +1,8 @@
+
+import dotenv from 'dotenv';
+dotenv.config();
 import axios, { AxiosError } from 'axios';
 import { globalPriceStore } from '../utils/globalPriceStore';
-
-
 
 // RapidAPI CoinRanking configuration
 const RAPID_API_HOST = process.env.RAPID_API_HOST || 'coinranking1.p.rapidapi.com';
@@ -10,6 +11,8 @@ const RAPID_API_KEY = process.env.RAPID_API_KEY;
 // Rate limiting configuration
 const RAPID_API_LIMIT = 50; // RapidAPI free tier: 50 requests per minute
 const RAPID_API_WINDOW = 60 * 1000; // 1 minute in milliseconds
+const MAX_RETRIES = 3;
+const BASE_DELAY = 1000; // 1 second
 
 // Cache configuration
 const RAPID_CACHE_TTL = 30 * 1000; // 30 seconds
@@ -17,15 +20,23 @@ const RAPID_CACHE_TTL = 30 * 1000; // 30 seconds
 // Rate limiter state
 interface RateLimiterState {
   requests: number[];
-  queue: Array<() => Promise<void>>;
-  processing: boolean;
 }
 
 const rateLimiter: RateLimiterState = {
-  requests: [],
-  queue: [],
-  processing: false
+  requests: []
 };
+
+// Queue for requests
+interface QueuedRequest {
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+  fn: () => Promise<any>;
+  retryCount: number;
+  endpoint: string;
+}
+
+const requestQueue: QueuedRequest[] = [];
+let isProcessing = false;
 
 // Cache for API responses
 interface CacheEntry {
@@ -125,45 +136,71 @@ const getTimeUntilNextSlot = (): number => {
 
 // Process the request queue
 const processQueue = async (): Promise<void> => {
-  if (rateLimiter.processing) return;
-  rateLimiter.processing = true;
+  if (isProcessing || requestQueue.length === 0) return;
+  isProcessing = true;
 
-  while (rateLimiter.queue.length > 0) {
+  while (requestQueue.length > 0) {
+    // Check if we can make a request
     if (!canMakeRequest()) {
       const waitTime = getTimeUntilNextSlot();
-      if (waitTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
+      console.log(`⏳ Rate limit reached, waiting ${Math.ceil(waitTime / 1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
-    const nextRequest = rateLimiter.queue.shift();
-    if (nextRequest) {
-      rateLimiter.requests.push(Date.now());
-      
-      try {
-        await nextRequest();
-      } catch (error) {
-        console.error('Queue request failed:', error);
+    const request = requestQueue.shift();
+    if (!request) continue;
+
+    // Record this request
+    rateLimiter.requests.push(Date.now());
+
+    try {
+      const result = await request.fn();
+      request.resolve(result);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        
+        // Handle rate limiting with retry
+        if (axiosError.response?.status === 429 && request.retryCount < MAX_RETRIES) {
+          const delay = BASE_DELAY * Math.pow(2, request.retryCount);
+          console.log(`⚠️ Rate limited for ${request.endpoint}, retry ${request.retryCount + 1}/${MAX_RETRIES} in ${delay}ms`);
+          
+          // Re-queue with incremented retry count after delay
+          setTimeout(() => {
+            requestQueue.push({
+              ...request,
+              retryCount: request.retryCount + 1
+            });
+          }, delay);
+        } else {
+          console.error('❌ Request failed:', {
+            endpoint: request.endpoint,
+            status: axiosError.response?.status,
+            message: axiosError.message
+          });
+          request.reject(error);
+        }
+      } else {
+        request.reject(error);
       }
     }
   }
 
-  rateLimiter.processing = false;
+  isProcessing = false;
 };
 
 // Queue a request with rate limiting
-const queueRequest = <T>(fn: () => Promise<T>): Promise<T> => {
+const queueRequest = <T>(endpoint: string, fn: () => Promise<T>): Promise<T> => {
   return new Promise((resolve, reject) => {
-    rateLimiter.queue.push(async () => {
-      try {
-        const result = await fn();
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
+    requestQueue.push({
+      resolve,
+      reject,
+      fn,
+      retryCount: 0,
+      endpoint
     });
     
-    if (!rateLimiter.processing) {
+    if (!isProcessing) {
       processQueue();
     }
   });
@@ -182,14 +219,15 @@ export const createRequest = async <T = any>(
   const cacheKey = getCacheKey(endpoint, params);
   const cached = rapidApiCache.get(cacheKey);
   
+  // Return cached response if valid
   if (cached && Date.now() - cached.timestamp < RAPID_CACHE_TTL) {
     console.log(`🔄 Cache hit: ${endpoint}`);
     return cached.data as T;
   }
   
-  console.log(`📡 API Request: ${endpoint} (queued)`);
+  console.log(`📡 Queueing request: ${endpoint}`);
   
-  return queueRequest(async () => {
+  return queueRequest(endpoint, async () => {
     try {
       const response = await axios.get(`https://${RAPID_API_HOST}${endpoint}`, {
         headers: {
@@ -198,23 +236,31 @@ export const createRequest = async <T = any>(
           'Accept': 'application/json'
         },
         params,
-        timeout: 10000
       });
       
       if (response.data && response.data.status === 'success') {
+        // Cache the response
         rapidApiCache.set(cacheKey, {
           data: response.data,
           timestamp: Date.now(),
           endpoint
         });
-        // Store in global price store for live updates
-        const coins = response.data.data.coins.map((coin: any) => ({
-          symbol: coin.symbol,
-          price: coin.price
-        }));
 
-globalPriceStore.updateFromCoinranking(coins);
-        console.log(`✅ Request completed: ${endpoint} | Queue: ${rateLimiter.queue.length}`);
+        // Update global store with coin data (only for /coins endpoint)
+        if (endpoint === '/coins') {
+          try {
+            const coins = response.data.data.coins.map((coin: any) => ({
+              symbol: coin.symbol,
+              price: parseFloat(coin.price)
+            }));
+            globalPriceStore.updateFromCoinranking(coins);
+            console.log(`📤 Updated global store with ${coins.length} coins`);
+          } catch (storeError) {
+            console.error('Error updating global store:', storeError);
+          }
+        }
+        
+        console.log(`✅ Request completed: ${endpoint} | Queue: ${requestQueue.length}`);
       }
       
       return response.data as T;
@@ -222,20 +268,18 @@ globalPriceStore.updateFromCoinranking(coins);
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         
-        if (axiosError.response?.status === 429) {
-          console.warn(`⚠️ Rate limit hit for ${endpoint}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          return createRequest<T>(endpoint, params);
+        // Log all errors except 429 (which is handled by queue)
+        if (axiosError.response?.status !== 429) {
+          console.error('❌ RapidAPI Error:', {
+            endpoint,
+            params,
+            status: axiosError.response?.status,
+            statusText: axiosError.response?.statusText,
+            data: axiosError.response?.data,
+            message: axiosError.message
+          });
         }
-        
-        console.error('❌ RapidAPI Error:', {
-          endpoint,
-          params,
-          error: axiosError.response?.data || axiosError.message,
-          status: axiosError.response?.status
-        });
       }
-      
       throw error;
     }
   });
@@ -277,7 +321,7 @@ export const getRateLimiterStats = () => {
   
   return {
     requestsThisMinute: rateLimiter.requests.length,
-    queueLength: rateLimiter.queue.length,
+    queueLength: requestQueue.length,
     limit: RAPID_API_LIMIT,
     windowMs: RAPID_API_WINDOW,
     availableSlots: Math.max(0, RAPID_API_LIMIT - rateLimiter.requests.length),

@@ -1,0 +1,624 @@
+/* TokenDetails.css */
+
+.token-details {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 8px 24px var(--overlay);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Decorative background effect */
+.token-details::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 70% 30%, 
+        color-mix(in srgb, var(--accent) 5%, transparent) 0%,
+        transparent 50%);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Header Styles */
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+    position: relative;
+    z-index: 1;
+}
+
+.details-header h4 {
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    position: relative;
+    display: inline-block;
+}
+
+.details-header h4::after {
+    content: '';
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    border-radius: 2px;
+}
+
+.price-info {
+    display: flex;
+    gap: 12px;
+    animation: fadeInRight 0.3s ease;
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Source Badge */
+.source-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px var(--overlay);
+    position: relative;
+    overflow: hidden;
+}
+
+.source-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    20% { left: 100%; }
+    100% { left: 100%; }
+}
+
+.source-badge.binance {
+    background: linear-gradient(135deg, #f0b90b 0%, #f8d34a 100%);
+    color: #1e1e1e;
+    border: 1px solid #f0b90b;
+}
+
+.source-badge.coinbase {
+    background: linear-gradient(135deg, #0052ff 0%, #4d7cff 100%);
+    color: white;
+    border: 1px solid #0052ff;
+}
+
+.source-badge.coinranking {
+    background: linear-gradient(135deg, #8a2be2 0%, #b46eff 100%);
+    color: white;
+    border: 1px solid #8a2be2;
+}
+
+/* Save Status */
+.save-status {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideDown 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.save-status.success {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--success) 15%, var(--surface) 85%), var(--surface));
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border) 70%);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--success) 20%, transparent);
+}
+
+.save-status.success::before {
+    content: '✓';
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.save-status.error {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--danger) 15%, var(--surface) 85%), var(--surface));
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border) 70%);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--danger) 20%, transparent);
+}
+
+.save-status.error::before {
+    content: '✕';
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Details Grid */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    animation: fadeInUp 0.3s ease;
+    animation-fill-mode: both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation for detail items */
+.detail-item:nth-child(1) { animation-delay: 0.05s; }
+.detail-item:nth-child(2) { animation-delay: 0.1s; }
+.detail-item:nth-child(3) { animation-delay: 0.15s; }
+.detail-item:nth-child(4) { animation-delay: 0.2s; }
+.detail-item:nth-child(5) { animation-delay: 0.25s; }
+.detail-item:nth-child(6) { animation-delay: 0.3s; }
+.detail-item:nth-child(7) { animation-delay: 0.35s; }
+.detail-item:nth-child(8) { animation-delay: 0.4s; }
+
+.detail-item label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-item .value {
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    word-break: break-word;
+    transition: all 0.2s;
+    box-shadow: inset 0 2px 4px var(--overlay);
+    position: relative;
+    overflow: hidden;
+}
+
+.detail-item .value::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--accent), transparent);
+    opacity: 0.5;
+}
+
+.detail-item .value:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px var(--overlay);
+    transform: translateY(-2px);
+}
+
+/* Price value special styling */
+.detail-item .value:has(.price-value) {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Edit Input */
+.edit-input {
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    transition: all 0.2s;
+    width: 100%;
+    box-shadow: inset 0 2px 4px var(--overlay);
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent), inset 0 2px 4px var(--overlay);
+    transform: translateY(-2px);
+}
+
+.edit-input:hover {
+    border-color: var(--text-muted);
+}
+
+.edit-input::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Number input styling */
+.edit-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.edit-input[type="number"]::-webkit-outer-spin-button,
+.edit-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* TokenAddresses section integration */
+.token-details .token-addresses {
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+    transition: all 0.2s;
+}
+
+.token-details .token-addresses:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+}
+
+.token-details .token-addresses h4 {
+    color: var(--text);
+    font-size: 16px;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.token-details .token-addresses h4::before {
+    content: '🔗';
+    font-size: 18px;
+}
+
+/* Actions Section */
+.details-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid var(--border);
+    position: relative;
+    z-index: 1;
+}
+
+.action-btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px var(--overlay);
+}
+
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.action-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.action-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 6px var(--overlay);
+}
+
+.action-btn.primary {
+    background: linear-gradient(135deg, var(--info), color-mix(in srgb, var(--info) 80%, white 20%));
+    color: var(--accent-contrast);
+}
+
+.action-btn.success {
+    background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 80%, white 20%));
+    color: var(--accent-contrast);
+}
+
+.action-btn.secondary {
+    background: linear-gradient(135deg, var(--surface-2), var(--surface));
+    color: var(--text);
+    border: 2px solid var(--border);
+}
+
+.action-btn.secondary:hover {
+    border-color: var(--text-muted);
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.action-btn:disabled::before {
+    display: none;
+}
+
+/* Loading state for save button */
+.action-btn.success:disabled {
+    background: linear-gradient(135deg, var(--success), var(--surface-2));
+    position: relative;
+    color: transparent;
+}
+
+.action-btn.success:disabled::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--accent-contrast);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .token-details {
+        padding: 16px;
+    }
+
+    .details-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .details-header h4::after {
+        bottom: -8px;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .detail-item .value,
+    .edit-input {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .details-actions {
+        flex-direction: column;
+    }
+
+    .action-btn {
+        width: 100%;
+        padding: 14px;
+    }
+
+    .price-info {
+        width: 100%;
+    }
+
+    .source-badge {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Tablet Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .details-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .detail-item .value {
+        background: var(--surface-2);
+    }
+
+    .action-btn::before {
+        background: rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Print styles */
+@media print {
+    .token-details {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+
+    .details-actions,
+    .price-info {
+        display: none;
+    }
+
+    .detail-item .value {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+
+    .token-details::before {
+        display: none;
+    }
+}
+
+/* Focus visible for accessibility */
+.action-btn:focus-visible,
+.edit-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Custom scrollbar for details panel */
+.token-details {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--surface-2);
+}
+
+.token-details::-webkit-scrollbar {
+    width: 6px;
+}
+
+.token-details::-webkit-scrollbar-track {
+    background: var(--surface-2);
+    border-radius: 3px;
+}
+
+.token-details::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.token-details::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Glowing effect for editable fields when editing */
+.is-editing .detail-item {
+    position: relative;
+}
+
+.is-editing .detail-item::after {
+    content: '✎';
+    position: absolute;
+    top: 28px;
+    right: 8px;
+    color: var(--accent);
+    font-size: 14px;
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Empty state styling */
+.detail-item .value:empty::before {
+    content: '—';
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* UUID special styling */
+.detail-item:has(.value[data-uuid]) .value {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+}
+
+/* Tooltip for long values */
+.detail-item .value[title] {
+    cursor: help;
+    position: relative;
+}
+
+.detail-item .value[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    padding: 4px 8px;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    z-index: 10;
+    box-shadow: 0 2px 8px var(--overlay);
+}

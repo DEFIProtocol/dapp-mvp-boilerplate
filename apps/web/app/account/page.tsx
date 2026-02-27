@@ -5,10 +5,10 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 
-import { fetchHoldings } from "../../src/lib/api/holdings"; // Adjust based on your actual import path
-import { useChainContext } from "../../src/contexts/ChainContext";
-import { useUser } from "../../src/contexts/UserContext"; // Note: useUser, not UserProvider here
-import { useTokens } from "../../src/contexts/TokenContext";
+import { fetchHoldings } from "../src/lib/api/holdings"; // Adjust based on your actual import path
+import { useChainContext } from "../src/contexts/ChainContext";
+import { useUser } from "../src/contexts/UserContext"; // Note: useUser, not UserProvider here
+import { useTokens } from "../src/contexts/TokenContext";
 import { WalletBalance } from "./components/WalletBalance";
 import { Holdings } from "./components/Holdings";
 import { Watchlist } from "./components/Watchlist";

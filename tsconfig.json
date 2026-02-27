@@ -1,15 +1,20 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": ".","esModuleInterop": true,
+"allowSyntheticDefaultImports": true,
     "paths": {
       "@dapp/ui": ["packages/ui"],
       "@dapp/ui/*": ["packages/ui/*"],
-      "@dapp/hooks": ["packages/hooks"],
-      "@dapp/hooks/*": ["packages/hooks/*"],
-      "@dapp/utils": ["packages/utils"],
-      "@dapp/utils/*": ["packages/utils/*"],
+      "@dapp/hooks": ["apps/web/app/src/hooks"],
+      "@dapp/hooks/*": ["apps/web/app/src/hooks/*"],
+      "@dapp/utils": ["apps/web/app/src/utils"],
+      "@dapp/utils/*": ["apps/web/app/src/utils/*"],
       "@dapp/contracts": ["packages/contracts"],
-      "@dapp/contracts/*": ["packages/contracts/*"]
+      "@dapp/contracts/*": ["packages/contracts/*"],
+      "@dapp/contexts": ["apps/web/app/src/contexts"],
+      "@dapp/contexts/*": ["apps/web/app/src/contexts/*"],
+      "@dapp/lib": ["apps/web/app/src/lib"],
+      "@dapp/lib/*": ["apps/web/app/src/lib/*"]
     }
   }
 }
