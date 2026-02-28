@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import './tables.module.css';
+import { sortData, useTableSort, SORT_CONFIGS } from '@/utils/sortUtils';
+import styles from './tables.module.css';
 
 export default function CoinbaseTable({ prices }) {
     const [search, setSearch] = useState('');
-    const [sortField, setSortField] = useState('symbol');
-    const [sortDirection, setSortDirection] = useState('asc');
     const [page, setPage] = useState(1);
     const [showVolume, setShowVolume] = useState(false);
     const pageSize = 50;
+
+    const { sortField, sortDirection, handleSort, getSortIndicator } = useTableSort(
+        SORT_CONFIGS.coinbase.defaultField,
+        SORT_CONFIGS.coinbase.defaultDirection
+    );
 
     const filteredAndSorted = useMemo(() => {
         let filtered = prices;
@@ -22,39 +26,8 @@ export default function CoinbaseTable({ prices }) {
             );
         }
 
-        return filtered.sort((a, b) => {
-            let aVal, bVal;
-            
-            switch(sortField) {
-                case 'symbol':
-                    aVal = a.symbol || '';
-                    bVal = b.symbol || '';
-                    break;
-                case 'name':
-                    aVal = a.name || '';
-                    bVal = b.name || '';
-                    break;
-                case 'price':
-                    aVal = parseFloat(a.price) || 0;
-                    bVal = parseFloat(b.price) || 0;
-                    break;
-                case 'change24h':
-                    aVal = parseFloat(a.change24h) || 0;
-                    bVal = parseFloat(b.change24h) || 0;
-                    break;
-                case 'volume':
-                    aVal = parseFloat(a.volume24h) || 0;
-                    bVal = parseFloat(b.volume24h) || 0;
-                    break;
-                default:
-                    aVal = a.symbol || '';
-                    bVal = b.symbol || '';
-            }
-            
-            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
+        // Sort using utility
+        return sortData(filtered, sortField, sortDirection, SORT_CONFIGS.coinbase);
     }, [prices, search, sortField, sortDirection]);
 
     const paginated = useMemo(() => {
@@ -63,15 +36,6 @@ export default function CoinbaseTable({ prices }) {
     }, [filteredAndSorted, page]);
 
     const totalPages = Math.ceil(filteredAndSorted.length / pageSize);
-
-    const handleSort = (field) => {
-        if (sortField === field) {
-            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortDirection('asc');
-        }
-    };
 
     const formatVolume = (volume) => {
         if (!volume) return '—';
@@ -84,13 +48,39 @@ export default function CoinbaseTable({ prices }) {
 
     const getChangeClass = (change) => {
         if (!change) return '';
-        return parseFloat(change) >= 0 ? 'positive' : 'negative';
+        return parseFloat(change) >= 0 ? styles.positive : styles.negative;
     };
 
+    // Calculate WebSocket stats
+    const wsCount = prices.filter(p => p.source === 'coinbase-ws').length;
+    const restCount = prices.filter(p => p.source === 'coinbase-rest').length;
+    const wsConnected = wsCount > 0;
+
     return (
-        <div className="table-container">
-            <div className="table-controls">
-                <div className="search-wrapper">
+        <div className={styles.tableContainer}>
+            {/* Coinbase Stats */}
+            <div className={styles.coinbaseStats}>
+                <div className={styles.coinbaseStatItem}>
+                    <span className={`${styles.wsIndicator} ${wsConnected ? styles.connected : styles.disconnected}`} />
+                    <span className={styles.coinbaseStatLabel}>WebSocket</span>
+                    <span className={styles.coinbaseStatValue}>{wsConnected ? 'Live' : 'Disconnected'}</span>
+                </div>
+                <div className={styles.coinbaseStatItem}>
+                    <span className={styles.coinbaseStatLabel}>Live Pairs</span>
+                    <span className={styles.coinbaseStatValue}>{wsCount}</span>
+                </div>
+                <div className={styles.coinbaseStatItem}>
+                    <span className={styles.coinbaseStatLabel}>REST Pairs</span>
+                    <span className={styles.coinbaseStatValue}>{restCount}</span>
+                </div>
+                <div className={styles.coinbaseStatItem}>
+                    <span className={styles.coinbaseStatLabel}>Total</span>
+                    <span className={styles.coinbaseStatValue}>{prices.length}</span>
+                </div>
+            </div>
+
+            <div className={styles.tableControls}>
+                <div className={styles.searchWrapper}>
                     <input
                         type="text"
                         placeholder="Search by symbol or name..."
@@ -99,27 +89,26 @@ export default function CoinbaseTable({ prices }) {
                             setSearch(e.target.value);
                             setPage(1);
                         }}
-                        className="search-input"
+                        className={styles.searchInput}
                     />
                 </div>
                 
-                <div className="table-options">
+                <div className={styles.tableOptions}>
                     <button 
-                        className={`toggle-btn ${showVolume ? 'active' : ''}`}
+                        className={`${styles.toggleBtn} ${showVolume ? styles.active : ''}`}
                         onClick={() => setShowVolume(!showVolume)}
-                        title="Toggle volume column"
                     >
-                        📊 Volume
+                        <span>📊</span> Volume
                     </button>
                     
-                    <div className="pagination">
+                    <div className={styles.pagination}>
                         <button 
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1}
                         >
                             ←
                         </button>
-                        <span>{page} / {totalPages}</span>
+                        <span className={styles.pageInfo}>{page} / {totalPages}</span>
                         <button 
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages}
@@ -130,25 +119,25 @@ export default function CoinbaseTable({ prices }) {
                 </div>
             </div>
 
-            <div className="table-wrapper">
-                <table className="pricing-table coinbase-table">
+            <div className={styles.tableWrapper}>
+                <table className={`${styles.pricingTable} ${styles.coinbaseTable}`}>
                     <thead>
                         <tr>
-                            <th onClick={() => handleSort('symbol')}>
-                                Symbol {sortField === 'symbol' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('symbol')} className={styles.sortable}>
+                                Symbol {getSortIndicator('symbol')}
                             </th>
-                            <th onClick={() => handleSort('name')}>
-                                Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('name')} className={styles.sortable}>
+                                Name {getSortIndicator('name')}
                             </th>
-                            <th onClick={() => handleSort('price')}>
-                                Price {sortField === 'price' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('price')} className={styles.sortable}>
+                                Price {getSortIndicator('price')}
                             </th>
-                            <th onClick={() => handleSort('change24h')}>
-                                24h Change {sortField === 'change24h' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('change24h')} className={styles.sortable}>
+                                24h Change {getSortIndicator('change24h')}
                             </th>
                             {showVolume && (
-                                <th onClick={() => handleSort('volume')}>
-                                    24h Volume {sortField === 'volume' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                <th onClick={() => handleSort('volume')} className={styles.sortable}>
+                                    24h Volume {getSortIndicator('volume')}
                                 </th>
                             )}
                             <th>Pair</th>
@@ -156,39 +145,46 @@ export default function CoinbaseTable({ prices }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {paginated.map((item) => (
-                            <tr key={item.symbol} className="coinbase-row">
-                                <td className="symbol-cell">
-                                    <strong>{item.symbol}</strong>
-                                </td>
-                                <td>{item.name || item.symbol}</td>
-                                <td className="price-cell">
-                                    ${parseFloat(item.price).toFixed(4)}
-                                </td>
-                                <td className={getChangeClass(item.change24h)}>
-                                    {item.change24h ? (
-                                        <>
-                                            {parseFloat(item.change24h) >= 0 ? '▲' : '▼'} 
-                                            {Math.abs(parseFloat(item.change24h)).toFixed(2)}%
-                                        </>
-                                    ) : '—'}
-                                </td>
-                                {showVolume && (
-                                    <td className="volume-cell">
-                                        {formatVolume(item.volume24h)}
+                        {paginated.map((item) => {
+                            const isWebSocket = item.source === 'coinbase-ws';
+                            return (
+                                <tr key={item.symbol} className={styles.coinbaseRow}>
+                                    <td className={styles.symbolCell}>
+                                        <strong>{item.symbol}</strong>
                                     </td>
-                                )}
-                                <td className="pair-cell">{item.pair}</td>
-                                <td>
-                                    <span className="source-badge coinbase">
-                                        {item.source === 'coinbase-ws' ? '🟢 Live' : '🔵 REST'}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
+                                    <td>{item.name || item.symbol}</td>
+                                    <td className={styles.priceCell}>
+                                        ${parseFloat(item.price).toFixed(4)}
+                                    </td>
+                                    <td className={getChangeClass(item.change24h)}>
+                                        {item.change24h ? (
+                                            <>
+                                                {parseFloat(item.change24h) >= 0 ? '▲' : '▼'} 
+                                                {Math.abs(parseFloat(item.change24h)).toFixed(2)}%
+                                            </>
+                                        ) : '—'}
+                                    </td>
+                                    {showVolume && (
+                                        <td className={styles.volumeCell}>
+                                            {formatVolume(item.volume24h)}
+                                        </td>
+                                    )}
+                                    <td className={styles.pairCell}>{item.pair}</td>
+                                    <td>
+                                        <div className={styles.sourceIndicator}>
+                                            <span className={`${styles.sourceDot} ${isWebSocket ? styles.ws : styles.rest}`} />
+                                            <span className={isWebSocket ? styles.wsText : styles.restText}>
+                                                {isWebSocket ? 'WebSocket' : 'REST'}
+                                            </span>
+                                            {isWebSocket && <span className={styles.liveBadge}>● LIVE</span>}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {paginated.length === 0 && (
                             <tr>
-                                <td colSpan={showVolume ? 7 : 6} className="no-results">
+                                <td colSpan={showVolume ? 7 : 6} className={styles.noResults}>
                                     No Coinbase prices found
                                 </td>
                             </tr>
@@ -198,8 +194,8 @@ export default function CoinbaseTable({ prices }) {
             </div>
 
             {filteredAndSorted.length > pageSize && (
-                <div className="table-footer">
-                    <div className="results-info">
+                <div className={styles.tableFooter}>
+                    <div className={styles.resultsInfo}>
                         Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, filteredAndSorted.length)} of {filteredAndSorted.length} pairs
                     </div>
                 </div>

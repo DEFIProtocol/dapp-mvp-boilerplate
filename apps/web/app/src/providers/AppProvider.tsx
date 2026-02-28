@@ -8,6 +8,8 @@ import { UserProvider } from "@/contexts/UserContext";
 import { TokenProvider } from "@/contexts/TokenContext";
 import { PriceStoreProvider } from "@/contexts/PriceStoreContext";
 import { OneInchTokensProvider } from "@/contexts/OneInchTokensContext";
+import { AllUserProvider } from "@/contexts/AllUserContext";
+
 
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
@@ -15,6 +17,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       <ChainProvider>
         <ThemeProvider>
           <OneInchTokensProvider>
+            <AllUserProvider >
           <TokenProvider>
             <UserProvider>
               <PriceStoreProvider>
@@ -22,6 +25,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               </PriceStoreProvider>
             </UserProvider>
           </TokenProvider>
+            </AllUserProvider>
           </OneInchTokensProvider>
         </ThemeProvider>
       </ChainProvider>

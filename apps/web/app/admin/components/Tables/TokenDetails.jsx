@@ -1,7 +1,7 @@
 // components/Admin/Tables/TokenDetails.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import TokenAddresses from './TokenAddresses';
-import './TokenDetails.css';
+import styles from './TokenDetails.module.css';
 
 export default function TokenDetails({ token, onUpdate, globalPrice }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -18,8 +18,9 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
         { key: 'symbol', label: 'Symbol', type: 'text', readOnly: true },
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'price', label: 'Price', type: 'number' },
-        { key: 'market_cap', label: 'Market Cap', type: 'number' },
-        { key: 'volume_24h', label: '24h Volume', type: 'number' },
+        { key: 'change24h', label: '24h Change', type: 'number' },
+        { key: 'marketCap', label: 'Market Cap', type: 'number' },
+        { key: 'volume24h', label: '24h Volume', type: 'number' },
         { key: 'decimals', label: 'Decimals', type: 'number' },
         { key: 'type', label: 'Type', type: 'text' },
         { key: 'uuid', label: 'UUID', type: 'text', readOnly: true }
@@ -53,13 +54,57 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
         }
     };
 
+    const formatValue = (field, value) => {
+        if (value === null || value === undefined) return '—';
+        
+        if (field.type === 'number') {
+            if (field.key === 'price') {
+                return `$${parseFloat(value).toFixed(4)}`;
+            }
+            if (field.key === 'change24h') {
+                const num = parseFloat(value);
+                return (
+                    <span className={num >= 0 ? styles.positive : styles.negative}>
+                        {num >= 0 ? '▲' : '▼'} {Math.abs(num).toFixed(2)}%
+                    </span>
+                );
+            }
+            if (field.key === 'marketCap' || field.key === 'volume24h') {
+                const num = parseFloat(value);
+                if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
+                if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+                if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+                return `$${num.toLocaleString()}`;
+            }
+            return parseFloat(value).toLocaleString();
+        }
+        
+        return value;
+    };
+
+    const getSourceBadge = () => {
+        if (token.oneinch_data) {
+            return <span className={`${styles.sourceBadge} ${styles.oneinch}`}>1inch</span>;
+        } else if (token.source === 'binance' || token.binance_data) {
+            return <span className={`${styles.sourceBadge} ${styles.binance}`}>Binance</span>;
+        } else if (token.source === 'coinbase' || token.coinbase_data) {
+            return <span className={`${styles.sourceBadge} ${styles.coinbase}`}>Coinbase</span>;
+        } else if (token.source === 'coinranking' || token.coinranking_data) {
+            return <span className={`${styles.sourceBadge} ${styles.coinranking}`}>Coinranking</span>;
+        }
+        return <span className={`${styles.sourceBadge} ${styles.database}`}>DB</span>;
+    };
+
     return (
-        <div className="token-details">
-            <div className="details-header">
-                <h4>{token.symbol} Details</h4>
+        <div className={styles.tokenDetails}>
+            <div className={styles.detailsHeader}>
+                <div className={styles.titleSection}>
+                    <h4>{token.symbol} Details</h4>
+                    {getSourceBadge()}
+                </div>
                 {globalPrice && (
-                    <div className="price-info">
-                        <span className={`source-badge ${globalPrice.source}`}>
+                    <div className={styles.priceInfo}>
+                        <span className={`${styles.sourceBadge} ${styles[globalPrice.source]}`}>
                             {globalPrice.source} Price: ${globalPrice.price.toFixed(4)}
                         </span>
                     </div>
@@ -67,12 +112,15 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
             </div>
 
             {saveStatus === 'success' && (
-                <div className="save-status success">✓ Saved</div>
+                <div className={`${styles.saveStatus} ${styles.success}`}>✓ Saved</div>
+            )}
+            {saveStatus === 'error' && (
+                <div className={`${styles.saveStatus} ${styles.error}`}>✕ Save failed</div>
             )}
 
-            <div className="details-grid">
+            <div className={styles.detailsGrid}>
                 {fields.map(field => (
-                    <div key={field.key} className="detail-item">
+                    <div key={field.key} className={styles.detailItem}>
                         <label>{field.label}</label>
                         {isEditing && !field.readOnly ? (
                             <input
@@ -84,16 +132,12 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
                                         ? (e.target.value === '' ? '' : parseFloat(e.target.value))
                                         : e.target.value
                                 })}
-                                className="edit-input"
+                                className={styles.editInput}
                                 step={field.type === 'number' ? 'any' : undefined}
                             />
                         ) : (
-                            <div className="value">
-                                {field.type === 'number' && editData[field.key]
-                                    ? field.key === 'price' 
-                                        ? `$${parseFloat(editData[field.key]).toFixed(4)}`
-                                        : parseFloat(editData[field.key]).toLocaleString()
-                                    : editData[field.key] || '—'}
+                            <div className={styles.value}>
+                                {formatValue(field, editData[field.key])}
                             </div>
                         )}
                     </div>
@@ -106,12 +150,12 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
                 isEditing={isEditing}
             />
 
-            <div className="details-actions">
+            <div className={styles.detailsActions}>
                 {isEditing ? (
                     <>
                         <button
                             onClick={handleSave}
-                            className="action-btn success"
+                            className={`${styles.actionBtn} ${styles.success}`}
                             disabled={saveStatus === 'saving'}
                         >
                             {saveStatus === 'saving' ? 'Saving...' : 'Save'}
@@ -122,7 +166,7 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
                                 setChains(token.chains || {});
                                 setIsEditing(false);
                             }}
-                            className="action-btn secondary"
+                            className={`${styles.actionBtn} ${styles.secondary}`}
                         >
                             Cancel
                         </button>
@@ -130,7 +174,7 @@ export default function TokenDetails({ token, onUpdate, globalPrice }) {
                 ) : (
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="action-btn primary"
+                        className={`${styles.actionBtn} ${styles.primary}`}
                     >
                         Edit Token
                     </button>

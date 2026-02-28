@@ -1,0 +1,295 @@
+/* TokenDetails.module.css */
+
+.tokenDetails {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.detailsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.titleSection {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.detailsHeader h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.priceInfo {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Source Badges */
+.sourceBadge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sourceBadge.binance {
+    background: linear-gradient(135deg, #f0b90b20, #fbbf2420);
+    color: #b45309;
+    border: 1px solid #f0b90b40;
+}
+
+.sourceBadge.coinbase {
+    background: linear-gradient(135deg, #0052ff20, #3b82f620);
+    color: #1e40af;
+    border: 1px solid #0052ff40;
+}
+
+.sourceBadge.coinranking {
+    background: linear-gradient(135deg, #2d9cdb20, #60a5fa20);
+    color: #1e3a8a;
+    border: 1px solid #2d9cdb40;
+}
+
+.sourceBadge.oneinch {
+    background: linear-gradient(135deg, #10b98120, #34d39920);
+    color: #047857;
+    border: 1px solid #10b98140;
+}
+
+.sourceBadge.database {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    color: #4c51bf;
+    border: 1px solid #667eea40;
+}
+
+/* Save Status */
+.saveStatus {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slideDown 0.3s ease;
+}
+
+.saveStatus.success {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.saveStatus.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Details Grid */
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.detailItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detailItem label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+
+.detailItem .value {
+    padding: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #333;
+    word-break: break-word;
+    font-family: 'Roboto Mono', monospace;
+    transition: all 0.2s;
+}
+
+.detailItem .value:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+/* Price Changes */
+.positive {
+    color: #10b981;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.negative {
+    color: #ef4444;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Edit Input */
+.editInput {
+    padding: 0.75rem;
+    background: white;
+    border: 2px solid #f0f0f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #333;
+    transition: all 0.2s;
+    width: 100%;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.editInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.editInput:hover {
+    border-color: #94a3b8;
+}
+
+/* Actions */
+.detailsActions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid #f0f0f0;
+}
+
+.actionBtn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.actionBtn.primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.actionBtn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.actionBtn.success {
+    background: #10b981;
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.actionBtn.success:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.actionBtn.secondary {
+    background: white;
+    color: #4a5568;
+    border: 2px solid #f0f0f0;
+}
+
+.actionBtn.secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e0;
+}
+
+.actionBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tokenDetails {
+        padding: 1rem;
+    }
+
+    .detailsHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detailsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .detailsActions {
+        flex-direction: column;
+    }
+
+    .actionBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}

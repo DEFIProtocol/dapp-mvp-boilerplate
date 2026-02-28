@@ -1,16 +1,20 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import './tables.module.css';
+import { sortData, useTableSort, SORT_CONFIGS } from '@/utils/sortUtils';
+import styles from './tables.module.css';
 
 export default function CoinrankingTable({ coins }) {
     const [search, setSearch] = useState('');
-    const [sortField, setSortField] = useState('rank');
-    const [sortDirection, setSortDirection] = useState('asc');
     const [page, setPage] = useState(1);
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
     const pageSize = 100;
+
+    const { sortField, sortDirection, handleSort, getSortIndicator } = useTableSort(
+        SORT_CONFIGS.coinranking.defaultField,
+        SORT_CONFIGS.coinranking.defaultDirection
+    );
 
     const filteredAndSorted = useMemo(() => {
         let filtered = coins;
@@ -32,48 +36,8 @@ export default function CoinrankingTable({ coins }) {
             filtered = filtered.filter(c => parseFloat(c.price) <= parseFloat(maxPrice));
         }
 
-        // Sort
-        return filtered.sort((a, b) => {
-            let aVal, bVal;
-            
-            switch(sortField) {
-                case 'rank':
-                    aVal = a.rank || 9999;
-                    bVal = b.rank || 9999;
-                    break;
-                case 'symbol':
-                    aVal = a.symbol || '';
-                    bVal = b.symbol || '';
-                    break;
-                case 'name':
-                    aVal = a.name || '';
-                    bVal = b.name || '';
-                    break;
-                case 'price':
-                    aVal = parseFloat(a.price) || 0;
-                    bVal = parseFloat(b.price) || 0;
-                    break;
-                case 'change':
-                    aVal = parseFloat(a.change) || 0;
-                    bVal = parseFloat(b.change) || 0;
-                    break;
-                case 'marketCap':
-                    aVal = parseFloat(a.marketCap) || 0;
-                    bVal = parseFloat(b.marketCap) || 0;
-                    break;
-                case 'volume':
-                    aVal = parseFloat(a['24hVolume']) || 0;
-                    bVal = parseFloat(b['24hVolume']) || 0;
-                    break;
-                default:
-                    aVal = a.rank || 9999;
-                    bVal = b.rank || 9999;
-            }
-            
-            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
+        // Sort using utility
+        return sortData(filtered, sortField, sortDirection, SORT_CONFIGS.coinranking);
     }, [coins, search, sortField, sortDirection, minPrice, maxPrice]);
 
     const paginated = useMemo(() => {
@@ -82,15 +46,6 @@ export default function CoinrankingTable({ coins }) {
     }, [filteredAndSorted, page]);
 
     const totalPages = Math.ceil(filteredAndSorted.length / pageSize);
-
-    const handleSort = (field) => {
-        if (sortField === field) {
-            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortDirection('asc');
-        }
-    };
 
     const formatMarketCap = (cap) => {
         if (!cap) return '—';
@@ -109,27 +64,64 @@ export default function CoinrankingTable({ coins }) {
         return `$${num.toLocaleString()}`;
     };
 
-    const getChangeClass = (change) => {
-        if (!change) return '';
-        return parseFloat(change) >= 0 ? 'positive' : 'negative';
+    const formatPrice = (price) => {
+        if (!price) return '—';
+        const num = parseFloat(price);
+        if (num < 0.01) return num.toFixed(6);
+        if (num < 1) return num.toFixed(4);
+        if (num < 100) return num.toFixed(2);
+        return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
     };
 
+    const getChangeClass = (change) => {
+        if (!change) return '';
+        return parseFloat(change) >= 0 ? styles.positive : styles.negative;
+    };
+
+    // Calculate stats
+    const totalMarketCap = coins.reduce((acc, coin) => acc + (parseFloat(coin.marketCap) || 0), 0);
+    const avgChange = coins.reduce((acc, coin) => acc + (parseFloat(coin.change) || 0), 0) / (coins.length || 1);
+
     return (
-        <div className="table-container coinranking-container">
-            <div className="table-controls">
-                <div className="search-filters">
-                    <input
-                        type="text"
-                        placeholder="Search by symbol or name..."
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                        className="search-input"
-                    />
+        <div className={styles.tableContainer}>
+            {/* Coinranking Stats */}
+            <div className={styles.coinrankingStats}>
+                <div className={styles.coinrankingStatItem}>
+                    <span className={styles.coinrankingStatLabel}>Total Coins</span>
+                    <span className={styles.coinrankingStatValue}>{coins.length}</span>
+                </div>
+                <div className={styles.coinrankingStatItem}>
+                    <span className={styles.coinrankingStatLabel}>Showing</span>
+                    <span className={styles.coinrankingStatValue}>{filteredAndSorted.length}</span>
+                </div>
+                <div className={styles.coinrankingStatItem}>
+                    <span className={styles.coinrankingStatLabel}>Avg 24h Change</span>
+                    <span className={avgChange >= 0 ? styles.positive : styles.negative}>
+                        {avgChange >= 0 ? '▲' : '▼'} {Math.abs(avgChange).toFixed(2)}%
+                    </span>
+                </div>
+                <div className={styles.coinrankingStatItem}>
+                    <span className={styles.coinrankingStatLabel}>Total Market Cap</span>
+                    <span className={styles.coinrankingStatValue}>{formatMarketCap(totalMarketCap)}</span>
+                </div>
+            </div>
+
+            <div className={styles.tableControls}>
+                <div className={styles.searchFilters}>
+                    <div className={styles.searchWrapper}>
+                        <input
+                            type="text"
+                            placeholder="Search by symbol or name..."
+                            value={search}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setPage(1);
+                            }}
+                            className={styles.searchInput}
+                        />
+                    </div>
                     
-                    <div className="price-filters">
+                    <div className={styles.priceFilters}>
                         <input
                             type="number"
                             placeholder="Min price $"
@@ -138,11 +130,11 @@ export default function CoinrankingTable({ coins }) {
                                 setMinPrice(e.target.value);
                                 setPage(1);
                             }}
-                            className="price-input"
+                            className={styles.priceInput}
                             step="0.01"
                             min="0"
                         />
-                        <span>-</span>
+                        <span className={styles.priceSeparator}>—</span>
                         <input
                             type="number"
                             placeholder="Max price $"
@@ -151,57 +143,57 @@ export default function CoinrankingTable({ coins }) {
                                 setMaxPrice(e.target.value);
                                 setPage(1);
                             }}
-                            className="price-input"
+                            className={styles.priceInput}
                             step="0.01"
                             min="0"
                         />
                     </div>
                 </div>
 
-                <div className="stats-badge">
-                    <span className="badge coinranking">
+                <div className={styles.statsBadge}>
+                    <span className={`${styles.badge} ${styles.coinranking}`}>
                         {filteredAndSorted.length} / {coins.length} coins
                     </span>
                 </div>
             </div>
 
-            <div className="table-wrapper">
-                <table className="pricing-table coinranking-table">
+            <div className={styles.tableWrapper}>
+                <table className={`${styles.pricingTable} ${styles.coinrankingTable}`}>
                     <thead>
                         <tr>
-                            <th onClick={() => handleSort('rank')}>
-                                Rank {sortField === 'rank' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('rank')} className={styles.sortable}>
+                                Rank {getSortIndicator('rank')}
                             </th>
-                            <th onClick={() => handleSort('symbol')}>
-                                Symbol {sortField === 'symbol' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('symbol')} className={styles.sortable}>
+                                Symbol {getSortIndicator('symbol')}
                             </th>
-                            <th onClick={() => handleSort('name')}>
-                                Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('name')} className={styles.sortable}>
+                                Name {getSortIndicator('name')}
                             </th>
-                            <th onClick={() => handleSort('price')}>
-                                Price {sortField === 'price' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('price')} className={styles.sortable}>
+                                Price {getSortIndicator('price')}
                             </th>
-                            <th onClick={() => handleSort('change')}>
-                                24h Change {sortField === 'change' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('change')} className={styles.sortable}>
+                                24h Change {getSortIndicator('change')}
                             </th>
-                            <th onClick={() => handleSort('marketCap')}>
-                                Market Cap {sortField === 'marketCap' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('marketCap')} className={styles.sortable}>
+                                Market Cap {getSortIndicator('marketCap')}
                             </th>
-                            <th onClick={() => handleSort('volume')}>
-                                24h Volume {sortField === 'volume' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            <th onClick={() => handleSort('volume')} className={styles.sortable}>
+                                24h Volume {getSortIndicator('volume')}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         {paginated.map((coin) => (
-                            <tr key={coin.uuid} className="coinranking-row">
-                                <td className="rank-cell">#{coin.rank || '—'}</td>
-                                <td className="symbol-cell">
+                            <tr key={coin.uuid} className={styles.coinrankingRow}>
+                                <td className={styles.rankCell}>#{coin.rank || '—'}</td>
+                                <td className={styles.symbolCell}>
                                     <strong>{coin.symbol}</strong>
                                 </td>
                                 <td>{coin.name}</td>
-                                <td className="price-cell">
-                                    ${parseFloat(coin.price).toFixed(4)}
+                                <td className={styles.priceCell}>
+                                    ${formatPrice(coin.price)}
                                 </td>
                                 <td className={getChangeClass(coin.change)}>
                                     {coin.change ? (
@@ -211,17 +203,17 @@ export default function CoinrankingTable({ coins }) {
                                         </>
                                     ) : '—'}
                                 </td>
-                                <td className="marketcap-cell">
+                                <td className={styles.marketCapCell}>
                                     {formatMarketCap(coin.marketCap)}
                                 </td>
-                                <td className="volume-cell">
+                                <td className={styles.volumeCell}>
                                     {formatVolume(coin['24hVolume'])}
                                 </td>
                             </tr>
                         ))}
                         {paginated.length === 0 && (
                             <tr>
-                                <td colSpan="7" className="no-results">
+                                <td colSpan="7" className={styles.noResults}>
                                     No coins found matching your filters
                                 </td>
                             </tr>
@@ -232,24 +224,24 @@ export default function CoinrankingTable({ coins }) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="pagination-container">
-                    <div className="pagination">
+                <div className={styles.paginationContainer}>
+                    <div className={styles.pagination}>
                         <button 
                             onClick={() => setPage(1)}
                             disabled={page === 1}
-                            className="page-nav"
+                            className={styles.pageNav}
                         >
                             ⏮ First
                         </button>
                         <button 
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1}
-                            className="page-nav"
+                            className={styles.pageNav}
                         >
                             ← Prev
                         </button>
                         
-                        <div className="page-numbers">
+                        <div className={styles.pageNumbers}>
                             {[...Array(Math.min(5, totalPages))].map((_, i) => {
                                 let pageNum;
                                 if (totalPages <= 5) {
@@ -266,7 +258,7 @@ export default function CoinrankingTable({ coins }) {
                                     <button
                                         key={pageNum}
                                         onClick={() => setPage(pageNum)}
-                                        className={`page-number ${page === pageNum ? 'active' : ''}`}
+                                        className={`${styles.pageNumber} ${page === pageNum ? styles.active : ''}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -277,20 +269,20 @@ export default function CoinrankingTable({ coins }) {
                         <button 
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages}
-                            className="page-nav"
+                            className={styles.pageNav}
                         >
                             Next →
                         </button>
                         <button 
                             onClick={() => setPage(totalPages)}
                             disabled={page === totalPages}
-                            className="page-nav"
+                            className={styles.pageNav}
                         >
                             Last ⏭
                         </button>
                     </div>
                     
-                    <div className="page-info">
+                    <div className={styles.pageInfo}>
                         Page {page} of {totalPages} • Showing {paginated.length} coins
                     </div>
                 </div>

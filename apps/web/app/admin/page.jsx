@@ -1,38 +1,62 @@
-// app/admin/page.jsx
-import { Suspense } from 'react';
-import AdminAccess from './components/AdminAccess';
-import PricingManager from './components/PricingManager';
-import TokenManager from './components/TokenManager.jsx';
-import './admin.module.css';
+"use client";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import AdminAccess from "./components/AdminAccess";
+import PricingManager from "./components/PricingManager";
+import TokenManager from "./components/TokenManager";
+import UserManager from "./components/UserManager";
+import styles from "./admin.module.css"; // Changed to import as styles
 
-export default async function AdminPage({ searchParams }) {
-    // Await the searchParams promise
-    const params = await searchParams;
-    const auth = params?.auth;
-
-    // Simple auth check
-    if (auth !== 'admin123') {
+export default function AdminPage() {
+    const searchParams = useSearchParams();
+    const auth = searchParams.get("auth");
+    
+    if (auth !== "admin123") {
         return <AdminAccess />;
     }
-
+    
+    const [activeTab, setActiveTab] = useState("pricing");
+    
     return (
-        <div className="admin-container">
-            <div className="admin-header">
+        <div className={styles.adminContainer}>
+            <div className={styles.adminHeader}>
                 <h1>Admin Dashboard</h1>
-                <a href="/admin" className="logout-btn">Logout</a>
+                <a href="/admin" className={styles.logoutBtn}>Logout</a>
             </div>
-            
-            <div className="admin-tabs">
-                <button className="tab-button active">💰 Pricing</button>
-                <button className="tab-button" disabled>🗂️ Tokens</button>
-                <TokenManager />
-                <button className="tab-button" disabled>👥 Users (Coming Soon)</button>
+
+            <div className={styles.adminTabs}>
+                <button
+                    className={`${styles.tabButton} ${activeTab === "pricing" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("pricing")}
+                >
+                    <span>💰</span> Pricing
+                </button>
+
+                <button
+                    className={`${styles.tabButton} ${activeTab === "tokens" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("tokens")}
+                >
+                    <span>🗂️</span> Tokens
+                </button>
+
+                <button
+                    className={`${styles.tabButton} ${activeTab === "users" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("users")}
+                >
+                    <span>👥</span> Users
+                </button>
             </div>
-            
-            <div className="admin-content">
-                <Suspense fallback={<div className="loading">Loading pricing data...</div>}>
-                    <PricingManager />
-                </Suspense>
+
+            <div className={styles.adminContent}>
+                {activeTab === "pricing" && (
+                    <Suspense fallback={<div className={styles.loading}>Loading pricing data...</div>}>
+                        <PricingManager />
+                    </Suspense>
+                )}
+
+                {activeTab === "tokens" && <TokenManager />}
+
+                {activeTab === "users" && <UserManager />}
             </div>
         </div>
     );
