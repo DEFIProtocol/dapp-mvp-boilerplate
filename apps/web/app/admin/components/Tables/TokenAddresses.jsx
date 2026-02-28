@@ -1,10 +1,11 @@
 // components/Admin/Tables/TokenAddresses.jsx
 import React, { useState } from 'react';
-import './TokenAddresses.css';
+import styles from './TokenAddresses.module.css';
 
 export default function TokenAddresses({ chains, onChange, isEditing }) {
     const [newChain, setNewChain] = useState('');
     const [newAddress, setNewAddress] = useState('');
+    const [copiedChain, setCopiedChain] = useState(null);
 
     const addAddress = () => {
         if (newChain.trim() && newAddress.trim()) {
@@ -20,25 +21,27 @@ export default function TokenAddresses({ chains, onChange, isEditing }) {
         onChange(updated);
     };
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
+    const copyToClipboard = async (chain, text) => {
+        await navigator.clipboard.writeText(text);
+        setCopiedChain(chain);
+        setTimeout(() => setCopiedChain(null), 2000);
     };
 
     return (
-        <div className="token-addresses">
+        <div className={styles.tokenAddresses}>
             <h4>Chain Addresses</h4>
             
-            <div className="addresses-list">
+            <div className={styles.addressesList}>
                 {Object.entries(chains).map(([chain, address]) => (
-                    <div key={chain} className="address-item">
-                        <span className="chain-name">{chain}:</span>
-                        <span className="address mono" title={address}>
+                    <div key={chain} className={styles.addressItem}>
+                        <span className={styles.chainName}>{chain}:</span>
+                        <span className={styles.address} title={address}>
                             {address.substring(0, 6)}...{address.substring(address.length - 4)}
                         </span>
-                        <div className="address-actions">
+                        <div className={styles.addressActions}>
                             <button
-                                onClick={() => copyToClipboard(address)}
-                                className="icon-btn"
+                                onClick={() => copyToClipboard(chain, address)}
+                                className={`${styles.iconBtn} ${copiedChain === chain ? styles.copied : ''}`}
                                 title="Copy address"
                             >
                                 📋
@@ -46,7 +49,7 @@ export default function TokenAddresses({ chains, onChange, isEditing }) {
                             {isEditing && (
                                 <button
                                     onClick={() => removeAddress(chain)}
-                                    className="icon-btn danger"
+                                    className={`${styles.iconBtn} ${styles.danger}`}
                                     title="Remove address"
                                 >
                                     ✕
@@ -57,29 +60,31 @@ export default function TokenAddresses({ chains, onChange, isEditing }) {
                 ))}
                 
                 {Object.keys(chains).length === 0 && (
-                    <div className="no-addresses">No chain addresses</div>
+                    <div className={styles.noAddresses}>
+                        <span>No chain addresses</span>
+                    </div>
                 )}
             </div>
 
             {isEditing && (
-                <div className="add-address-form">
+                <div className={styles.addAddressForm}>
                     <input
                         type="text"
                         placeholder="Chain (e.g., ethereum)"
                         value={newChain}
                         onChange={(e) => setNewChain(e.target.value)}
-                        className="chain-input"
+                        className={styles.chainInput}
                     />
                     <input
                         type="text"
                         placeholder="Address"
                         value={newAddress}
                         onChange={(e) => setNewAddress(e.target.value)}
-                        className="address-input mono"
+                        className={styles.addressInput}
                     />
                     <button
                         onClick={addAddress}
-                        className="add-btn"
+                        className={styles.addBtn}
                         disabled={!newChain.trim() || !newAddress.trim()}
                     >
                         Add

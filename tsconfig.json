@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": ".","esModuleInterop": true,
-"allowSyntheticDefaultImports": true,
+    "allowSyntheticDefaultImports": true,
     "paths": {
       "@dapp/ui": ["packages/ui"],
       "@dapp/ui/*": ["packages/ui/*"],

@@ -2,13 +2,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTokens } from '@/contexts/TokenContext';
 import { usePriceStore } from '@/contexts/PriceStoreContext';
-import { useOneInchTokens } from '@/contexts/OneInchTokens\Context';
+import { useOneInchTokens } from '@/contexts/OneInchTokensContext';
 import { useTokenCrud } from '@/hooks/useTokenCrud';
 import { useSimpleDebounce } from '@/hooks/useSimpleDebounce';
 import { filterAndSortTokens } from '@/utils/tokenHelpers';
 import TokensTable from './Tables/TokensTable';
 import OneInchCompareTable from './Tables/OneInchCompareTable';
-import './styles/TokenManager.module.css';
+import AddTokenModal from './modals/AddTokenModal';
+import styles from './styles/TokenManager.module.css';
 
 export default function TokenManager({ initialTokens = [] }) {
     // Contexts
@@ -24,7 +25,36 @@ export default function TokenManager({ initialTokens = [] }) {
     const [expandedRows, setExpandedRows] = useState(new Set());
     const [selectedTokens, setSelectedTokens] = useState([]);
     const [showOneInchCompare, setShowOneInchCompare] = useState(false);
+    const [showAddTokenModal, setShowAddTokenModal] = useState(false);
     const [bulkStatus, setBulkStatus] = useState({ type: '', message: '' });
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    // Simple chain mapping
+    const getChainKey = (id) => {
+        const map = { 
+            1: 'ethereum', 
+            56: 'bnb', 
+            137: 'polygon', 
+            42161: 'arbitrum', 
+            43114: 'avalanche' 
+        };
+        return map[id] || 'ethereum';
+    };
+
+    // Filter DB tokens by chain address (for compare view)
+    const getDbTokensOnChain = useCallback((chainId) => {
+        const chainKey = getChainKey(chainId);
+        return (dbTokens || []).filter(token => {
+            try {
+                const chains = typeof token.chains === 'string' 
+                    ? JSON.parse(token.chains) 
+                    : (token.chains || {});
+                return chains[chainKey]?.length > 0;
+            } catch {
+                return false;
+            }
+        });
+    }, [dbTokens]);
 
     // Data
     const displayTokens = initialTokens.length ? initialTokens : (dbTokens || []);
@@ -72,7 +102,9 @@ export default function TokenManager({ initialTokens = [] }) {
     const handleBulkDelete = useCallback(async () => {
         if (!selectedTokens.length || !window.confirm(`Delete ${selectedTokens.length} token(s)?`)) return;
         
+        setIsProcessing(true);
         let success = 0, failed = 0;
+        
         for (const token of selectedTokens) {
             const result = await deleteToken(token.symbol);
             result.success ? success++ : failed++;
@@ -83,17 +115,26 @@ export default function TokenManager({ initialTokens = [] }) {
             message: `Deleted ${success} tokens${failed ? `, ${failed} failed` : ''}`
         });
         setSelectedTokens([]);
+        setIsProcessing(false);
         setTimeout(() => setBulkStatus({ type: '', message: '' }), 3000);
     }, [selectedTokens, deleteToken]);
 
     if (loadingDb && !displayTokens.length) {
-        return <div className="loading">Loading tokens...</div>;
+        return (
+            <div className={styles.loadingContainer}>
+                <div className={styles.loadingSpinner}></div>
+                <div className={styles.loadingText}>Loading tokens...</div>
+            </div>
+        );
     }
 
     if (showOneInchCompare) {
+        const dbTokensOnChain = getDbTokensOnChain(chainId);
+        const chainKey = getChainKey(chainId);
+
         return (
             <OneInchCompareTable
-                dbTokens={dbTokens}
+                dbTokens={dbTokensOnChain}
                 oneInchTokens={oneInchTokens}
                 oneInchMap={oneInchMap}
                 globalPrices={globalPrices}
@@ -105,59 +146,149 @@ export default function TokenManager({ initialTokens = [] }) {
                 chainId={chainId}
                 setChainId={setChainId}
                 formatPrice={formatPrice}
+                currentChainKey={chainKey}
             />
         );
     }
 
     return (
-        <div className="admin-token-manager">
-            <div className="manager-header">
-                <div className="header-left">
-                    <h2>Token Management</h2>
-                    <div className="stats">
-                        <span className="stat-item">🛢️ Total: {displayTokens.length}</span>
-                        <span className="stat-item">📊 Showing: {filteredTokens.length}</span>
+        <div className={styles.tokenManager}>
+            {/* Header Stats */}
+            <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Total Tokens</div>
+                    <div className={styles.statValue}>{displayTokens.length}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Showing</div>
+                    <div className={styles.statValue}>{filteredTokens.length}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>With Prices</div>
+                    <div className={styles.statValue}>
+                        {displayTokens.filter(t => globalPrices[t.symbol?.toUpperCase()]).length}
                     </div>
                 </div>
-                
-                <div className="header-right">
-                    <button onClick={() => setShowOneInchCompare(true)} className="action-btn">
-                        🧩 Compare 1inch
-                    </button>
-                    {selectedTokens.length > 0 && (
-                        <button onClick={handleBulkDelete} className="action-btn danger">
-                            🗑️ Delete ({selectedTokens.length})
-                        </button>
-                    )}
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Selected</div>
+                    <div className={styles.statValue}>{selectedTokens.length}</div>
                 </div>
             </div>
 
+            {/* Source Stats */}
+            <div className={styles.sourceStats}>
+                <div className={styles.sourceStatItem}>
+                    <span className={`${styles.sourceDot} ${styles.binance}`} />
+                    <span className={styles.sourceStatLabel}>Database</span>
+                    <span className={styles.sourceStatValue}>{dbTokens?.length || 0}</span>
+                </div>
+                <div className={styles.sourceStatItem}>
+                    <span className={`${styles.sourceDot} ${styles.coinbase}`} />
+                    <span className={styles.sourceStatLabel}>1inch</span>
+                    <span className={styles.sourceStatValue}>{oneInchTokens?.length || 0}</span>
+                </div>
+                <div className={styles.sourceStatItem}>
+                    <span className={`${styles.sourceDot} ${styles.coinranking}`} />
+                    <span className={styles.sourceStatLabel}>With Prices</span>
+                    <span className={styles.sourceStatValue}>
+                        {Object.keys(globalPrices || {}).length}
+                    </span>
+                </div>
+            </div>
+
+            {/* Status Messages */}
             {bulkStatus.message && (
-                <div className={`status-message ${bulkStatus.type}`}>
+                <div className={`${styles.statusMessage} ${styles[bulkStatus.type]}`}>
                     {bulkStatus.message}
                 </div>
             )}
 
             {globalError && (
-                <div className="status-message error">
-                    ⚠️ Price data unavailable: {globalError}
+                <div className={`${styles.statusMessage} ${styles.error}`}>
+                    <span className={styles.messageIcon}>⚠️</span>
+                    Price data unavailable: {globalError}
                 </div>
             )}
 
-            <TokensTable
-                tokens={filteredTokens}
-                expandedRows={expandedRows}
-                selectedTokens={selectedTokens}
-                onToggleExpand={toggleRowExpansion}
-                onSelectToken={toggleTokenSelection}
-                onSort={handleSort}
-                sortConfig={sortConfig}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                globalPrices={globalPrices}
-                dbTokenMap={dbTokenMap}
-                onUpdateToken={updateToken}
-            />
+            {errorDb && (
+                <div className={`${styles.statusMessage} ${styles.error}`}>
+                    <span className={styles.messageIcon}>⚠️</span>
+                    Database error: {errorDb}
+                </div>
+            )}
+
+            {/* Action Bar */}
+            <div className={styles.actionBar}>
+                <div className={styles.searchWrapper}>
+                    <input
+                        type="text"
+                        placeholder="Search tokens..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className={styles.searchInput}
+                        disabled={isProcessing}
+                    />
+                </div>
+                
+                <div className={styles.actionButtons}>
+                    <button 
+                        onClick={() => setShowAddTokenModal(true)}
+                        className={`${styles.actionBtn} ${styles.coinranking}`}
+                        disabled={isProcessing}
+                    >
+                        <span className={styles.btnIcon}>➕</span>
+                        Add Token
+                    </button>
+
+                    <button 
+                        onClick={() => setShowOneInchCompare(true)} 
+                        className={`${styles.actionBtn} ${styles.coinbase}`}
+                        disabled={isProcessing}
+                    >
+                        <span className={styles.btnIcon}>🧩</span>
+                        Compare 1inch
+                    </button>
+                    
+                    {selectedTokens.length > 0 && (
+                        <button 
+                            onClick={handleBulkDelete} 
+                            className={`${styles.actionBtn} ${styles.binance}`}
+                            disabled={isProcessing}
+                        >
+                            <span className={styles.btnIcon}>🗑️</span>
+                            Delete ({selectedTokens.length})
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Tokens Table */}
+            <div className={styles.tableSection}>
+                <TokensTable
+                    tokens={filteredTokens}
+                    expandedRows={expandedRows}
+                    selectedTokens={selectedTokens}
+                    onToggleExpand={toggleRowExpansion}
+                    onSelectToken={toggleTokenSelection}
+                    onSort={handleSort}
+                    sortConfig={sortConfig}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    globalPrices={globalPrices}
+                    dbTokenMap={dbTokenMap}
+                    onUpdateToken={updateToken}
+                />
+            </div>
+
+            {/* Add Token Modal */}
+            {showAddTokenModal && (
+                <AddTokenModal
+                    onClose={() => setShowAddTokenModal(false)}
+                    onCreateToken={createToken}
+                    globalPrices={globalPrices}
+                    oneInchTokens={oneInchTokens}
+                />
+            )}
         </div>
     );
 }

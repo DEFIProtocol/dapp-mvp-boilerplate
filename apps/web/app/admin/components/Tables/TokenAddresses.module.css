@@ -1,0 +1,276 @@
+/* TokenAddresses.module.css */
+
+.tokenAddresses {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.tokenAddresses:hover {
+    border-color: #667eea40;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+}
+
+.tokenAddresses h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tokenAddresses h4::before {
+    content: '🔗';
+    font-size: 1.2rem;
+}
+
+/* Addresses List */
+.addressesList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f1f5f9;
+}
+
+.addressesList::-webkit-scrollbar {
+    width: 4px;
+}
+
+.addressesList::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+}
+
+.addressesList::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
+}
+
+/* Address Item */
+.addressItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.addressItem:hover {
+    border-color: #667eea;
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.chainName {
+    font-weight: 600;
+    color: #667eea;
+    min-width: 100px;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+}
+
+.address {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+    color: #64748b;
+    flex: 1;
+    word-break: break-all;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #f0f0f0;
+    cursor: help;
+}
+
+.address:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* Address Actions */
+.addressActions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.addressItem:hover .addressActions {
+    opacity: 1;
+}
+
+.iconBtn {
+    padding: 0.4rem 0.6rem;
+    background: white;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #64748b;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iconBtn:hover {
+    background: #f8fafc;
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.iconBtn.danger:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+.iconBtn.copied {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+/* No Addresses */
+.noAddresses {
+    padding: 2rem;
+    text-align: center;
+    color: #94a3b8;
+    font-style: italic;
+    background: #f8fafc;
+    border: 2px dashed #f0f0f0;
+    border-radius: 8px;
+}
+
+/* Add Address Form */
+.addAddressForm {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 2px dashed #f0f0f0;
+    animation: formSlide 0.3s ease;
+}
+
+@keyframes formSlide {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chainInput,
+.addressInput {
+    padding: 0.6rem 1rem;
+    background: white;
+    border: 2px solid #f0f0f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.chainInput {
+    max-width: 120px;
+}
+
+.addressInput {
+    flex: 2;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.chainInput:focus,
+.addressInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Add Button */
+.addBtn {
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, #10b981, #34d399);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.addBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.addBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tokenAddresses {
+        padding: 1rem;
+    }
+
+    .addressItem {
+        flex-wrap: wrap;
+    }
+
+    .chainName {
+        min-width: 100%;
+    }
+
+    .address {
+        width: 100%;
+        order: 1;
+    }
+
+    .addressActions {
+        width: 100%;
+        justify-content: flex-end;
+        order: 2;
+    }
+
+    .addAddressForm {
+        flex-direction: column;
+    }
+
+    .chainInput {
+        max-width: none;
+    }
+}

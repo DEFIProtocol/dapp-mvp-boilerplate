@@ -1,652 +1,291 @@
-/* TokenTable.css */
+/* TokensTable.module.css */
 
-.table-container {
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 12px var(--overlay);
-    overflow: hidden;
-    margin-bottom: 20px;
+.tokensTable {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    border: 1px solid #f0f0f0;
 }
 
-/* Search Bar */
-.search-bar {
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-2);
-}
-
-.search-input {
-    width: 100%;
-    max-width: 400px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    color: var(--text);
-    transition: all 0.2s ease;
-}
-
-.search-input::placeholder {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-/* Table Wrapper */
-.table-wrapper {
-    overflow-x: auto;
-    max-height: 70vh;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) var(--surface-2);
-}
-
-.table-wrapper::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.table-wrapper::-webkit-scrollbar-track {
-    background: var(--surface-2);
-}
-
-.table-wrapper::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-}
-
-/* Token Table */
-.tokens-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 14px;
-    min-width: 1000px;
-}
-
-/* Table Header */
-.tokens-table thead {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--surface-2);
-}
-
-.tokens-table th {
-    padding: 16px 12px;
-    background: linear-gradient(180deg, var(--surface-2) 0%, color-mix(in srgb, var(--surface-2) 90%, var(--bg) 10%) 100%);
-    border-bottom: 2px solid var(--border);
-    text-align: left;
-    font-weight: 600;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    transition: all 0.2s;
-}
-
-.tokens-table th.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-    padding-right: 24px;
-}
-
-.tokens-table th.sortable:hover {
-    color: var(--text);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%) 0%, var(--surface-2) 100%);
-}
-
-.tokens-table th.sortable::after {
-    content: '';
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
-}
-
-.tokens-table th.sortable:hover::after {
-    opacity: 1;
-}
-
-/* Checkbox Column */
-.checkbox-col {
-    width: 40px;
-    text-align: center;
-    padding: 12px 8px !important;
-}
-
-.checkbox-col input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.checkbox-col input[type="checkbox"]:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-/* Table Cells */
-.tokens-table td {
-    padding: 16px 12px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-    color: var(--text);
-    transition: background 0.2s;
-}
-
-/* Token Rows */
-.token-row {
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--surface);
-}
-
-.token-row:hover {
-    background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px var(--overlay);
-}
-
-.token-row.expanded {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--info) 10%, var(--surface) 90%), var(--surface));
-    border-left: 3px solid var(--info);
-}
-
-.token-row.selected {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, var(--surface) 90%), var(--surface));
-    border-left: 3px solid var(--accent);
-}
-
-.token-row.selected:hover {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, var(--surface) 85%), var(--surface));
-}
-
-/* Symbol Cell */
-.symbol-cell {
-    font-weight: 700;
-    color: var(--accent);
-    font-family: 'Courier New', monospace;
-    font-size: 15px;
-    letter-spacing: -0.5px;
-}
-
-.symbol-cell strong {
-    display: inline-block;
-    padding: 4px 8px;
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.token-row:hover .symbol-cell strong {
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    transform: scale(1.02);
-}
-
-/* Price Cell */
-.price-cell {
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    position: relative;
-}
-
-.price-cell .price-value {
-    display: inline-block;
-    padding: 4px 8px;
-    background: var(--surface-2);
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    transition: all 0.2s;
-}
-
-.token-row:hover .price-cell .price-value {
-    background: var(--surface);
-    border-color: var(--accent);
-}
-
-/* Source Badges */
-.source-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-left: 8px;
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.source-badge.binance {
-    background: linear-gradient(135deg, #f0b90b20, #f0b90b40);
-    color: #f0b90b;
-    border: 1px solid #f0b90b60;
-    box-shadow: 0 2px 4px #f0b90b20;
-}
-
-.source-badge.coinbase {
-    background: linear-gradient(135deg, #0052ff20, #0052ff40);
-    color: #0052ff;
-    border: 1px solid #0052ff60;
-    box-shadow: 0 2px 4px #0052ff20;
-}
-
-.source-badge.coinranking {
-    background: linear-gradient(135deg, #8a2be220, #8a2be240);
-    color: #8a2be2;
-    border: 1px solid #8a2be260;
-    box-shadow: 0 2px 4px #8a2be220;
-}
-
-/* Source Indicators */
-.source-indicator {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    font-size: 16px;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 currentColor; }
-    70% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 20%, transparent); }
-    100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 20%, transparent); }
-}
-
-.source-indicator.binance {
-    color: #f0b90b;
-    text-shadow: 0 0 8px #f0b90b;
-}
-
-.source-indicator.coinbase {
-    color: #0052ff;
-    text-shadow: 0 0 8px #0052ff;
-}
-
-.source-indicator.coinranking {
-    color: #8a2be2;
-    text-shadow: 0 0 8px #8a2be2;
-}
-
-/* Market Cap Cell */
-.marketcap-cell {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.marketcap-cell::before {
-    content: '💎';
-    margin-right: 4px;
-    opacity: 0.5;
-    filter: grayscale(50%);
-    transition: all 0.2s;
-}
-
-.token-row:hover .marketcap-cell::before {
-    opacity: 1;
-    filter: grayscale(0%);
-}
-
-/* Action Buttons */
-.action-btn {
-    padding: 8px 16px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.2s;
-    background: var(--surface);
-    color: var(--text);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-}
-
-.action-btn.small {
-    padding: 6px 12px;
-    font-size: 11px;
-}
-
-.action-btn:hover {
-    background: var(--surface-2);
-    border-color: var(--accent);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px var(--overlay);
-}
-
-.action-btn:active {
-    transform: translateY(0);
-    box-shadow: none;
-}
-
-.action-btn.primary {
-    background: var(--info);
-    color: var(--accent-contrast);
-    border-color: var(--info);
-}
-
-.action-btn.danger {
-    background: var(--danger);
-    color: var(--accent-contrast);
-    border-color: var(--danger);
-}
-
-.action-btn.success {
-    background: var(--success);
-    color: var(--accent-contrast);
-    border-color: var(--success);
-}
-
-/* Details Row */
-.details-row td {
-    padding: 0 !important;
-    background: var(--surface-2);
-    border-bottom: 2px solid var(--border);
-    animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* No Results */
-.no-results {
-    padding: 60px !important;
-    text-align: center;
-    color: var(--text-muted);
-    font-style: italic;
-    background: var(--surface-2);
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    margin: 20px;
-    font-size: 16px;
-    position: relative;
-}
-
-.no-results::before {
-    content: '🔍';
-    display: block;
-    font-size: 32px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.no-results::after {
-    content: 'Try adjusting your search';
-    display: block;
-    font-size: 12px;
-    margin-top: 8px;
-    opacity: 0.7;
-}
-
-/* Loading State */
-.loading-row td {
-    padding: 40px !important;
-    text-align: center;
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Row Striping */
-.tokens-table tbody tr:nth-child(even) {
-    background: color-mix(in srgb, var(--surface) 95%, var(--bg) 5%);
-}
-
-.tokens-table tbody tr:nth-child(even):hover {
-    background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
-}
-
-/* Empty State Icon */
-.no-results {
-    position: relative;
-}
-
-/* Tooltip Styles (if you want to add tooltips later) */
-/* Tooltip Styles (if you want to add tooltips later)
-   Note: CSS Modules require selectors to be local. If you want to use tooltips, add a class like .tooltip and use it in your component. Example below: */
-.tooltip {
-    position: relative;
-    cursor: help;
-}
-
-.tooltip:before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 8px;
-    background: var(--surface-2);
-    color: var(--text);
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    border: 1px solid var(--border);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    z-index: 100;
-}
-
-.tooltip:hover:before {
-    opacity: 1;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .tokens-table {
-        font-size: 13px;
-    }
-    
-    .tokens-table th,
-    .tokens-table td {
-        padding: 12px 8px;
-    }
-    
-    .symbol-cell strong {
-        padding: 2px 6px;
-    }
-}
-
-@media (max-width: 768px) {
-    .search-bar {
-        padding: 15px;
-    }
-    
-    .search-input {
-        max-width: none;
-        font-size: 16px; /* Prevents zoom on mobile */
-    }
-    
-    .action-btn.small {
-        padding: 8px 12px;
-        font-size: 12px;
-    }
-    
-    .source-badge {
-        display: none; /* Hide badges on mobile to save space */
-    }
-    
-    .source-indicator {
-        width: 20px;
-        height: 20px;
-        font-size: 14px;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .search-bar,
-    .action-btn,
-    .checkbox-col,
-    .source-indicator {
-        display: none;
-    }
-    
-    .tokens-table {
-        border: 1px solid #000;
-    }
-    
-    .tokens-table th,
-    .tokens-table td {
-        border: 1px solid #ccc;
-    }
-    
-    .token-row.expanded,
-    .token-row.selected {
-        background: #f0f0f0;
-        border-left: 2px solid #000;
-    }
-}
-
-/* Selection Summary */
-.selection-summary {
-    margin-top: 16px;
-    padding: 12px 20px;
-    background: var(--surface-2);
-    border-radius: 8px;
-    border: 1px solid var(--border);
+.tableHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
-    color: var(--text-muted);
-    animation: slideUp 0.3s ease;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.searchSection {
+    flex: 1;
+    max-width: 300px;
 }
 
-.selection-summary strong {
-    color: var(--accent);
-    font-size: 16px;
-    margin: 0 4px;
+.searchInput {
+    width: 100%;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border: 2px solid #f0f0f0;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
 }
 
-.selection-actions {
+.searchInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.stats {
     display: flex;
-    gap: 8px;
+    gap: 1rem;
 }
 
-/* Hover Effects */
-.tokens-table tbody tr {
-    position: relative;
+.statItem {
+    padding: 0.4rem 1rem;
+    background: #f8fafc;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
 }
 
-.tokens-table tbody tr::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border), transparent);
-    opacity: 0.5;
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    background: white;
 }
 
-.tokens-table tbody tr:last-child::after {
-    display: none;
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 900px;
 }
 
-/* Custom Checkbox Animation */
-.checkbox-col input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 4px;
-    position: relative;
+.table th {
+    text-align: left;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea08, #764ba208);
+    border-bottom: 2px solid #f0f0f0;
+    font-weight: 600;
+    color: #444;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    color: #4a5568;
+    vertical-align: middle;
+}
+
+.sortable {
     cursor: pointer;
+    user-select: none;
     transition: all 0.2s;
 }
 
-.checkbox-col input[type="checkbox"]:checked {
-    background: var(--accent);
-    border-color: var(--accent);
+.sortable:hover {
+    background: linear-gradient(135deg, #667eea15, #764ba215) !important;
 }
 
-.checkbox-col input[type="checkbox"]:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--accent-contrast);
-    font-size: 12px;
-    font-weight: bold;
+/* Checkbox Column */
+.checkboxCol {
+    width: 40px;
+    text-align: center;
 }
 
-.checkbox-col input[type="checkbox"]:indeterminate {
-    background: var(--text-muted);
-    border-color: var(--text-muted);
+.checkboxCol input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #667eea;
 }
 
-.checkbox-col input[type="checkbox"]:indeterminate::after {
-    content: '−';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--accent-contrast);
-    font-size: 12px;
-    font-weight: bold;
+/* Token Row */
+.tokenRow {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tokenRow:hover {
+    background: linear-gradient(135deg, #667eea08, #764ba208);
+}
+
+.tokenRow.selected {
+    background: linear-gradient(135deg, #667eea15, #764ba215);
+}
+
+/* Cell Types */
+.symbolCell {
+    font-weight: 700;
+    color: #333;
+    font-size: 1rem;
+}
+
+.priceCell {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600;
+    color: #2c3e50;
+    white-space: nowrap;
+}
+
+.marketCapCell {
+    font-family: 'Roboto Mono', monospace;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+/* Price Changes */
+.positive {
+    color: #10b981;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.negative {
+    color: #ef4444;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+/* Source Badge */
+.sourceCell {
+    text-align: left;
+}
+
+.sourceBadge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sourceBadge.binance {
+    background: linear-gradient(135deg, #f0b90b20, #fbbf2420);
+    color: #b45309;
+    border: 1px solid #f0b90b40;
+}
+
+.sourceBadge.coinbase {
+    background: linear-gradient(135deg, #0052ff20, #3b82f620);
+    color: #1e40af;
+    border: 1px solid #0052ff40;
+}
+
+.sourceBadge.coinranking {
+    background: linear-gradient(135deg, #2d9cdb20, #60a5fa20);
+    color: #1e3a8a;
+    border: 1px solid #2d9cdb40;
+}
+
+.sourceBadge.oneinch {
+    background: linear-gradient(135deg, #10b98120, #34d39920);
+    color: #047857;
+    border: 1px solid #10b98140;
+}
+
+.sourceBadge.database {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    color: #4c51bf;
+    border: 1px solid #667eea40;
+}
+
+/* Actions Column */
+.actionsCol {
+    width: 100px;
+    text-align: right;
+}
+
+.actionsCell {
+    text-align: right;
+}
+
+.detailsBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    background: white;
+    border: 2px solid #f0f0f0;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.detailsBtn:hover {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Details Row */
+.detailsRow td {
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-top: 2px solid #f0f0f0;
+}
+
+/* No Results */
+.noResults {
+    text-align: center;
+    padding: 3rem !important;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-style: italic;
+    background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tokensTable {
+        padding: 1rem;
+    }
+
+    .tableHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .searchSection {
+        max-width: none;
+    }
+
+    .stats {
+        justify-content: flex-end;
+    }
+
+    .table {
+        font-size: 0.8rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .detailsBtn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+    }
 }

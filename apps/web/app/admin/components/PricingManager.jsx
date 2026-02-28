@@ -1,154 +1,281 @@
-
-import { Suspense } from 'react';
+"use client";
+import React, { useState } from "react";
+import { usePricingData } from "@/hooks/usePricingData";
 import BinanceTable from './PricingTables/BinanceTable';
 import CoinbaseTable from './PricingTables/CoinbaseTable';
 import CoinrankingTable from './PricingTables/CoinrankingTable';
 import UnifiedPrices from './PricingTables/UnifiedPrices';
-import './styles/PricingManager.module.css';
+import CompareTable from './PricingTables/CompareTable'; // Add this import
+import styles from './styles/PricingManager.module.css';
 
-async function fetchPricingData() {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    
-    console.log('Fetching from:', baseUrl); // Debug log
-    
-    try {
-        const [unified, binance, coinbase, coinranking] = await Promise.all([
-            fetch(`${baseUrl}/api/prices`).then(async r => {
-                if (!r.ok) throw new Error(`Unified prices: ${r.status}`);
-                return r.json();
-            }),
-            fetch(`${baseUrl}/api/binance/prices`).then(async r => {
-                if (!r.ok) throw new Error(`Binance: ${r.status}`);
-                return r.json();
-            }),
-            fetch(`${baseUrl}/api/coinbase/prices`).then(async r => {
-                if (!r.ok) throw new Error(`Coinbase: ${r.status}`);
-                return r.json();
-            }),
-            fetch(`${baseUrl}/api/coinranking/coins?limit=1200`).then(async r => {
-                if (!r.ok) throw new Error(`Coinranking: ${r.status}`);
-                return r.json();
-            })
-        ]);
+export default function PricingManager() {
+    const [activeView, setActiveView] = useState("unified");
+    const {
+        loading,
+        error,
+        unifiedPrices,
+        binancePrices,
+        coinbasePrices,
+        coinrankingCoins,
+        comparisonData,  // Add this
+        coverage,
+        tokenContextTokens
+    } = usePricingData();
 
-        return {
-            unified: unified.data || [],
-            binance: binance.data || [],
-            coinbase: coinbase.data || [],
-            coinranking: coinranking.data?.coins || []
-        };
-    } catch (error) {
-        console.error('Error fetching pricing data:', error);
-        // Return empty data instead of throwing
-        return {
-            unified: [],
-            binance: [],
-            coinbase: [],
-            coinranking: [],
-            error: error.message
-        };
-    }
-}
-
-export default async function PricingManager() {
-    const data = await fetchPricingData();
-    
-    // Show error state if fetch failed
-    if (data.error) {
+    if (loading) {
         return (
-            <div className="error-state">
-                <h3>Error Loading Pricing Data</h3>
-                <p>{data.error}</p>
-                <p>Make sure your backend server is running at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}</p>
+            <div className={styles.loadingContainer}>
+                <div className={styles.loadingSpinner}></div>
+                <div className={styles.loadingText}>Loading pricing data...</div>
             </div>
         );
     }
 
+    if (error) {
+        return (
+            <div className={styles.errorState}>
+                <h3>⚠️ Error Loading Pricing Data</h3>
+                <p>{error}</p>
+                <p>Make sure your backend server is running at:</p>
+                <code>{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}</code>
+                <button 
+                    onClick={() => window.location.reload()} 
+                    className={styles.retryButton}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    const avgCoverage = (
+        (parseFloat(coverage.binance.percentage) + 
+         parseFloat(coverage.coinbase.percentage) + 
+         parseFloat(coverage.coinranking.percentage)) / 3
+    ).toFixed(1);
+
     return (
-        <div className="pricing-manager">
+        <div className={styles.pricingManager}>
             {/* Header Stats */}
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <div className="stat-label">Total Tokens</div>
-                    <div className="stat-value">{data.unified.length}</div>
+            <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Total Tokens (Unified)</div>
+                    <div className={styles.statValue}>{unifiedPrices.length}</div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-label">Binance Pairs</div>
-                    <div className="stat-value">{data.binance.length}</div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Token Context</div>
+                    <div className={styles.statValue}>{tokenContextTokens?.length || 0}</div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-label">Coinbase Pairs</div>
-                    <div className="stat-value">{data.coinbase.length}</div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Coverage Avg</div>
+                    <div className={styles.statValue}>{avgCoverage}%</div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-label">Coinranking</div>
-                    <div className="stat-value">{data.coinranking.length}</div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Data Sources</div>
+                    <div className={styles.statValue}>3</div>
                 </div>
             </div>
 
-            {/* Source Breakdown - only show if we have unified data */}
-            {data.unified.length > 0 && (
-                <div className="source-stats">
-                    <h3>Price Source Breakdown</h3>
-                    <div className="source-bars">
-                        {['binance', 'coinbase', 'coinranking'].map(source => {
-                            const count = data.unified.filter(p => p.source === source).length;
-                            const percentage = ((count / data.unified.length) * 100).toFixed(1);
-                            return (
-                                <div key={source} className="source-bar-item">
-                                    <div className="source-label">{source}</div>
-                                    <div className="bar-container">
-                                        <div 
-                                            className={`bar ${source}`}
-                                            style={{ width: `${percentage}%` }}
-                                        />
+            {/* Double Bar Charts */}
+            {unifiedPrices.length > 0 && (
+                <div className={styles.doubleChartSection}>
+                    {/* Price Source Distribution Chart */}
+                    <div className={styles.chartCard}>
+                        <div className={styles.chartHeader}>
+                            <h3>📊 Price Source Distribution</h3>
+                            <span className={styles.chartSubtitle}>From Unified Prices</span>
+                        </div>
+                        <div className={styles.chartBars}>
+                            {['binance', 'coinbase', 'coinranking'].map(source => {
+                                const count = unifiedPrices.filter(p => p && p.source === source).length;
+                                const percentage = unifiedPrices.length > 0 
+                                    ? ((count / unifiedPrices.length) * 100).toFixed(1)
+                                    : '0';
+                                
+                                return (
+                                    <div key={source} className={styles.chartBarItem}>
+                                        <div className={styles.chartBarLabel}>
+                                            <span className={`${styles.sourceDot} ${styles[source]}`}></span>
+                                            <span>{source.charAt(0).toUpperCase() + source.slice(1)}</span>
+                                        </div>
+                                        <div className={styles.chartBarContainer}>
+                                            <div 
+                                                className={`${styles.chartBar} ${styles[source]}`}
+                                                style={{ width: `${percentage}%` }}
+                                            >
+                                                <span className={styles.chartBarValue}>{percentage}%</span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.chartBarCount}>{count} tokens</div>
                                     </div>
-                                    <div className="source-count">{count} ({percentage}%)</div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Token Context Coverage Chart */}
+                    <div className={styles.chartCard}>
+                        <div className={styles.chartHeader}>
+                            <h3>🎯 Token Context Coverage</h3>
+                            <span className={styles.chartSubtitle}>
+                                Of {tokenContextTokens?.length || 0} tracked tokens
+                            </span>
+                        </div>
+                        <div className={styles.chartBars}>
+                            {[
+                                { source: 'binance', ...coverage.binance },
+                                { source: 'coinbase', ...coverage.coinbase },
+                                { source: 'coinranking', ...coverage.coinranking }
+                            ].map(item => (
+                                <div key={item.source} className={styles.chartBarItem}>
+                                    <div className={styles.chartBarLabel}>
+                                        <span className={`${styles.sourceDot} ${styles[item.source]}`}></span>
+                                        <span>{item.source.charAt(0).toUpperCase() + item.source.slice(1)}</span>
+                                    </div>
+                                    <div className={styles.chartBarContainer}>
+                                        <div 
+                                            className={`${styles.chartBar} ${styles[item.source]}`}
+                                            style={{ width: `${item.percentage}%` }}
+                                        >
+                                            <span className={styles.chartBarValue}>{item.percentage}%</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.chartBarCount}>
+                                        {item.count} / {tokenContextTokens?.length || 0} tokens
+                                    </div>
                                 </div>
-                            );
-                        })}
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Unified Prices Table */}
-            <div className="section">
-                <div className="section-header">
-                    <h3>Unified Prices (Hierarchy: Binance → Coinbase → Coinranking)</h3>
-                    <div className="section-controls">
-                        <span className="badge binance">Binance Priority</span>
-                        <span className="badge coinbase">Coinbase Priority</span>
-                        <span className="badge coinranking">Coinranking Base</span>
+            {/* View Tabs */}
+            <div className={styles.viewTabs}>
+                <button
+                    className={`${styles.viewTab} ${activeView === "unified" ? styles.active : ""}`}
+                    onClick={() => setActiveView("unified")}
+                >
+                    📊 Unified View
+                </button>
+                <button
+                    className={`${styles.viewTab} ${activeView === "binance" ? styles.active : ""}`}
+                    onClick={() => setActiveView("binance")}
+                >
+                    🟡 Binance
+                </button>
+                <button
+                    className={`${styles.viewTab} ${activeView === "coinbase" ? styles.active : ""}`}
+                    onClick={() => setActiveView("coinbase")}
+                >
+                    🔵 Coinbase
+                </button>
+                <button
+                    className={`${styles.viewTab} ${activeView === "coinranking" ? styles.active : ""}`}
+                    onClick={() => setActiveView("coinranking")}
+                >
+                    💎 Coinranking
+                </button>
+                <button
+                    className={`${styles.viewTab} ${activeView === "compare" ? styles.active : ""}`}
+                    onClick={() => setActiveView("compare")}
+                >
+                    🔍 Compare
+                </button>
+            </div>
+
+            {/* Content based on active view */}
+            {activeView === "unified" && (
+                <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h3>Unified Prices</h3>
+                        <div className={styles.sectionControls}>
+                            <span className={`${styles.badge} ${styles.binance}`}>Binance Priority</span>
+                            <span className={`${styles.badge} ${styles.coinbase}`}>Coinbase Priority</span>
+                            <span className={`${styles.badge} ${styles.coinranking}`}>Coinranking Base</span>
+                        </div>
                     </div>
+                    {unifiedPrices.length > 0 ? (
+                        <div className={styles.tableContainer}>
+                            <UnifiedPrices prices={unifiedPrices} />
+                        </div>
+                    ) : (
+                        <div className={styles.noData}>No unified price data available</div>
+                    )}
                 </div>
-                <Suspense fallback={<div>Loading unified prices...</div>}>
-                    <UnifiedPrices prices={data.unified} />
-                </Suspense>
-            </div>
+            )}
 
-            {/* Individual Source Tables */}
-            <div className="tables-grid">
-                <div className="section">
-                    <h3>Binance (Real-time WebSocket)</h3>
-                    <Suspense fallback={<div>Loading...</div>}>
-                        <BinanceTable prices={data.binance} />
-                    </Suspense>
+            {activeView === "binance" && (
+                <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h3>Binance</h3>
+                        <span className={`${styles.badge} ${styles.binance}`}>Real-time WebSocket</span>
+                    </div>
+                    {binancePrices.length > 0 ? (
+                        <div className={styles.tableContainer}>
+                            <BinanceTable prices={binancePrices} />
+                        </div>
+                    ) : (
+                        <div className={styles.noData}>No Binance data available</div>
+                    )}
                 </div>
+            )}
 
-                <div className="section">
-                    <h3>Coinbase (Real-time WebSocket)</h3>
-                    <Suspense fallback={<div>Loading...</div>}>
-                        <CoinbaseTable prices={data.coinbase} />
-                    </Suspense>
+            {activeView === "coinbase" && (
+                <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h3>Coinbase</h3>
+                        <span className={`${styles.badge} ${styles.coinbase}`}>Real-time WebSocket</span>
+                    </div>
+                    {coinbasePrices.length > 0 ? (
+                        <div className={styles.tableContainer}>
+                            <CoinbaseTable prices={coinbasePrices} />
+                        </div>
+                    ) : (
+                        <div className={styles.noData}>No Coinbase data available</div>
+                    )}
                 </div>
+            )}
 
-                <div className="section full-width">
-                    <h3>Coinranking (Base - 1200+ tokens)</h3>
-                    <Suspense fallback={<div>Loading...</div>}>
-                        <CoinrankingTable coins={data.coinranking} />
-                    </Suspense>
+            {activeView === "coinranking" && (
+                <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h3>Coinranking</h3>
+                        <span className={`${styles.badge} ${styles.coinranking}`}>Base Dataset (1200+ tokens)</span>
+                    </div>
+                    {coinrankingCoins.length > 0 ? (
+                        <div className={styles.tableContainer}>
+                            <CoinrankingTable coins={coinrankingCoins} />
+                        </div>
+                    ) : (
+                        <div className={styles.noData}>No Coinranking data available</div>
+                    )}
                 </div>
-            </div>
+            )}
+
+            {activeView === "compare" && (
+                <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h3>Compare Datasets: Binance vs Coinbase</h3>
+                        <div className={styles.sectionControls}>
+                            <span className={`${styles.badge} ${styles.binance}`}>
+                                {comparisonData?.filter(d => d.source.binance).length || 0} Binance
+                            </span>
+                            <span className={`${styles.badge} ${styles.coinbase}`}>
+                                {comparisonData?.filter(d => d.source.coinbase).length || 0} Coinbase
+                            </span>
+                            <span className={`${styles.badge} ${styles.coinranking}`}>
+                                {comparisonData?.filter(d => d.source.coinranking).length || 0} Coinranking
+                            </span>
+                        </div>
+                    </div>
+                    {comparisonData?.length > 0 ? (
+                        <CompareTable data={comparisonData} />
+                    ) : (
+                        <div className={styles.noData}>No comparison data available</div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
