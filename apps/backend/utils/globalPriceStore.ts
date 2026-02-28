@@ -6,6 +6,9 @@ export interface PriceSource {
   source: 'coinranking' | 'binance' | 'coinbase' | string;
   timestamp: number;
   pair?: string;
+  marketCap?: number;
+  uuid?: string;
+  change24h?: number;
 }
 
 class GlobalPriceStore {
@@ -13,25 +16,28 @@ class GlobalPriceStore {
   private listeners: Array<(prices: Map<string, PriceSource>) => void> = [];
 
   // 1. Coinranking sets the baseline (all tokens)
-  updateFromCoinranking(coins: Array<{ symbol: string; price: string | number }>) {
+  updateFromCoinranking(coins: Array<{ symbol: string; price: string | number; marketCap?: string | number; uuid?: string; change?: string | number }>) {
     let count = 0;
-    
     coins.forEach(coin => {
       const symbol = coin.symbol.toUpperCase();
       const price = typeof coin.price === 'string' ? parseFloat(coin.price) : coin.price;
-      
+      const marketCap = coin.marketCap !== undefined ? Number(coin.marketCap) : undefined;
+      const uuid = coin.uuid;
+      const change24h = coin.change !== undefined ? Number(coin.change) : undefined;
       // Only set if not already overridden by higher priority source
       if (!this.prices.has(symbol) || this.prices.get(symbol)?.source === 'coinranking') {
         this.prices.set(symbol, {
           symbol,
           price,
           source: 'coinranking',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          marketCap,
+          uuid,
+          change24h
         });
         count++;
       }
     });
-    
     console.log(`✅ Coinranking base set: ${count} tokens`);
     this.notifyListeners();
   }
@@ -39,15 +45,18 @@ class GlobalPriceStore {
   // 2. Binance overrides (higher priority)
   updateFromBinance(binanceData: Array<{ symbol: string; price: number }>) {
     let overrides = 0;
-    
     binanceData.forEach(item => {
-      const symbol = item.symbol; // Already normalized
-      
+      const symbol = item.symbol;
+      // Only price is set by binance, keep other fields if present
+      const prev = this.prices.get(symbol);
       this.prices.set(symbol, {
         symbol,
         price: item.price,
         source: 'binance',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        marketCap: prev?.marketCap,
+        uuid: prev?.uuid,
+        change24h: prev?.change24h
       });
       overrides++;
     });
@@ -55,19 +64,21 @@ class GlobalPriceStore {
   }
 
   // 3. Coinbase overrides (only if not already in Binance)
-  updateFromCoinbase(coinbaseData: Array<{ symbol: string; price: number }>) {
+  updateFromCoinbase(coinbaseData: Array<{ symbol: string; price: number; marketCap?: number; change24h?: number }>) {
     let overrides = 0;
-    
     coinbaseData.forEach(item => {
       const symbol = item.symbol;
-      
       // Only override if not already set by Binance
       if (!this.prices.has(symbol) || this.prices.get(symbol)?.source !== 'binance') {
+        const prev = this.prices.get(symbol);
         this.prices.set(symbol, {
           symbol,
           price: item.price,
           source: 'coinbase',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          marketCap: item.marketCap !== undefined ? item.marketCap : prev?.marketCap,
+          uuid: prev?.uuid,
+          change24h: item.change24h !== undefined ? item.change24h : prev?.change24h
         });
         overrides++;
       }

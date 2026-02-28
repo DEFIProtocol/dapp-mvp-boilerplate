@@ -124,7 +124,8 @@ export const initializeTokenPrices = async (): Promise<void> => {
 
     // Fetch ticker for each product (in batches to avoid rate limits)
     const batchSize = 10;
-    const allPrices: Array<{ symbol: string; price: number }> = [];
+    // We'll try to get marketCap and change24h from coinranking if available
+    const allPrices: Array<{ symbol: string; price: number; marketCap?: number; change24h?: number }> = [];
     
     for (let i = 0; i < usdPairs.length; i += batchSize) {
       const batch = usdPairs.slice(i, i + batchSize);
@@ -140,6 +141,18 @@ export const initializeTokenPrices = async (): Promise<void> => {
           const baseSymbol = product.base_currency;
           const price = parseFloat(tickerResponse.data.price);
           
+          // Try to get marketCap and change24h from coinranking global store if available
+          let marketCap: number | undefined = undefined;
+          let change24h: number | undefined = undefined;
+          const coinranking = globalPriceStore.getAllPrices().find(p => p.symbol === baseSymbol && p.source === 'coinranking');
+          if (coinranking) {
+            marketCap = coinranking.marketCap;
+            change24h = coinranking.change24h;
+          }
+          // Use coinbase's own 24h change if available
+          const cbChange = calculate24hChange(tickerResponse.data);
+          if (cbChange && !isNaN(Number(cbChange))) change24h = Number(cbChange);
+
           // Store in local token store
           tokenPriceStore.set(baseSymbol, {
             symbol: baseSymbol,
@@ -148,14 +161,14 @@ export const initializeTokenPrices = async (): Promise<void> => {
             lastUpdated: Date.now(),
             pair: product.id,
             volume24h: tickerResponse.data.volume_24h,
-            change24h: calculate24hChange(tickerResponse.data)
+            change24h: cbChange
           });
           
           // Update price cache
           priceCache.set(baseSymbol, price, 'coinbase');
           
           // Add to batch for global store
-          allPrices.push({ symbol: baseSymbol, price });
+          allPrices.push({ symbol: baseSymbol, price, marketCap, change24h });
           
         } catch (error) {
           // Skip failed fetches
@@ -232,9 +245,22 @@ const setupCoinbaseWebSocket = (): void => {
         priceCache.set(symbol, price, 'coinbase-ws');
         
         // 🔥 Send REAL-TIME update to global store
+        // Try to get marketCap and change24h from coinranking global store if available
+        let marketCap: number | undefined = undefined;
+        let change24h: number | undefined = undefined;
+        const coinranking = globalPriceStore.getAllPrices().find(p => p.symbol === symbol && p.source === 'coinranking');
+        if (coinranking) {
+          marketCap = coinranking.marketCap;
+          change24h = coinranking.change24h;
+        }
+        // Use coinbase's own 24h change if available
+        const cbChange = calculateWs24hChange(message, existing!);
+        if (cbChange && !isNaN(Number(cbChange))) change24h = Number(cbChange);
         globalPriceStore.updateFromCoinbase([{
           symbol,
-          price
+          price,
+          marketCap,
+          change24h
         }]);
       }
     } catch (error) {
