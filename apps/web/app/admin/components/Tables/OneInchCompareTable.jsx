@@ -42,29 +42,81 @@ export default function OneInchCompareTable({
         { key: 'avalanche', label: 'Avalanche', id: 43114 }
     ];
 
-    // Filter 1inch tokens NOT in DB
-    const oneInchTokensNotInDb = useMemo(() => {
-        const dbSymbols = new Set(dbTokens.map(t => t.symbol?.toUpperCase()));
-        return (oneInchTokens || []).filter(token => {
-            const symbol = token.symbol?.toUpperCase();
-            return symbol && !dbSymbols.has(symbol);
-        });
-    }, [oneInchTokens, dbTokens]);
 
-    // Search filtering
+    // Filter DB tokens by selected chain and sort by symbol
     const filteredDb = useMemo(() => {
         const term = dbSearch.toLowerCase();
-        return dbTokens.filter(t => 
-            !term || t.symbol?.toLowerCase().includes(term) || t.name?.toLowerCase().includes(term)
-        );
-    }, [dbTokens, dbSearch]);
+        return dbTokens
+            .filter(t => {
+                const chains = typeof t.chains === 'string' ? JSON.parse(t.chains || '{}') : (t.chains || {});
+                // Only show tokens that have an address for the selected chain
+                return chains[currentChainKey];
+            })
+            .filter(t =>
+                !term || t.symbol?.toLowerCase().includes(term) || t.name?.toLowerCase().includes(term)
+            )
+            .sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+    }, [dbTokens, dbSearch, currentChainKey]);
 
+
+    // All 1inch tokens for the selected chain, sorted by symbol
+    const allOneInchTokens = useMemo(() => {
+        return (oneInchTokens || [])
+            .filter(token => !!token.symbol)
+            .sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+    }, [oneInchTokens]);
+
+    // 1inch tokens not in DB, with address and price, for batch import
+    const oneInchTokensNotInDb = useMemo(() => {
+        const dbSymbols = new Set(dbTokens.map(t => t.symbol?.toUpperCase()));
+        return allOneInchTokens.filter(token => {
+            const symbol = token.symbol?.toUpperCase();
+            const hasAddress = !!token.address;
+            const hasPrice = !!globalPrices?.[symbol]?.price;
+            return symbol && !dbSymbols.has(symbol) && hasAddress && hasPrice;
+        });
+    }, [allOneInchTokens, dbTokens, globalPrices]);
+
+
+    // Search filtering for all 1inch tokens (not just importable)
     const filteredOneInch = useMemo(() => {
         const term = oneInchSearch.toLowerCase();
-        return oneInchTokensNotInDb.filter(t => 
+        return allOneInchTokens.filter(t =>
             !term || t.symbol?.toLowerCase().includes(term) || t.name?.toLowerCase().includes(term)
         );
-    }, [oneInchTokensNotInDb, oneInchSearch]);
+    }, [allOneInchTokens, oneInchSearch]);
+
+    // Batch import handler
+    const handleBatchImport = async () => {
+        setAdding(true);
+        setStatus({ type: '', message: '' });
+        let added = 0, failed = 0;
+        for (const token of oneInchTokensNotInDb) {
+            const symbol = token.symbol?.toUpperCase();
+            const rapidCoin = globalPrices?.[symbol];
+            const newTokenData = {
+                symbol,
+                name: token.name || rapidCoin?.name || symbol,
+                price: rapidCoin?.price || 0,
+                change24h: rapidCoin?.change24h || 0,
+                marketCap: rapidCoin?.marketCap || 0,
+                volume24h: rapidCoin?.volume24h || 0,
+                decimals: token.decimals || 18,
+                type: '1inch',
+                uuid: rapidCoin?.uuid,
+                image: rapidCoin?.image || token.logoURI,
+                chains: { [currentChainKey]: token.address }
+            };
+            const result = await onAddFromOneInch(newTokenData);
+            if (result.success) added++; else failed++;
+        }
+        setStatus({
+            type: failed ? 'warning' : 'success',
+            message: `Batch import: ${added} added${failed ? `, ${failed} failed` : ''}`
+        });
+        setAdding(false);
+        setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+    };
 
     const handleAddFromOneInch = async (symbol) => {
         setAdding(true);
@@ -72,7 +124,7 @@ export default function OneInchCompareTable({
 
         const oneInchToken = oneInchTokens.find(t => t.symbol?.toUpperCase() === symbol);
         const rapidCoin = globalPrices?.[symbol];
-        
+
         if (!rapidCoin?.uuid) {
             setStatus({ type: 'error', message: `Token ${symbol} missing UUID in RapidAPI` });
             setAdding(false);
@@ -88,24 +140,24 @@ export default function OneInchCompareTable({
         }
 
         const existingToken = dbTokenMap.get(symbol.toLowerCase());
-        
+        // Always ensure chains is a JSON object and uuid/image are set from correct sources
+        const newChains = { ...(existingToken?.chains || {}), [currentChainKey]: oneInchToken.address };
+        const newTokenData = {
+            symbol,
+            name: oneInchToken.name || rapidCoin.name || symbol,
+            price: rapidCoin.price || 0,
+            change24h: rapidCoin.change24h || 0,
+            marketCap: rapidCoin.marketCap || 0,
+            volume24h: rapidCoin.volume24h || 0,
+            decimals: oneInchToken.decimals || 18,
+            type: '1inch',
+            uuid: rapidCoin.uuid,
+            image: rapidCoin.image || oneInchToken.logoURI,
+            chains: newChains
+        };
         const result = existingToken
-            ? await onUpdateToken(symbol, {
-                  chains: { ...(existingToken.chains || {}), [currentChainKey]: oneInchToken.address }
-              })
-            : await onAddFromOneInch({
-                  symbol,
-                  name: oneInchToken.name || rapidCoin.name || symbol,
-                  price: rapidCoin.price || 0,
-                  change24h: rapidCoin.change24h || 0,
-                  marketCap: rapidCoin.marketCap || 0,
-                  volume24h: rapidCoin.volume24h || 0,
-                  decimals: oneInchToken.decimals || 18,
-                  type: '1inch',
-                  uuid: rapidCoin.uuid,
-                  image: rapidCoin.image || oneInchToken.logoURI,
-                  chains: { [currentChainKey]: oneInchToken.address }
-              });
+            ? await onUpdateToken(symbol, { chains: newChains, uuid: rapidCoin.uuid, image: rapidCoin.image || oneInchToken.logoURI })
+            : await onAddFromOneInch(newTokenData);
 
         setStatus({
             type: result.success ? 'success' : 'error',
@@ -177,7 +229,7 @@ export default function OneInchCompareTable({
             <div className={styles.compareGrid}>
                 {/* DB Tokens Column */}
                 <div className={styles.compareColumn}>
-                    <h3>Database Tokens on {currentChainKey}</h3>
+                    <h3>Database Tokens on {currentChainKey} ({filteredDb.length})</h3>
                     <div 
                         className={styles.tableWrapper}
                         ref={leftTableRef}
@@ -235,7 +287,17 @@ export default function OneInchCompareTable({
 
                 {/* 1inch Tokens Column */}
                 <div className={styles.compareColumn}>
-                    <h3>1inch Tokens to Add</h3>
+                    <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
+                        <h3>1inch Tokens ({filteredOneInch.length})</h3>
+                        <button
+                            onClick={handleBatchImport}
+                            disabled={adding || oneInchTokensNotInDb.length === 0}
+                            className={`${styles.actionBtn} ${styles.success} ${styles.small}`}
+                            title={oneInchTokensNotInDb.length === 0 ? 'No tokens to import' : 'Batch import all tokens'}
+                        >
+                            Batch Import ({oneInchTokensNotInDb.length})
+                        </button>
+                    </div>
                     <div 
                         className={styles.tableWrapper}
                         ref={rightTableRef}
@@ -255,10 +317,15 @@ export default function OneInchCompareTable({
                             <tbody>
                                 {filteredOneInch.map(token => {
                                     const symbol = token.symbol?.toUpperCase();
+                                    // Find uuid by matching symbol case-insensitively in globalPrices
+                                    let uuid = '';
+                                    if (symbol && globalPrices) {
+                                        const entry = Object.entries(globalPrices).find(([k]) => k.toUpperCase() === symbol);
+                                        if (entry && entry[1]?.uuid) uuid = entry[1].uuid;
+                                    }
                                     const rapidCoin = globalPrices?.[symbol];
-                                    const hasUuid = !!rapidCoin?.uuid;
+                                    const hasUuid = typeof uuid === 'string' && uuid.length > 0;
                                     const hasAddress = !!token?.address;
-                                    
                                     return (
                                         <tr key={token.address}>
                                             <td className={styles.symbolCell}>
@@ -274,7 +341,7 @@ export default function OneInchCompareTable({
                                                     : '—'}
                                             </td>
                                             <td>
-                                                {rapidCoin?.uuid ? '✅' : '❌'}
+                                                {hasUuid ? uuid : <span style={{color:'red'}}>❌</span>}
                                             </td>
                                             <td>
                                                 <button

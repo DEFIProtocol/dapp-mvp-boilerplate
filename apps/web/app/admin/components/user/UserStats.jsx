@@ -1,3 +1,6 @@
+// user/UserStats.jsx
+import styles from './UserTable.module.css';
+
 export default function UserStats({ users }) {
   const stats = {
     total: users.length,
@@ -10,11 +13,23 @@ export default function UserStats({ users }) {
   };
 
   return (
-    <div className="user-stats">
-      <span>👥 Total: {stats.total}</span>
-      <span>✅ Verified: {stats.verified}</span>
-      <span>📧 With Email: {stats.withEmail}</span>
-      <span>🔗 Total Chains: {stats.totalChains}</span>
+    <div className={styles.userStats}>
+      <div className={styles.statCard}>
+        <div className={styles.statLabel}>Total Users</div>
+        <div className={styles.statValue}>{stats.total}</div>
+      </div>
+      <div className={styles.statCard}>
+        <div className={styles.statLabel}>Verified</div>
+        <div className={styles.statValue}>{stats.verified}</div>
+      </div>
+      <div className={styles.statCard}>
+        <div className={styles.statLabel}>With Email</div>
+        <div className={styles.statValue}>{stats.withEmail}</div>
+      </div>
+      <div className={styles.statCard}>
+        <div className={styles.statLabel}>Chain Addresses</div>
+        <div className={styles.statValue}>{stats.totalChains}</div>
+      </div>
     </div>
   );
 }

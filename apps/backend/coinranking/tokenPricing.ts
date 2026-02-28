@@ -251,7 +251,10 @@ export const createRequest = async <T = any>(
           try {
             const coins = response.data.data.coins.map((coin: any) => ({
               symbol: coin.symbol,
-              price: parseFloat(coin.price)
+              price: parseFloat(coin.price),
+              marketCap: coin.marketCap !== undefined ? parseFloat(coin.marketCap) : undefined,
+              uuid: coin.uuid,
+              change: coin.change !== undefined ? parseFloat(coin.change) : undefined
             }));
             globalPriceStore.updateFromCoinranking(coins);
             console.log(`📤 Updated global store with ${coins.length} coins`);

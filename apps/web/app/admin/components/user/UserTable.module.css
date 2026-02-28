@@ -1,0 +1,365 @@
+/* user/UserTable.module.css */
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  background: white;
+}
+
+.userTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 900px;
+}
+
+.userTable th {
+  text-align: left;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea08, #764ba208);
+  border-bottom: 2px solid #f0f0f0;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+.userTable td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #4a5568;
+  vertical-align: middle;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.sortable:hover {
+  background: linear-gradient(135deg, #667eea15, #764ba215) !important;
+}
+
+.checkboxCol {
+  width: 40px;
+  text-align: center;
+}
+
+.checkboxCol input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.actionsCol {
+  width: 100px;
+  text-align: center;
+}
+
+.noResults {
+  text-align: center;
+  padding: 3rem !important;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-style: italic;
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .userTable {
+    font-size: 0.8rem;
+  }
+
+  .userTable th,
+  .userTable td {
+    padding: 0.75rem 0.5rem;
+  }
+}
+/* user/UserRow.module.css */
+
+.userRow {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.userRow:hover {
+  background: linear-gradient(135deg, #667eea08, #764ba208);
+}
+
+.userRow.selected {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+}
+
+.checkboxCol {
+  width: 40px;
+  text-align: center;
+}
+
+.checkboxCol input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.emailCell,
+.usernameCell,
+.walletCell,
+.chainsCell,
+.verifiedCell {
+  padding: 1rem;
+}
+
+.walletCell {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.chainBadge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  color: #4c51bf;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #667eea40;
+}
+
+.verifiedBadge {
+  font-size: 1.1rem;
+  cursor: help;
+}
+
+.unverifiedBadge {
+  font-size: 1.1rem;
+  opacity: 0.5;
+  cursor: help;
+}
+
+.editInput {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid #f0f0f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.editInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.actionsCell {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  border: 2px solid #f0f0f0;
+  color: #4a5568;
+}
+
+.actionBtn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+
+.actionBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.actionBtn.primary {
+  background: #667eea;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.primary:hover {
+  background: #5a67d8;
+}
+
+.actionBtn.success {
+  background: #10b981;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.success:hover {
+  background: #0e9f6e;
+}
+
+.actionBtn.info {
+  background: #3b82f6;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.info:hover {
+  background: #2563eb;
+}
+
+.actionBtn.secondary {
+  background: #f0f0f0;
+  color: #4a5568;
+  border-color: #e0e0e0;
+}
+
+.actionBtn.secondary:hover {
+  background: #e0e0e0;
+}
+
+@media (max-width: 768px) {
+  .actionsCell {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .walletCell {
+    font-size: 0.75rem;
+  }
+}
+/* user/UserActions.module.css */
+
+.actionBar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.actionBtn.info {
+  background: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.actionBtn.info:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.actionBtn.danger {
+  background: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.actionBtn.danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btnIcon {
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .actionBar {
+    flex-direction: column;
+  }
+
+  .actionBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* user/UserStats.module.css */
+
+.userStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .userStats {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .statValue {
+    font-size: 1.5rem;
+  }
+}

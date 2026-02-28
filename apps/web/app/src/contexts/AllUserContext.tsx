@@ -1,4 +1,3 @@
-
 "use client";
 import React, { ReactNode, Dispatch, SetStateAction, useState, useEffect, useCallback, createContext, useContext } from "react";
 
@@ -28,12 +27,28 @@ export function AllUserProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/users");
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Failed to fetch users");
-      setUsers(json.data || []);
+      // Fix: Use the correct endpoint path
+      const res = await fetch("/api/users/db");
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      // Your backend returns the array directly, not wrapped in { success, data }
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        // Fallback: if it's wrapped in some other format
+        setUsers(data.data || data.users || []);
+      }
     } catch (err: any) {
+      console.error('Error fetching users:', err);
       setError(err.message);
+      setUsers([]);
     } finally {
       setLoading(false);
     }

@@ -123,22 +123,32 @@ export function usePricingData() {
             differencePercentage = ((Math.abs(binance.price - coinbase.price) / ((binance.price + coinbase.price) / 2)) * 100).toFixed(2);
         }
 
-        // Get best available price change
-        const priceChange = binance?.priceChangePercent || 
-                           coinbase?.priceChangePercent || 
-                           coinranking?.change;
+        // PRIORITIZATION FIX:
+        // Price: Binance priority
+        const price = binance?.price || coinbase?.price || coinranking?.price;
+        
+        // % Change: Coinbase priority, then coinranking, never binance
+        const priceChange = coinbase?.priceChangePercent || coinranking?.change || null;
+        
+        // Market Cap: Coinbase priority, then coinranking, never binance
+        const marketCap = coinbase?.marketCap || coinranking?.marketCap || null;
+        
+        // Volume: Try all sources
+        const volume24h = binance?.volume || coinbase?.volume || coinranking?.volume24h;
 
         comparisonData.push({
             symbol: symbol.toUpperCase(),
             name: tokenInfo?.name || coinranking?.name || symbol.toUpperCase(),
+            price: price ? parseFloat(price) : null,
+            priceChange: priceChange ? parseFloat(priceChange) : null,
+            marketCap: marketCap ? parseFloat(marketCap) : null,
+            volume24h: volume24h ? parseFloat(volume24h) : null,
+            // Keep raw data for reference
             binancePrice: binance?.price || null,
             coinbasePrice: coinbase?.price || null,
             coinrankingPrice: coinranking?.price || null,
-            priceChange: priceChange ? parseFloat(priceChange) : null,
             priceDifference,
             differencePercentage,
-            marketCap: coinranking?.marketCap || null,
-            volume24h: binance?.volume || coinbase?.volume || coinranking?.volume24h,
             source: {
                 binance: !!binance,
                 coinbase: !!coinbase,
