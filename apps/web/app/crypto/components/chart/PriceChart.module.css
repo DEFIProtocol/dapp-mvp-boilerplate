@@ -1,0 +1,394 @@
+/* components/oracle/PriceChart.module.css */
+.chartContainer {
+  background: white;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.chartContainer:hover {
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.chartTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tokenIcon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #667eea;
+}
+
+.chartTitle h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.timeframeLabel {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.chartControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.chartStats {
+  font-size: 0.9rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 0.4rem 1rem;
+  border-radius: 30px;
+  border: 1px solid #f0f0f0;
+}
+
+.statLabel {
+  margin-right: 0.5rem;
+}
+
+.positive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.chart {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  margin-bottom: 1rem;
+  min-height: 350px;
+}
+
+.priceScale {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: 'Roboto Mono', monospace;
+  text-align: right;
+  padding-right: 0.5rem;
+  border-right: 2px solid #f0f0f0;
+}
+
+.candles {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  position: relative;
+  height: 100%;
+  background: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
+  border-radius: 8px;
+}
+
+.candleWrapper {
+  position: relative;
+  height: 100%;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+}
+
+.candleWrapper:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.wick {
+  position: absolute;
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.body {
+  position: absolute;
+  border-radius: 4px;
+  transition: all 0.2s;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.body.up {
+  background: linear-gradient(180deg, #10b981, #34d399);
+}
+
+.body.down {
+  background: linear-gradient(180deg, #ef4444, #f87171);
+}
+
+.timeScale {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.timeLabel {
+  font-family: 'Roboto Mono', monospace;
+  background: #f8fafc;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.volumeBar {
+  margin-top: 0.5rem;
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.volumeFill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.loading, .error, .noData {
+  height: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #94a3b8;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.loading span, .error span, .noData span {
+  font-size: 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .chartControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .chartContainer {
+    padding: 1rem;
+  }
+
+  .chartHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chartControls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .priceScale {
+    width: 50px;
+    font-size: 0.7rem;
+  }
+
+  .tokenIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .chartTitle h3 {
+    font-size: 1rem;
+  }
+
+  .timeLabel {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart {
+    min-height: 300px;
+  }
+  
+  .priceScale {
+    width: 45px;
+    font-size: 0.65rem;
+  }
+}
+/* Add to PriceChart.module.css */
+/* Add to PriceChart.module.css - replace the transition effects section */
+
+/* Transition effects - SLOWER VERSION */
+.candles.transitioning {
+  opacity: 0.5;
+  transition: opacity 0.6s ease; /* Increased from 0.2s to 0.6s */
+}
+
+.candleWrapper {
+  animation: slideIn 0.8s cubic-bezier(0.2, 0.9, 0.3, 1); /* Slower with custom easing */
+  transform-origin: bottom;
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.7) translateY(15px);
+  }
+  40% {
+    opacity: 0.7;
+    transform: scaleY(1.02) translateY(-2px);
+  }
+  70% {
+    opacity: 0.9;
+    transform: scaleY(0.98) translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeScale 0.8s cubic-bezier(0.2, 0.8, 0.4, 1); /* Slower from 0.3s to 0.8s */
+}
+
+@keyframes fadeScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  30% {
+    opacity: 0.6;
+    transform: scale(1.03);
+  }
+  60% {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation for stats during transition - SLOWER */
+.pulse {
+  animation: pulse 0.8s ease-in-out; /* Increased from 0.3s to 0.8s */
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.08);
+    background: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+  70% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Staggered animation delays - more pronounced */
+.candleWrapper:nth-child(odd) {
+  animation-delay: 0.1s;
+}
+
+.candleWrapper:nth-child(even) {
+  animation-delay: 0.2s;
+}
+
+/* Hover effects - keep snappy for interaction */
+.candleWrapper:hover {
+  transform: translateY(-2px) scale(1.02);
+  z-index: 10;
+  transition: all 0.2s ease; /* Keep hover fast for responsiveness */
+}
+
+.candleWrapper:hover .body {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Loading shimmer effect */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8fafc 50%, #f0f0f0 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}

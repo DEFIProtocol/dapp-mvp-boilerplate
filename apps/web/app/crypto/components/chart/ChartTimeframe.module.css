@@ -1,0 +1,46 @@
+/* components/oracle/ChartTimeframe.module.css */
+.timeframeSelector {
+  display: flex;
+  gap: 0.25rem;
+  background: #f8fafc;
+  padding: 0.25rem;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.timeframeBtn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: #64748b;
+}
+
+.timeframeBtn:hover {
+  background: white;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.timeframeBtn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+@media (max-width: 768px) {
+  .timeframeSelector {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .timeframeBtn {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+}

@@ -1,0 +1,237 @@
+/* components/oracle/PriceCard.module.css */
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 280px;
+  max-width: 350px;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+/* Token-specific gradients */
+.btc::before {
+  background: linear-gradient(90deg, #f7931a, #f9b348);
+}
+
+.eth::before {
+  background: linear-gradient(90deg, #627eea, #8ba0f0);
+}
+
+.sol::before {
+  background: linear-gradient(90deg, #14f195, #9945ff);
+}
+
+.gold::before {
+  background: linear-gradient(90deg, #d4af37, #f5d742);
+}
+
+.default::before {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+/* Loading state */
+.card.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 1rem auto;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loadingText {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* Error state */
+.card.error {
+  background: #fff5f5;
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.retryHint {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tokenIcon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #667eea;
+}
+
+.btc .tokenIcon {
+  background: #f7931a20;
+  color: #f7931a;
+}
+
+.eth .tokenIcon {
+  background: #627eea20;
+  color: #627eea;
+}
+
+.sol .tokenIcon {
+  background: #14f19520;
+  color: #14f195;
+}
+
+.gold .tokenIcon {
+  background: #d4af3720;
+  color: #d4af37;
+}
+
+.tokenName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.staleBadge {
+  margin-left: auto;
+  font-size: 1rem;
+  cursor: help;
+}
+
+/* Price */
+.priceContainer {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.price {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.2;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.priceValue {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+/* Details */
+.details {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.4rem 0;
+  color: #4a5568;
+}
+
+.detailRow span:first-child {
+  color: #64748b;
+}
+
+.mono {
+  font-family: 'Roboto Mono', monospace;
+  color: #2c3e50;
+}
+
+.fresh {
+  color: #10b981;
+}
+
+.stale {
+  color: #ef4444;
+}
+
+.chain {
+  text-transform: capitalize;
+  background: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f0f0f0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.feedSource {
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    min-width: 100%;
+  }
+  
+  .price {
+    font-size: 1.8rem;
+  }
+}
