@@ -235,3 +235,33 @@
     font-size: 1.8rem;
   }
 }
+/* Add to PriceCard.module.css */
+
+.card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card.selected {
+  border: 2px solid #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+}
+
+.selectedBadge {
+  margin-left: auto;
+  background: #667eea;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.card:hover:not(.loading):not(.error) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}

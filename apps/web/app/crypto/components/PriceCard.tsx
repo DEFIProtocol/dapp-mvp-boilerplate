@@ -1,5 +1,5 @@
 "use client";
-import styles from './PriceCard.module.css';
+import styles from './styles/PriceCard.module.css';
 
 interface PriceCardProps {
   token: string;
