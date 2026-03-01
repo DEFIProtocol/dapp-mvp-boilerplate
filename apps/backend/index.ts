@@ -10,7 +10,8 @@ import binancePricingRouter from "./routes/binancePricing";
 import coinRankingRouter from "./routes/coinRanking";
 import oneInchRouter from "./routes/oneInchTokens";
 import pricesRouter from "./routes/prices";
-
+import oracleRouter from "./routes/oracle";
+import { bigintSerializer } from './middleware/bigintSerializer'; // ✅ Good import
 
 dotenv.config();
 
@@ -23,7 +24,10 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json()); // ✅ Parse JSON first
+
+// ✅ Add BigInt serializer middleware HERE - after express.json() but before routes
+app.use(bigintSerializer);
 
 // Database connection
 if (!process.env.DATABASE_URL) {
@@ -43,15 +47,16 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// API Routes
+// API Routes (all after middleware)
 app.use("/api/infura", infuraRouter(pool));
 app.use("/api/users", usersRouter(pool));
 app.use("/api/tokens", tokensRouter(pool));
 app.use("/api/binance", binancePricingRouter);
 app.use("/api/coinbase", coinbasePricingRouter);
-app.use("/api/coinranking", coinRankingRouter); // Add this
+app.use("/api/coinranking", coinRankingRouter);
 app.use("/api/1inch", oneInchRouter);
-app.use("/api", pricesRouter); // Now you have /api/prices
+app.use("/api", pricesRouter);
+app.use("/api/oracle", oracleRouter);
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -61,6 +66,8 @@ app.get("/health", (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// ... rest of your root endpoint and app.listen stays the same
 
 // Root endpoint - show available routes
 app.get("/", (req, res) => {
@@ -85,6 +92,7 @@ app.get("/", (req, res) => {
             .badge.coinbase { background: #0052ff; color: white; }
             .badge.coinranking { background: #8a2be2; color: white; }
             .badge.oneinch { background: #4CAF50; color: white; }
+            .badge.oracle { background: #ff6b6b; color: white; }
             .badge.db { background: #28a745; color: white; }
             .method { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #e9ecef; font-family: monospace; font-size: 12px; margin-right: 10px; }
             .method.get { background: #d1e7dd; color: #0f5132; }
@@ -101,11 +109,14 @@ app.get("/", (req, res) => {
             .chain-selector button { padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
             .chain-selector button:hover { background: #45a049; }
             footer { margin-top: 40px; color: #666; font-size: 12px; text-align: center; }
+            .price-box { background: #f0f9ff; padding: 10px; border-radius: 6px; margin: 5px 0; }
+            .price-box .symbol { font-weight: bold; color: #0066cc; }
+            .price-box .value { font-size: 18px; font-weight: bold; color: #333; margin-left: 10px; }
           </style>
         </head>
         <body>
           <h1>🚀 DApp MVP API</h1>
-          <p>Version 1.0.0 - Crypto pricing and blockchain data API</p>
+          <p>Version 1.0.0 - Crypto pricing, blockchain data, and Chainlink Oracle API</p>
           
           <div class="grid">
             <!-- Exchange Pricing Card -->
@@ -158,16 +169,6 @@ app.get("/", (req, res) => {
                   <a href="/api/coinranking/coin/Qwsogvtv82FCd" target="_blank">View Bitcoin</a>
                 </div>
               </div>
-              
-              <div class="endpoint">
-                <span class="badge coinranking">RAPIDAPI</span>
-                <span class="method get">GET</span><br>
-                <span class="url">/api/coinranking/stats</span>
-                <p>Rate limiter and cache stats</p>
-                <div class="links">
-                  <a href="/api/coinranking/stats" target="_blank">View Stats</a>
-                </div>
-              </div>
             </div>
             
             <!-- 1inch Tokens Card -->
@@ -200,21 +201,86 @@ app.get("/", (req, res) => {
                 <div id="oneinchResults" style="margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">
                   <p>Select a chain and click "Fetch Tokens" to see token count</p>
                 </div>
-                
-                <div class="links" style="margin-top: 10px;">
-                  <a href="/api/1inch/tokens?chainId=1" target="_blank">Ethereum Tokens</a>
-                  <a href="/api/1inch/tokens?chainId=56" target="_blank">BSC Tokens</a>
-                  <a href="/api/1inch/tokens?chainId=137" target="_blank">Polygon Tokens</a>
+              </div>
+            </div>
+            
+            <!-- Chainlink Oracle Card -->
+            <div class="card">
+              <h3>🔮 Chainlink Oracle</h3>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/priority</span>
+                <p>Get priority prices (BTC, ETH, SOL, Gold)</p>
+                <div class="links">
+                  <a href="/api/oracle/priority" target="_blank">View JSON</a>
+                </div>
+                <div id="oraclePriority" style="margin-top: 10px;">
+                  <button onclick="fetchOraclePriority()" style="padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">Fetch Priority Prices</button>
+                  <div id="oracleResults" style="margin-top: 10px;"></div>
                 </div>
               </div>
               
               <div class="endpoint">
-                <span class="badge oneinch">1INCH</span>
+                <span class="badge oracle">ORACLE</span>
                 <span class="method get">GET</span><br>
-                <span class="url">/api/1inch/chains</span>
-                <p>List all supported chains</p>
+                <span class="url">/api/oracle/gold</span>
+                <p>Get gold price (PAXG/XAU)</p>
                 <div class="links">
-                  <a href="/api/1inch/chains" target="_blank">View Chains</a>
+                  <a href="/api/oracle/gold" target="_blank">View JSON</a>
+                </div>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/price/:chain/:token</span>
+                <p>Get price for any token (e.g., /api/oracle/price/ethereum/btc)</p>
+                <div class="links">
+                  <a href="/api/oracle/price/ethereum/btc" target="_blank">BTC Price</a>
+                  <a href="/api/oracle/price/ethereum/eth" target="_blank">ETH Price</a>
+                  <a href="/api/oracle/price/ethereum/sol" target="_blank">SOL Price</a>
+                </div>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/history/:chain/:feedAddress</span>
+                <p>Get historical prices with candle intervals</p>
+                <div class="links">
+                  <a href="/api/oracle/history/ethereum/0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419?interval=60&rounds=20" target="_blank">BTC 1h Candles</a>
+                </div>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/priority-history</span>
+                <p>Get historical candles for all priority tokens</p>
+                <div class="links">
+                  <a href="/api/oracle/priority-history?interval=60" target="_blank">View JSON</a>
+                </div>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/feeds/:chain</span>
+                <p>Get all available feeds for a chain</p>
+                <div class="links">
+                  <a href="/api/oracle/feeds/ethereum" target="_blank">Ethereum Feeds</a>
+                </div>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge oracle">ORACLE</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/oracle/health</span>
+                <p>Oracle service health check</p>
+                <div class="links">
+                  <a href="/api/oracle/health" target="_blank">View Health</a>
                 </div>
               </div>
             </div>
@@ -242,6 +308,16 @@ app.get("/", (req, res) => {
                 <span class="method get">GET</span><br>
                 <span class="url">/api/tokens</span>
                 <p>Token metadata</p>
+              </div>
+              
+              <div class="endpoint">
+                <span class="badge">UNIFIED</span>
+                <span class="method get">GET</span><br>
+                <span class="url">/api/prices</span>
+                <p>Unified price feed (priority: Binance → Coinbase → Coinranking)</p>
+                <div class="links">
+                  <a href="/api/prices" target="_blank">View JSON</a>
+                </div>
               </div>
               
               <div class="endpoint">
@@ -293,9 +369,47 @@ app.get("/", (req, res) => {
               }
             }
             
-            // Auto-fetch Ethereum tokens on page load
+            async function fetchOraclePriority() {
+              const resultsDiv = document.getElementById('oracleResults');
+              resultsDiv.innerHTML = '<p>Loading...</p>';
+              
+              try {
+                const response = await fetch('/api/oracle/priority');
+                const data = await response.json();
+                
+                if (data.success) {
+                  const prices = data.prices;
+                  const gold = data.gold;
+                  
+                  let html = '<div style="background: #f0f9ff; padding: 10px; border-radius: 6px;">';
+                  
+                  if (prices.btc) {
+                    html += \`<div class="price-box"><span class="symbol">BTC:</span> <span class="value">$\${prices.btc.price.toFixed(2)}</span> <span style="color: \${prices.btc.age < 60000 ? '#28a745' : '#ff6b6b'}; font-size: 12px;">(\${Math.round(prices.btc.age/1000)}s ago)</span></div>\`;
+                  }
+                  if (prices.eth) {
+                    html += \`<div class="price-box"><span class="symbol">ETH:</span> <span class="value">$\${prices.eth.price.toFixed(2)}</span></div>\`;
+                  }
+                  if (prices.sol) {
+                    html += \`<div class="price-box"><span class="symbol">SOL:</span> <span class="value">$\${prices.sol.price.toFixed(2)}</span></div>\`;
+                  }
+                  if (gold) {
+                    html += \`<div class="price-box"><span class="symbol">GOLD:</span> <span class="value">$\${gold.price.toFixed(2)}</span></div>\`;
+                  }
+                  
+                  html += '</div>';
+                  resultsDiv.innerHTML = html;
+                } else {
+                  resultsDiv.innerHTML = \`<p style="color: red;">❌ Error: \${data.error}</p>\`;
+                }
+              } catch (error) {
+                resultsDiv.innerHTML = \`<p style="color: red;">❌ Failed to fetch: \${error.message}</p>\`;
+              }
+            }
+            
+            // Auto-fetch Ethereum tokens and oracle prices on page load
             window.addEventListener('load', () => {
               setTimeout(fetchOneInchTokens, 500);
+              setTimeout(fetchOraclePriority, 1000);
             });
           </script>
         </body>
@@ -306,13 +420,14 @@ app.get("/", (req, res) => {
     res.json({
       name: "DApp MVP API",
       version: "1.0.0",
-      description: "Crypto pricing and blockchain data API",
+      description: "Crypto pricing, blockchain data, and Chainlink Oracle API",
       endpoints: {
         health: "/health",
         api: {
           infura: "/api/infura",
           users: "/api/users",
           tokens: "/api/tokens",
+          prices: "/api/prices",
           binance: {
             prices: "/api/binance/prices",
             health: "/api/binance/health"
@@ -323,13 +438,20 @@ app.get("/", (req, res) => {
           },
           coinranking: {
             coins: "/api/coinranking/coins",
-            coin: "/api/coinranking/coin/:coinId",
-            history: "/api/coinranking/coin/:coinId/history",
-            stats: "/api/coinranking/stats"
+            coin: "/api/coinranking/coin/:coinId"
           },
           oneinch: {
             tokens: "/api/1inch/tokens?chainId={chainId}",
             chains: "/api/1inch/chains"
+          },
+          oracle: {
+            priority: "/api/oracle/priority",
+            gold: "/api/oracle/gold",
+            price: "/api/oracle/price/:chain/:token",
+            history: "/api/oracle/history/:chain/:feedAddress",
+            priorityHistory: "/api/oracle/priority-history",
+            feeds: "/api/oracle/feeds/:chain",
+            health: "/api/oracle/health"
           }
         }
       },
@@ -338,7 +460,9 @@ app.get("/", (req, res) => {
         coinbasePrices: `http://localhost:${port}/api/coinbase/prices`,
         coinrankingCoins: `http://localhost:${port}/api/coinranking/coins?limit=10`,
         oneinchEthereum: `http://localhost:${port}/api/1inch/tokens?chainId=1`,
-        oneinchBSC: `http://localhost:${port}/api/1inch/tokens?chainId=56`,
+        unifiedPrices: `http://localhost:${port}/api/prices`,
+        oraclePriority: `http://localhost:${port}/api/oracle/priority`,
+        oracleBTC: `http://localhost:${port}/api/oracle/price/ethereum/btc`,
         health: `http://localhost:${port}/health`
       },
       timestamp: new Date().toISOString()
@@ -354,5 +478,8 @@ app.listen(port, () => {
   console.log(`💰 Coinbase prices: http://localhost:${port}/api/coinbase/prices`);
   console.log(`📈 Coinranking: http://localhost:${port}/api/coinranking/coins?limit=10`);
   console.log(`🔄 1inch tokens: http://localhost:${port}/api/1inch/tokens?chainId=1`);
+  console.log(`📊 Unified prices: http://localhost:${port}/api/prices`);
+  console.log(`🔮 Oracle priority: http://localhost:${port}/api/oracle/priority`);
+  console.log(`🔮 Oracle BTC: http://localhost:${port}/api/oracle/price/ethereum/btc`);
   console.log(`🏥 Health check: http://localhost:${port}/health`);
 });
