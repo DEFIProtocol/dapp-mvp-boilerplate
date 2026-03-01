@@ -1,0 +1,266 @@
+/* app/admin/components/perps/PerpsTable.module.css */
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  background: white;
+}
+
+.perpsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 1200px;
+}
+
+.perpsTable th {
+  text-align: left;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea08, #764ba208);
+  border-bottom: 2px solid #f0f0f0;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+.perpsTable td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #4a5568;
+  vertical-align: middle;
+}
+
+.expandCol {
+  width: 40px;
+  text-align: center;
+}
+
+.expandBtn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #64748b;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.expandBtn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* Token Rows */
+.tokenRow {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tokenRow:hover {
+  background: linear-gradient(135deg, #667eea08, #764ba208);
+}
+
+.tokenRow.inactive {
+  opacity: 0.7;
+  background: #f8fafc;
+}
+
+.tokenRow.inactive td {
+  color: #94a3b8;
+}
+
+.symbolCell {
+  font-weight: 700;
+  color: #333;
+  font-size: 1rem;
+}
+
+.uuidCell {
+  font-family: 'Roboto Mono', monospace;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* Status Badge */
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.statusBadge.active {
+  background: linear-gradient(135deg, #10b98120, #34d39920);
+  color: #047857;
+  border: 1px solid #10b98140;
+}
+
+.statusBadge.inactive {
+  background: linear-gradient(135deg, #94a3b820, #cbd5e020);
+  color: #475569;
+  border: 1px solid #94a3b840;
+}
+
+/* Action Buttons */
+.actionsCol {
+  width: 120px;
+  text-align: center;
+}
+
+.actionsCell {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  border: 2px solid #f0f0f0;
+  color: #4a5568;
+}
+
+.actionBtn.small {
+  width: 32px;
+  height: 32px;
+  font-size: 0.9rem;
+}
+
+.actionBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtn.info {
+  background: #3b82f6;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.info:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.actionBtn.success {
+  background: #10b981;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.success:hover:not(:disabled) {
+  background: #0e9f6e;
+}
+
+.actionBtn.warning {
+  background: #f59e0b;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.warning:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.actionBtn.danger {
+  background: #ef4444;
+  color: white;
+  border-color: transparent;
+}
+
+.actionBtn.danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+/* Details Row */
+.detailsRow td {
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-top: 2px solid #f0f0f0;
+}
+
+.tokenDetails {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #f0f0f0;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detailLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.detailValue {
+  font-size: 0.9rem;
+  color: #333;
+  word-break: break-word;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.tokenIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* No Results */
+.noResults {
+  text-align: center;
+  padding: 3rem !important;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-style: italic;
+  background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .perpsTable {
+    font-size: 0.8rem;
+  }
+
+  .actionsCell {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}

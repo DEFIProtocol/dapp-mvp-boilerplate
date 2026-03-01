@@ -9,6 +9,7 @@ import { TokenProvider } from "@/contexts/TokenContext";
 import { PriceStoreProvider } from "@/contexts/PriceStoreContext";
 import { OneInchTokensProvider } from "@/contexts/OneInchTokensContext";
 import { AllUserProvider } from "@/contexts/AllUserContext";
+import { PerpsProvider } from "@/contexts/PerpsContext";
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -16,8 +17,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <WagmiProviderWrapper>
       <ChainProvider>
         <ThemeProvider>
-          <OneInchTokensProvider>
             <AllUserProvider >
+              <PerpsProvider>
+          <OneInchTokensProvider>
           <TokenProvider>
             <UserProvider>
               <PriceStoreProvider>
@@ -25,8 +27,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               </PriceStoreProvider>
             </UserProvider>
           </TokenProvider>
-            </AllUserProvider>
           </OneInchTokensProvider>
+              </PerpsProvider>
+            </AllUserProvider>
         </ThemeProvider>
       </ChainProvider>
     </WagmiProviderWrapper>
