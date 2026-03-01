@@ -1,0 +1,557 @@
+/* components/trading/PerpetualCard.module.css */
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 500px;
+}
+
+.card:hover {
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.symbolInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tokenIcon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #667eea;
+}
+
+.symbol {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.maxLeverage {
+  font-size: 0.7rem;
+  color: #667eea;
+  background: #667eea15;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+.priceInfo {
+  text-align: right;
+}
+
+.price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.fundingRate {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.positive {
+  color: #10b981;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Trading Section */
+.tradingSection {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.sideSelector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sideBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  color: #4a5568;
+  border: 2px solid #f0f0f0;
+}
+
+.longActive {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.shortActive {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+/* Leverage Container - NEW VERSION */
+.leverageContainer {
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.leverageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.leverageLabel {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Editable Leverage Badge */
+.leverageBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f8fafc;
+  padding: 0.2rem 0.2rem 0.2rem 0.6rem;
+  border-radius: 30px;
+  border: 1px solid #f0f0f0;
+}
+
+.leverageValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.editButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  color: #64748b;
+  font-size: 0.9rem;
+  border: 1px solid #f0f0f0;
+}
+
+.editButton:hover {
+  background: #667eea;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Edit Mode */
+.leverageEditWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: white;
+  border-radius: 30px;
+  padding: 0.1rem;
+  border: 1px solid #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.leverageInput {
+  width: 50px;
+  padding: 0.3rem 0.2rem 0.3rem 0.6rem;
+  border: none;
+  border-radius: 30px 0 0 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #667eea;
+  outline: none;
+}
+
+.leverageX {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.lockButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #10b981;
+  color: white;
+  font-size: 0.8rem;
+  margin-left: 0.1rem;
+}
+
+.lockButton:hover {
+  background: #0e9f6e;
+  transform: scale(1.05);
+}
+
+/* Leverage Slider - THIS IS THE WORKING ONE */
+.leverageSlider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #f0f0f0;
+  outline: none;
+  -webkit-appearance: none;
+  margin-bottom: 0.5rem;
+}
+
+.leverageSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Firefox support */
+.leverageSlider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* For the track fill effect (optional) */
+
+.sliderMarkers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  padding: 0 0.25rem;
+}
+
+/* Position Size */
+.positionSize {
+  margin-bottom: 1rem;
+}
+
+.sizeHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.balance {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.sizeInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #f0f0f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.sizeInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.sizeInput::placeholder {
+  color: #cbd5e0;
+  font-style: italic;
+}
+
+/* Order Info - Collapsible */
+.orderInfo {
+  background: white;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.orderInfo.visible {
+  opacity: 1;
+  max-height: 250px;
+  transform: translateY(0);
+}
+
+.orderInfo.hidden {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  border-bottom: 1px dashed #f0f0f0;
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.liquidation {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.pnl {
+  font-weight: 600;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actionBtn {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.buyBtn {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.buyBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.sellBtn {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+}
+
+.sellBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Risk Warning */
+.riskWarning {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  text-align: center;
+  border: 1px solid #ffeeba;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    max-width: 100%;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .priceInfo {
+    text-align: left;
+    width: 100%;
+  }
+}
+/* Add to PerpetualCard.module.css */
+
+/* Add to PerpetualCard.module.css - replace the slider sections */
+
+.sliderWrapper {
+  width: 100%;
+  height: 20px; /* Increased height to give thumb room */
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.leverageSlider {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+  position: relative;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  margin: 0;
+}
+
+/* Thumb styling - centered on the line */
+.leverageSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  margin-top: -7px; /* Half of thumb height minus half of track height (10px - 3px = 7px) */
+  position: relative;
+  z-index: 3;
+}
+
+.leverageSlider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  position: relative;
+  z-index: 3;
+}
+
+/* Hide the default track */
+.leverageSlider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+}
+
+.leverageSlider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+}
+
+/* Focus state for better accessibility */
+.leverageSlider:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+.sliderMarkers {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  padding: 0 0.25rem;
+  margin-top: 0.25rem; /* Add space between slider and markers */
+  position: relative;
+  z-index: 1;
+}

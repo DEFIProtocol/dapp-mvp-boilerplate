@@ -11,11 +11,11 @@ export default function AdminPage() {
     const searchParams = useSearchParams();
     const auth = searchParams.get("auth");
     
+    
+    const [activeTab, setActiveTab] = useState("pricing");
     if (auth !== "admin123") {
         return <AdminAccess />;
     }
-    
-    const [activeTab, setActiveTab] = useState("pricing");
     
     return (
         <div className={styles.adminContainer}>
