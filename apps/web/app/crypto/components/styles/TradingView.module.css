@@ -1,0 +1,78 @@
+.tradingView {
+  width: 100%;
+}
+
+.tokenHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+}
+
+.tokenIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f8fafc;
+  padding: 0.25rem;
+}
+
+.tokenHeader h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.tokenAddress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.addressLabel {
+  color: #64748b;
+}
+
+.addressValue {
+  color: #667eea;
+  font-family: 'Roboto Mono', monospace;
+  background: #f8fafc;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.topRow {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.chartColumn {
+  flex: 2;
+  min-width: 0;
+}
+
+.perpetualColumn {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1200px) {
+  .topRow {
+    flex-direction: column;
+  }
+  
+  .chartColumn,
+  .perpetualColumn {
+    flex: none;
+    width: 100%;
+  }
+}

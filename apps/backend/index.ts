@@ -11,7 +11,9 @@ import coinRankingRouter from "./routes/coinRanking";
 import oneInchRouter from "./routes/oneInchTokens";
 import pricesRouter from "./routes/prices";
 import oracleRouter from "./routes/oracle";
-import { bigintSerializer } from './middleware/bigintSerializer'; // ✅ Good import
+import perpsRouter from "./routes/perps"; // Your routes
+import * as perpsHelpers from "./postgres/perps"; // Import your helpers (adjust path if needed)
+import { bigintSerializer } from './middleware/bigintSerializer';
 
 dotenv.config();
 
@@ -24,9 +26,9 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json()); // ✅ Parse JSON first
+app.use(express.json());
 
-// ✅ Add BigInt serializer middleware HERE - after express.json() but before routes
+// Add BigInt serializer middleware
 app.use(bigintSerializer);
 
 // Database connection
@@ -39,15 +41,25 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-pool.query('SELECT NOW()', (err, res) => {
+pool.query('SELECT NOW()', async (err, res) => {
   if (err) {
     console.error('❌ Database connection failed:', err.message);
   } else {
     console.log('✅ Database connected successfully at:', res.rows[0].now);
+    
+    // Create perps table on startup
+    try {
+      await perpsHelpers.ensurePerpsTokensTable(pool);
+      console.log('✅ Perps tokens table ready');
+    } catch (error) {
+      console.error('❌ Failed to create perps table:', error);
+    }
   }
 });
 
+
 // API Routes (all after middleware)
+app.use("/api/perps", perpsRouter(pool));
 app.use("/api/infura", infuraRouter(pool));
 app.use("/api/users", usersRouter(pool));
 app.use("/api/tokens", tokensRouter(pool));

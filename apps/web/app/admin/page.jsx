@@ -1,3 +1,4 @@
+// app/admin/page.tsx
 "use client";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -5,14 +6,15 @@ import AdminAccess from "./components/AdminAccess";
 import PricingManager from "./components/PricingManager";
 import TokenManager from "./components/TokenManager";
 import UserManager from "./components/UserManager";
-import styles from "./admin.module.css"; // Changed to import as styles
+import PerpsManager from "./components/PerpsManager"; // Add this import
+import styles from "./admin.module.css";
 
 export default function AdminPage() {
     const searchParams = useSearchParams();
     const auth = searchParams.get("auth");
     
-    
     const [activeTab, setActiveTab] = useState("pricing");
+    
     if (auth !== "admin123") {
         return <AdminAccess />;
     }
@@ -45,6 +47,14 @@ export default function AdminPage() {
                 >
                     <span>👥</span> Users
                 </button>
+
+                {/* New Perps Tab */}
+                <button
+                    className={`${styles.tabButton} ${activeTab === "perps" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("perps")}
+                >
+                    <span>📈</span> Perpetuals
+                </button>
             </div>
 
             <div className={styles.adminContent}>
@@ -57,6 +67,9 @@ export default function AdminPage() {
                 {activeTab === "tokens" && <TokenManager />}
 
                 {activeTab === "users" && <UserManager />}
+
+                {/* New Perps Manager */}
+                {activeTab === "perps" && <PerpsManager />}
             </div>
         </div>
     );
