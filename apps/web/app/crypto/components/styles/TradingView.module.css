@@ -1,78 +1,78 @@
+/* app/crypto/components/styles/TradingView.module.css */
 .tradingView {
   width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
 }
 
+/* Hide the old token header since we're using MarketHeader */
 .tokenHeader {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
+  display: none;
 }
 
-.tokenIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #f8fafc;
-  padding: 0.25rem;
-}
-
-.tokenHeader h2 {
-  margin: 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.tokenAddress {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-}
-
-.addressLabel {
-  color: #64748b;
-}
-
-.addressValue {
-  color: #667eea;
-  font-family: 'Roboto Mono', monospace;
-  background: #f8fafc;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-}
-
+/* Main layout - using grid for chart and perpetual card */
 .topRow {
-  display: flex;
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 380px;
   gap: 1.5rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .chartColumn {
-  flex: 2;
-  min-width: 0;
+  background: white;
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  min-width: 0; /* Prevents chart overflow */
 }
 
 .perpetualColumn {
-  flex: 1;
-  min-width: 0;
+  position: sticky;
+  top: 100px;
+  align-self: start;
 }
 
+/* Responsive breakpoints */
 @media (max-width: 1200px) {
   .topRow {
-    flex-direction: column;
+    grid-template-columns: 1fr 350px;
+    gap: 1rem;
+    padding: 0 1.5rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .topRow {
+    grid-template-columns: 1fr;
+    max-width: 800px;
   }
   
-  .chartColumn,
   .perpetualColumn {
-    flex: none;
+    position: static;
+    max-width: 500px;
+    margin: 0 auto;
     width: 100%;
   }
 }
+
+@media (max-width: 768px) {
+  .topRow {
+    padding: 0 1rem;
+    margin: 1rem auto;
+  }
+  
+  .chartColumn {
+    padding: 1rem;
+  }
+}
+
+/* Remove all these duplicate blocks at the bottom:
+   - The second .tradingView block
+   - The .contentGrid block
+   - The duplicate .chartColumn and .perpetualColumn
+   - The duplicate media queries
+*/

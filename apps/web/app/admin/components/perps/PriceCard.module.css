@@ -265,3 +265,187 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
+/* Add to app/admin/components/perps/PriceCard.module.css */
+
+/* Split container for oracle comparison */
+.splitContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 0.75rem;
+}
+
+.oracleSide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.oracleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.oracleBadge {
+  background: #ff6b6b;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.65rem;
+  letter-spacing: 0.3px;
+}
+
+.pythBadge {
+  background: #7928CA;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.65rem;
+  letter-spacing: 0.3px;
+}
+
+.confidence {
+  color: #64748b;
+  font-size: 0.65rem;
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 12px;
+}
+
+.roundId {
+  color: #64748b;
+  font-family: monospace;
+  font-size: 0.65rem;
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 12px;
+}
+
+.oraclePrice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.priceValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Roboto Mono', monospace;
+  line-height: 1.2;
+}
+
+.emaValue {
+  font-size: 0.7rem;
+  color: #10b981;
+  font-weight: 600;
+  background: #d1fae5;
+  padding: 0.1rem 0.4rem;
+  border-radius: 20px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.timeValue {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.noData {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* Funding pill */
+.fundingPill {
+  margin-left: auto;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: white;
+  border: 1px solid;
+}
+
+.fundingPill.positive {
+  color: #10b981;
+  border-color: #10b981;
+  background: #d1fae5;
+}
+
+.fundingPill.negative {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+/* Difference footer */
+.differenceFooter {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.diffValue {
+  font-weight: 700;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+}
+
+/* Update existing styles */
+.card {
+  min-width: 320px;
+  max-width: 380px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tokenName {
+  font-size: 1rem;
+}
+
+.priceContainer {
+  display: none; /* Hide old price container since we're using split view */
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .card {
+    min-width: 100%;
+    max-width: 100%;
+  }
+  
+  .splitContainer {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
