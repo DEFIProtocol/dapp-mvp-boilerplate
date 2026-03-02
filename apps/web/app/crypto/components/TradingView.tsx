@@ -1,7 +1,8 @@
 // app/crypto/components/TradingView.tsx
 "use client";
-import { useOracleRound } from "@/hooks/useOracleRound";
-import { useBinanceKlines } from "@/hooks/candles/useBinanceCandles";
+import { useKlinesStore } from "@/hooks/candles/useKlineStore";
+import { usePythPriceWithConfidence } from "@/hooks/pyth/usePythPriceWithConfidence";
+import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
 import PriceChart from "./chart/PriceChart";
 import PerpetualCard from "./PerpetualCard";
 import MarketHeader from "./MarketHeader";
@@ -19,6 +20,16 @@ interface TradingViewProps {
   onTimeframeChange: (timeframe: string) => void;
 }
 
+// Map symbols to their Pyth feed IDs
+const PYTH_FEED_IDS: Record<string, string> = {
+  'BTC': '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+  'ETH': '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+  'SOL': '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+  'AVAX': '0x93da3352f9f1d105fdfe4971cfa80e9dd777bfc5d0f683ebb6e1294b92137bb7',
+  'BNB': '0x2f95862b045670cd22bee3114c39763a4a08beeb663b145d283c31d7d1101c4f',
+  'LINK': '0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221',
+};
+
 const timeframeMap = {
   '1m': '1m',
   '5m': '5m',
@@ -35,50 +46,49 @@ export default function TradingView({
   onTimeframeChange
 }: TradingViewProps) {
   
-  const { data: oracleData } = useOracleRound('ethereum', selectedSymbol.toLowerCase(), 15000);
-  const { data: candles, loading: chartLoading, isTransitioning } = useBinanceKlines(selectedSymbol, { 
-    interval: timeframeMap[selectedTimeframe as keyof typeof timeframeMap],
-    limit: 100 
-  });
+  const feedId = PYTH_FEED_IDS[selectedSymbol];
 
+  // Fetch Pyth data once at the parent level (400ms updates)
+  const { data: priceData } = usePythPriceWithConfidence(feedId, 400);
+  const { data: fundingData } = usePythFundingRate(feedId, 400);
+  
+  // Chart data
+ const { 
+  data: candles, 
+  loading: chartLoading, 
+  exchange
+} = useKlinesStore(selectedSymbol, {
+  interval: timeframeMap[selectedTimeframe as keyof typeof timeframeMap],
+  limit: 1000
+});
   return (
     <>
-      {/* MarketHeader OUTSIDE the main container - at the very top */}
-      <MarketHeader 
-        symbol={selectedSymbol}
-        name={selectedToken.name}
-        price={oracleData?.price || 0}
-        tokenIcon={selectedToken.icon_url}
-        fundingRate={0.0085}
-        openInterest={125_000_000}
-        volume24h={2_500_000_000}
-      />
+      <MarketHeader
+  symbol={selectedSymbol}
+  name={selectedToken.name}
+  tokenIcon={selectedToken.icon_url}
+  priceData={priceData ?? undefined}
+  fundingData={fundingData ?? undefined}
+/>
       
-      {/* Main content container */}
       <div className={styles.tradingView}>
-        {/* Hide old token header */}
-        <div className={styles.tokenHeader} style={{ display: 'none' }}></div>
-
-        {/* Top Row - Chart + Perpetual */}
         <div className={styles.topRow}>
           <div className={styles.chartColumn}>
             <PriceChart 
               candles={candles}
               symbol={selectedSymbol}
-              exchange="Binance"
+              exchange={exchange || "Loading"}
               onTimeframeChange={onTimeframeChange}
+              selectedTimeframe={selectedTimeframe}
               isLoading={chartLoading}
-              isTransitioning={isTransitioning}
             />
           </div>
           
           <div className={styles.perpetualColumn}>
             <PerpetualCard 
               symbol={selectedSymbol}
-              price={oracleData?.price || 0}
-              fundingRate={0.0085}
-              openInterest={125_000_000}
-              volume24h={2_500_000_000}
+              price={priceData?.price || 0}
+              fundingRate={fundingData?.funding_rate || 0.0085}
             />
           </div>
         </div>

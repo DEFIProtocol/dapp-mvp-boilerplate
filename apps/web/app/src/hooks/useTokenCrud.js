@@ -9,19 +9,19 @@ export function useTokenCrud() {
   // Existing: Create single token
   const createToken = useCallback(async (tokenData) => {
     try {
-      const response = await fetch('/api/tokens', {
+      const response = await fetch('/api/tokens/db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tokenData)
       });
       
       const result = await response.json();
-      
-      if (result.success) {
+
+      if (response.ok) {
         await refreshTokens();
-        return { success: true, token: result.token };
+        return { success: true, token: result?.data || result?.token || result };
       }
-      return { success: false, error: result.error };
+      return { success: false, error: result?.error || 'Failed to create token' };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -125,19 +125,19 @@ export function useTokenCrud() {
   // Existing: Update token
   const updateToken = useCallback(async (symbol, changes) => {
     try {
-      const response = await fetch(`/api/tokens/${symbol}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/tokens/db/${symbol}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes)
       });
       
       const result = await response.json();
-      
-      if (result.success) {
+
+      if (response.ok) {
         await refreshTokens();
         return { success: true };
       }
-      return { success: false, error: result.error };
+      return { success: false, error: result?.error || 'Failed to update token' };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -146,17 +146,17 @@ export function useTokenCrud() {
   // Existing: Delete token
   const deleteToken = useCallback(async (symbol) => {
     try {
-      const response = await fetch(`/api/tokens/${symbol}`, {
+      const response = await fetch(`/api/tokens/db/${symbol}`, {
         method: 'DELETE'
       });
       
       const result = await response.json();
-      
-      if (result.success) {
+
+      if (response.ok) {
         await refreshTokens();
         return { success: true };
       }
-      return { success: false, error: result.error };
+      return { success: false, error: result?.error || 'Failed to delete token' };
     } catch (error) {
       return { success: false, error: error.message };
     }

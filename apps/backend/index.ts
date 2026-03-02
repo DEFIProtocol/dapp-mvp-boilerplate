@@ -11,6 +11,7 @@ import binancePricingRouter from "./routes/binancePricing";
 import coinRankingRouter from "./routes/coinRanking";
 import oneInchRouter from "./routes/oneInchTokens";
 import pricesRouter from "./routes/prices";
+import klineRoutes from "./routes/klineRoutes";
 import oracleRouter from "./routes/oracle";
 import pythRouter from "./routes/pyth"; // Import Pyth router
 import perpsRouter from "./routes/perps"; // Your routes
@@ -72,6 +73,7 @@ app.use("/api/coinbase", coinbasePricingRouter);
 app.use("/api/coinranking", coinRankingRouter);
 app.use("/api/1inch", oneInchRouter);
 app.use("/api", pricesRouter);
+app.use('/api/klines', klineRoutes);
 app.use("/api/oracle", oracleRouter);
 app.use("/api/pyth", pythRouter); // Add Pyth routes
 

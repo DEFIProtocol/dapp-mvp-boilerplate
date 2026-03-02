@@ -16,7 +16,7 @@ export default function TokenManager({ initialTokens = [] }) {
     const { tokens: dbTokens, loading: loadingDb, error: errorDb } = useTokens();
     const { priceMap: globalPrices, loading: globalLoading, error: globalError, formatPrice } = usePriceStore();
     const { tokensList: oneInchTokens, isLoading: oneInchLoading, chainId, setChainId } = useOneInchTokens();
-    const { createToken, deleteToken, updateToken } = useTokenCrud();
+    const { createToken, deleteToken, updateToken, pruneDatabase } = useTokenCrud();
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
@@ -118,6 +118,23 @@ export default function TokenManager({ initialTokens = [] }) {
         setIsProcessing(false);
         setTimeout(() => setBulkStatus({ type: '', message: '' }), 3000);
     }, [selectedTokens, deleteToken]);
+
+    const handlePruneDb = useCallback(async () => {
+        if (!window.confirm('Prune DB? This will delete all tokens in the database.')) return;
+
+        setIsProcessing(true);
+        const result = await pruneDatabase();
+
+        setBulkStatus({
+            type: result.success ? 'warning' : 'error',
+            message: result.success
+                ? `Pruned database${typeof result.count === 'number' ? ` (${result.count} removed)` : ''}`
+                : `Failed to prune database: ${result.error || 'Unknown error'}`
+        });
+
+        setIsProcessing(false);
+        setTimeout(() => setBulkStatus({ type: '', message: '' }), 3500);
+    }, [pruneDatabase]);
 
     if (loadingDb && !displayTokens.length) {
         return (
@@ -259,6 +276,16 @@ export default function TokenManager({ initialTokens = [] }) {
                             Delete ({selectedTokens.length})
                         </button>
                     )}
+
+                    <button
+                        onClick={handlePruneDb}
+                        className={`${styles.actionBtn} ${styles.binance}`}
+                        disabled={isProcessing || !displayTokens.length}
+                        title="Delete all tokens in DB"
+                    >
+                        <span className={styles.btnIcon}>🧹</span>
+                        Prune DB
+                    </button>
                 </div>
             </div>
 

@@ -88,6 +88,17 @@ export default function tokensRouter(pool: Pool) {
     }
   });
 
+  // DELETE all tokens (prune DB)
+  router.delete("/prune", async (_req, res) => {
+    try {
+      const result = await pool.query("TRUNCATE TABLE token_addresses, tokens RESTART IDENTITY CASCADE");
+      res.json({ success: true, count: 0, message: "Database pruned" });
+    } catch (error) {
+      console.error('Error pruning tokens:', error);
+      res.status(500).json({ success: false, error: "Failed to prune token database" });
+    }
+  });
+
   // Token Address endpoints
   router.get("/db/:symbol/addresses", async (req, res) => {
     try {

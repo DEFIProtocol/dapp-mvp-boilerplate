@@ -157,7 +157,7 @@
 /* Leverage Container - NEW VERSION */
 .leverageContainer {
   margin-bottom: 1.5rem;
-  padding: 0.5rem;
+  padding: 0.35rem;
   background: white;
   border-radius: 12px;
   border: 1px solid #f0f0f0;
@@ -167,7 +167,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .leverageLabel {
@@ -182,8 +182,8 @@
   align-items: center;
   gap: 0.25rem;
   background: #f8fafc;
-  padding: 0.2rem 0.2rem 0.2rem 0.6rem;
-  border-radius: 30px;
+  padding: 0.1rem 0.2rem 0.1rem 0.5rem;
+  border-radius: 24px;
   border: 1px solid #f0f0f0;
 }
 
@@ -228,8 +228,8 @@
 }
 
 .leverageInput {
-  width: 50px;
-  padding: 0.3rem 0.2rem 0.3rem 0.6rem;
+  width: 40px;
+  padding: 0.2rem 0.15rem 0.2rem 0.5rem;
   border: none;
   border-radius: 30px 0 0 30px;
   font-size: 0.85rem;
@@ -267,8 +267,8 @@
 /* Leverage Slider - THIS IS THE WORKING ONE */
 .leverageSlider {
   width: 100%;
-  height: 6px;
-  border-radius: 3px;
+  height: 3px;
+  border-radius: 2px;
   background: #f0f0f0;
   outline: none;
   -webkit-appearance: none;
@@ -481,7 +481,7 @@
 
 .sliderWrapper {
   width: 100%;
-  height: 20px; /* Increased height to give thumb room */
+  height: 12px;
   border-radius: 3px;
   margin-bottom: 0.5rem;
   position: relative;
@@ -491,7 +491,7 @@
 
 .leverageSlider {
   width: 100%;
-  height: 6px;
+  height: 3px;
   background: transparent;
   position: relative;
   z-index: 2;
@@ -530,13 +530,13 @@
 /* Hide the default track */
 .leverageSlider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 6px;
+  height: 3px;
   background: transparent;
 }
 
 .leverageSlider::-moz-range-track {
   width: 100%;
-  height: 6px;
+  height: 3px;
   background: transparent;
 }
 
@@ -554,4 +554,87 @@
   margin-top: 0.25rem; /* Add space between slider and markers */
   position: relative;
   z-index: 1;
+}
+/* Add to PerpetualCard.module.css */
+
+/* Funding Badge - New */
+.fundingBadge {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  padding: 0.4rem 1rem;
+  border-radius: 30px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Order Type Selector - New */
+.orderTypeSelector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  background: white;
+  padding: 0.25rem;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.orderTypeBtn {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: #64748b;
+}
+
+.orderTypeBtn.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+/* Limit Price Input - New */
+.limitPrice {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.limitHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.marketPrice {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.limitInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #f0f0f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.limitInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.limitInput::placeholder {
+  color: #cbd5e0;
+  font-style: italic;
 }
