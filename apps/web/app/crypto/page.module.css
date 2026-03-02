@@ -1,14 +1,15 @@
 /* app/crypto/page.module.css */
 .dashboard {
-  padding: 2rem;
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  /* Remove padding from here if it's affecting the header */
+  padding: 0; /* Changed from 2rem to 0 */
 }
 
 .title {
   font-size: 2rem;
   color: #333;
-  margin-bottom: 2rem;
+  margin: 2rem 2rem 2rem 2rem; /* Add margin instead of padding on container */
   font-weight: 700;
   background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
@@ -19,10 +20,12 @@
 .selectorView {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 2rem; /* Add padding here instead */
 }
 
 .tradingView {
   position: relative;
+  width: 100%;
 }
 
 .backButton {
@@ -30,7 +33,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1.2rem;
-  margin-bottom: 1.5rem;
+  margin: 0 2rem 1.5rem 2rem; /* Add margin instead of relying on container */
   background: white;
   border: 2px solid #f0f0f0;
   border-radius: 50px;
@@ -40,7 +43,6 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .backButton:hover {
   background: #f8fafc;
   border-color: #667eea;
