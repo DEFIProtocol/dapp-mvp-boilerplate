@@ -6,6 +6,7 @@ import { getAllTokens, Token } from "../lib/api/tokens";
 interface TokenContextType {
   tokens: Token[];
   loading: boolean;
+  refreshTokens: () => Promise<void>;
   getTokenBySymbol: (symbol: string) => Token | undefined;
   getTokenAddress: (token: Token, chainId: string | number) => string | null;
 }
@@ -16,11 +17,19 @@ export function TokenProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const refreshTokens = async () => {
+    try {
+      const data = await getAllTokens();
+      setTokens(data);
+    } catch (error) {
+      console.error("Error loading tokens:", error);
+    }
+  };
+
   useEffect(() => {
     const loadTokens = async () => {
       try {
-        const data = await getAllTokens();
-        setTokens(data);
+        await refreshTokens();
       } catch (error) {
         console.error("Error loading tokens:", error);
       } finally {
@@ -47,6 +56,7 @@ export function TokenProvider({ children }: { children: ReactNode }) {
       value={{
         tokens,
         loading,
+        refreshTokens,
         getTokenBySymbol,
         getTokenAddress,
       }}

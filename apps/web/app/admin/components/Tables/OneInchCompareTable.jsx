@@ -19,6 +19,7 @@ export default function OneInchCompareTable({
     const [selectedSymbol, setSelectedSymbol] = useState('');
     const [dbSearch, setDbSearch] = useState('');
     const [oneInchSearch, setOneInchSearch] = useState('');
+    const [showOnlyMissing, setShowOnlyMissing] = useState(false);
     const [status, setStatus] = useState({ type: '', message: '' });
     const [adding, setAdding] = useState(false);
     
@@ -42,6 +43,14 @@ export default function OneInchCompareTable({
         { key: 'avalanche', label: 'Avalanche', id: 43114 }
     ];
 
+    const normalizedPriceMap = useMemo(() => {
+        const map = new Map();
+        Object.entries(globalPrices || {}).forEach(([symbol, payload]) => {
+            if (symbol) map.set(symbol.toUpperCase(), payload);
+        });
+        return map;
+    }, [globalPrices]);
+
 
     // Filter DB tokens by selected chain and sort by symbol
     const filteredDb = useMemo(() => {
@@ -59,32 +68,86 @@ export default function OneInchCompareTable({
     }, [dbTokens, dbSearch, currentChainKey]);
 
 
-    // All 1inch tokens for the selected chain, sorted by symbol
+    // 1inch tokens for selected chain only, deduped by symbol
     const allOneInchTokens = useMemo(() => {
-        return (oneInchTokens || [])
-            .filter(token => !!token.symbol)
-            .sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
-    }, [oneInchTokens]);
+        const dedupedBySymbol = new Map();
 
-    // 1inch tokens not in DB, with address and price, for batch import
-    const oneInchTokensNotInDb = useMemo(() => {
-        const dbSymbols = new Set(dbTokens.map(t => t.symbol?.toUpperCase()));
+        (oneInchTokens || [])
+            .filter(token => {
+                if (!token?.symbol || !token?.address) return false;
+                if (token.chainId && Number(token.chainId) !== Number(chainId)) return false;
+                return true;
+            })
+            .forEach(token => {
+                const symbol = token.symbol.toUpperCase();
+                if (!dedupedBySymbol.has(symbol)) {
+                    dedupedBySymbol.set(symbol, token);
+                }
+            });
+
+        return [...dedupedBySymbol.values()].sort((a, b) => (a.symbol || '').localeCompare(b.symbol || ''));
+    }, [oneInchTokens, chainId]);
+
+    const comparableOneInch = useMemo(() => {
         return allOneInchTokens.filter(token => {
             const symbol = token.symbol?.toUpperCase();
-            const hasAddress = !!token.address;
-            const hasPrice = !!globalPrices?.[symbol]?.price;
-            return symbol && !dbSymbols.has(symbol) && hasAddress && hasPrice;
+            return symbol && normalizedPriceMap.has(symbol);
         });
-    }, [allOneInchTokens, dbTokens, globalPrices]);
+    }, [allOneInchTokens, normalizedPriceMap]);
+
+    // 1inch tokens not in DB, with address and price, for batch import
+    const dbSymbolSet = useMemo(() => {
+        return new Set((dbTokens || []).map(t => t.symbol?.toUpperCase()).filter(Boolean));
+    }, [dbTokens]);
 
 
     // Search filtering for all 1inch tokens (not just importable)
     const filteredOneInch = useMemo(() => {
         const term = oneInchSearch.toLowerCase();
-        return allOneInchTokens.filter(t =>
+        return comparableOneInch.filter(t =>
             !term || t.symbol?.toLowerCase().includes(term) || t.name?.toLowerCase().includes(term)
         );
-    }, [allOneInchTokens, oneInchSearch]);
+    }, [comparableOneInch, oneInchSearch]);
+
+    const oneInchTokensNotInDb = useMemo(() => {
+        return filteredOneInch.filter(token => {
+            const symbol = token.symbol?.toUpperCase();
+            return symbol && !dbSymbolSet.has(symbol);
+        });
+    }, [filteredOneInch, dbSymbolSet]);
+
+    const alignedRows = useMemo(() => {
+        const dbBySymbol = new Map(
+            filteredDb.map(token => [token.symbol?.toUpperCase(), token])
+        );
+
+        const oneInchBySymbol = new Map(
+            filteredOneInch.map(token => [token.symbol?.toUpperCase(), token])
+        );
+
+        const symbols = Array.from(new Set([
+            ...dbBySymbol.keys(),
+            ...oneInchBySymbol.keys(),
+        ].filter(Boolean))).sort((left, right) => {
+            const leftMissing = !dbBySymbol.has(left);
+            const rightMissing = !dbBySymbol.has(right);
+            if (leftMissing !== rightMissing) {
+                return leftMissing ? -1 : 1;
+            }
+            return left.localeCompare(right);
+        });
+
+        return symbols.map(symbol => ({
+            symbol,
+            dbToken: dbBySymbol.get(symbol) || null,
+            oneInchToken: oneInchBySymbol.get(symbol) || null,
+        }));
+    }, [filteredDb, filteredOneInch]);
+
+    const visibleRows = useMemo(() => {
+        if (!showOnlyMissing) return alignedRows;
+        return alignedRows.filter(row => !row.dbToken && !!row.oneInchToken);
+    }, [alignedRows, showOnlyMissing]);
 
     // Batch import handler
     const handleBatchImport = async () => {
@@ -93,7 +156,7 @@ export default function OneInchCompareTable({
         let added = 0, failed = 0;
         for (const token of oneInchTokensNotInDb) {
             const symbol = token.symbol?.toUpperCase();
-            const rapidCoin = globalPrices?.[symbol];
+            const rapidCoin = normalizedPriceMap.get(symbol);
             const newTokenData = {
                 symbol,
                 name: token.name || rapidCoin?.name || symbol,
@@ -122,8 +185,8 @@ export default function OneInchCompareTable({
         setAdding(true);
         setStatus({ type: '', message: '' });
 
-        const oneInchToken = oneInchTokens.find(t => t.symbol?.toUpperCase() === symbol);
-        const rapidCoin = globalPrices?.[symbol];
+        const oneInchToken = filteredOneInch.find(t => t.symbol?.toUpperCase() === symbol);
+        const rapidCoin = normalizedPriceMap.get(symbol);
 
         if (!rapidCoin?.uuid) {
             setStatus({ type: 'error', message: `Token ${symbol} missing UUID in RapidAPI` });
@@ -215,7 +278,7 @@ export default function OneInchCompareTable({
                 </div>
                 
                 <div className={styles.searchBox}>
-                    <label>🔍 1inch Tokens to Add ({filteredOneInch.length})</label>
+                    <label>🔍 1inch Tokens on Chain ({filteredOneInch.length})</label>
                     <input
                         type="text"
                         value={oneInchSearch}
@@ -224,12 +287,24 @@ export default function OneInchCompareTable({
                         className={styles.searchInput}
                     />
                 </div>
+
+                <div className={styles.searchBox}>
+                    <label>View Mode</label>
+                    <button
+                        type="button"
+                        onClick={() => setShowOnlyMissing(prev => !prev)}
+                        className={`${styles.actionBtn} ${showOnlyMissing ? styles.success : styles.info} ${styles.small}`}
+                        style={{ width: '100%' }}
+                    >
+                        {showOnlyMissing ? 'Showing Missing Only' : 'Show Only Missing'}
+                    </button>
+                </div>
             </div>
 
             <div className={styles.compareGrid}>
                 {/* DB Tokens Column */}
                 <div className={styles.compareColumn}>
-                    <h3>Database Tokens on {currentChainKey} ({filteredDb.length})</h3>
+                    <h3>Database Tokens on {currentChainKey} ({showOnlyMissing ? visibleRows.filter(row => row.dbToken).length : filteredDb.length})</h3>
                     <div 
                         className={styles.tableWrapper}
                         ref={leftTableRef}
@@ -245,7 +320,19 @@ export default function OneInchCompareTable({
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredDb.map(token => {
+                                {visibleRows.map((row) => {
+                                    const token = row.dbToken;
+                                    if (!token) {
+                                        return (
+                                            <tr key={`db-empty-${row.symbol}`}>
+                                                <td className={styles.symbolCell}><strong>{row.symbol}</strong></td>
+                                                <td>—</td>
+                                                <td>—</td>
+                                                <td>Missing in DB</td>
+                                            </tr>
+                                        );
+                                    }
+
                                     const chains = typeof token.chains === 'string' 
                                         ? JSON.parse(token.chains || '{}') 
                                         : (token.chains || {});
@@ -273,10 +360,10 @@ export default function OneInchCompareTable({
                                         </tr>
                                     );
                                 })}
-                                {filteredDb.length === 0 && (
+                                {visibleRows.length === 0 && (
                                     <tr>
                                         <td colSpan="4" className={styles.noResults}>
-                                            No database tokens on {currentChainKey}
+                                            {showOnlyMissing ? 'No missing tokens for current filters' : `No database tokens on ${currentChainKey}`}
                                         </td>
                                     </tr>
                                 )}
@@ -288,7 +375,7 @@ export default function OneInchCompareTable({
                 {/* 1inch Tokens Column */}
                 <div className={styles.compareColumn}>
                     <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
-                        <h3>1inch Tokens ({filteredOneInch.length})</h3>
+                        <h3>1inch Tokens ({showOnlyMissing ? visibleRows.filter(row => row.oneInchToken).length : filteredOneInch.length})</h3>
                         <button
                             onClick={handleBatchImport}
                             disabled={adding || oneInchTokensNotInDb.length === 0}
@@ -315,17 +402,28 @@ export default function OneInchCompareTable({
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredOneInch.map(token => {
-                                    const symbol = token.symbol?.toUpperCase();
-                                    // Find uuid by matching symbol case-insensitively in globalPrices
-                                    let uuid = '';
-                                    if (symbol && globalPrices) {
-                                        const entry = Object.entries(globalPrices).find(([k]) => k.toUpperCase() === symbol);
-                                        if (entry && entry[1]?.uuid) uuid = entry[1].uuid;
+                                {visibleRows.map((row) => {
+                                    const token = row.oneInchToken;
+                                    const symbol = row.symbol;
+
+                                    if (!token) {
+                                        return (
+                                            <tr key={`oneinch-empty-${symbol}`}>
+                                                <td className={styles.symbolCell}><strong>{symbol}</strong></td>
+                                                <td>—</td>
+                                                <td>—</td>
+                                                <td>—</td>
+                                                <td>—</td>
+                                                <td>Not on {currentChainKey}</td>
+                                            </tr>
+                                        );
                                     }
-                                    const rapidCoin = globalPrices?.[symbol];
+
+                                    const rapidCoin = normalizedPriceMap.get(symbol);
+                                    const uuid = rapidCoin?.uuid || '';
                                     const hasUuid = typeof uuid === 'string' && uuid.length > 0;
                                     const hasAddress = !!token?.address;
+                                    const existsInDb = !!row.dbToken;
                                     return (
                                         <tr key={token.address}>
                                             <td className={styles.symbolCell}>
@@ -351,19 +449,19 @@ export default function OneInchCompareTable({
                                                     title={
                                                         !hasUuid ? 'Missing UUID' :
                                                         !hasAddress ? 'Missing address' :
-                                                        'Add to database'
+                                                        (existsInDb ? 'Update existing token' : 'Add to database')
                                                     }
                                                 >
-                                                    Add
+                                                    {existsInDb ? 'Update' : 'Add'}
                                                 </button>
                                             </td>
                                         </tr>
                                     );
                                 })}
-                                {filteredOneInch.length === 0 && (
+                                {visibleRows.length === 0 && (
                                     <tr>
                                         <td colSpan="6" className={styles.noResults}>
-                                            No 1inch tokens to import
+                                            {showOnlyMissing ? 'No missing tokens to import' : 'No 1inch tokens to import'}
                                         </td>
                                     </tr>
                                 )}

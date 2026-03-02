@@ -1,394 +1,309 @@
-/* components/oracle/PriceChart.module.css */
-.chartContainer {
-  background: white;
-  border-radius: 20px;
-  padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
+/* components/oracle/ChartHeader.module.css */
+.header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px 16px 0 0;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
-.chartContainer:hover {
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
-}
-
-.chartHeader {
+.topRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
-.chartTitle {
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.symbolInfo {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.tokenIcon {
-  width: 40px;
-  height: 40px;
+.symbolBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: linear-gradient(135deg, #667eea15, #764ba215);
+  padding: 0.4rem 0.8rem;
+  border-radius: 30px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.symbolIcon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.symbolText {
   font-weight: 700;
-  font-size: 1.2rem;
-  color: #667eea;
+  color: #1e293b;
+  letter-spacing: -0.3px;
 }
 
-.chartTitle h3 {
-  margin: 0;
-  font-size: 1.1rem;
+.exchangeBadge {
+  background: #f1f5f9;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #333;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
-.timeframeLabel {
-  font-size: 0.8rem;
-  color: #94a3b8;
+.priceInfo {
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+  padding: 0.4rem 1rem;
+  border-radius: 40px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.priceLabel {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
   display: block;
-  margin-top: 0.2rem;
+  margin-bottom: 0.1rem;
 }
 
-.chartControls {
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Roboto Mono', monospace;
+  line-height: 1;
+}
+
+.priceChange {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+}
+
+.priceChange.positive {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.priceChange.negative {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.bottomRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.indicatorsSection {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.chartStats {
-  font-size: 0.9rem;
-  color: #64748b;
-  background: #f8fafc;
+.indicatorPill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.4rem 1rem;
+  border: none;
   border-radius: 30px;
-  border: 1px solid #f0f0f0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-.statLabel {
-  margin-right: 0.5rem;
+.indicatorPill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  border-color: #667eea40;
 }
 
-.positive {
-  color: #10b981;
+.indicatorPill.active {
+  background: linear-gradient(135deg, #667eea10, #764ba210);
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.indicatorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.indicatorName {
   font-weight: 600;
 }
 
-.negative {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.chart {
-  display: flex;
-  gap: 1rem;
-  position: relative;
-  margin-bottom: 1rem;
-  min-height: 350px;
-}
-
-.priceScale {
-  width: 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: #64748b;
+.indicatorValues {
   font-family: 'Roboto Mono', monospace;
-  text-align: right;
-  padding-right: 0.5rem;
-  border-right: 2px solid #f0f0f0;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-left: 0.2rem;
 }
 
-.candles {
-  flex: 1;
+.menuContainer {
+  position: relative;
+}
+
+.menuButton {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  position: relative;
-  height: 100%;
-  background: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
-  border-radius: 8px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1.2rem;
+  border: none;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.candleWrapper {
-  position: relative;
-  height: 100%;
+.menuButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.menuIcon {
+  font-size: 1rem;
+}
+
+.menuDropdown {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  z-index: 20;
+  min-width: 160px;
+  background: white;
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menuItem, .menuItemActive {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  display: flex;
-  justify-content: center;
+  text-align: left;
 }
 
-.candleWrapper:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.wick {
-  position: absolute;
-  border-radius: 2px;
-  z-index: 1;
-}
-
-.body {
-  position: absolute;
-  border-radius: 4px;
-  transition: all 0.2s;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.body.up {
-  background: linear-gradient(180deg, #10b981, #34d399);
-}
-
-.body.down {
-  background: linear-gradient(180deg, #ef4444, #f87171);
-}
-
-.timeScale {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 2px solid #f0f0f0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: #64748b;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-}
-
-.timeLabel {
-  font-family: 'Roboto Mono', monospace;
+.menuItem:hover {
   background: #f8fafc;
-  padding: 0.2rem 0.5rem;
-  border-radius: 12px;
-  white-space: nowrap;
 }
 
-.volumeBar {
-  margin-top: 0.5rem;
-  height: 4px;
-  background: #f0f0f0;
-  border-radius: 2px;
-  overflow: hidden;
+.menuItemActive {
+  background: linear-gradient(135deg, #667eea10, #764ba210);
+  color: #667eea;
 }
 
-.volumeFill {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.loading, .error, .noData {
-  height: 100%;
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  color: #94a3b8;
-  background: #f8fafc;
-  border-radius: 12px;
-}
-
-.loading span, .error span, .noData span {
-  font-size: 2rem;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
+.menuItemDot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .chartControls {
-    width: 100%;
-    justify-content: space-between;
-  }
+  display: inline-block;
 }
 
 @media (max-width: 768px) {
-  .chartContainer {
+  .header {
     padding: 1rem;
   }
 
-  .chartHeader {
+  .topRow {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .chartControls {
+  .leftSection {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .priceInfo {
+    width: 100%;
+  }
+
+  .bottomRow {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
   }
 
-  .priceScale {
-    width: 50px;
-    font-size: 0.7rem;
+  .indicatorsSection {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
   }
 
-  .tokenIcon {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
+  .menuContainer {
+    width: 100%;
   }
 
-  .chartTitle h3 {
-    font-size: 1rem;
+  .menuButton {
+    width: 100%;
+    justify-content: center;
   }
-
-  .timeLabel {
-    font-size: 0.7rem;
-    padding: 0.15rem 0.4rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .chart {
-    min-height: 300px;
-  }
-  
-  .priceScale {
-    width: 45px;
-    font-size: 0.65rem;
-  }
-}
-/* Add to PriceChart.module.css */
-/* Add to PriceChart.module.css - replace the transition effects section */
-
-/* Transition effects - SLOWER VERSION */
-.candles.transitioning {
-  opacity: 0.5;
-  transition: opacity 0.6s ease; /* Increased from 0.2s to 0.6s */
-}
-
-.candleWrapper {
-  animation: slideIn 0.8s cubic-bezier(0.2, 0.9, 0.3, 1); /* Slower with custom easing */
-  transform-origin: bottom;
-}
-
-@keyframes slideIn {
-  0% {
-    opacity: 0;
-    transform: scaleY(0.7) translateY(15px);
-  }
-  40% {
-    opacity: 0.7;
-    transform: scaleY(1.02) translateY(-2px);
-  }
-  70% {
-    opacity: 0.9;
-    transform: scaleY(0.98) translateY(1px);
-  }
-  100% {
-    opacity: 1;
-    transform: scaleY(1) translateY(0);
-  }
-}
-
-.fadeIn {
-  animation: fadeScale 0.8s cubic-bezier(0.2, 0.8, 0.4, 1); /* Slower from 0.3s to 0.8s */
-}
-
-@keyframes fadeScale {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  30% {
-    opacity: 0.6;
-    transform: scale(1.03);
-  }
-  60% {
-    opacity: 0.9;
-    transform: scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Pulse animation for stats during transition - SLOWER */
-.pulse {
-  animation: pulse 0.8s ease-in-out; /* Increased from 0.3s to 0.8s */
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.08);
-    background: #e2e8f0;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-  }
-  70% {
-    transform: scale(1.02);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* Staggered animation delays - more pronounced */
-.candleWrapper:nth-child(odd) {
-  animation-delay: 0.1s;
-}
-
-.candleWrapper:nth-child(even) {
-  animation-delay: 0.2s;
-}
-
-/* Hover effects - keep snappy for interaction */
-.candleWrapper:hover {
-  transform: translateY(-2px) scale(1.02);
-  z-index: 10;
-  transition: all 0.2s ease; /* Keep hover fast for responsiveness */
-}
-
-.candleWrapper:hover .body {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.2s ease;
-}
-
-/* Loading shimmer effect */
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.loading {
-  background: linear-gradient(90deg, #f0f0f0 25%, #f8fafc 50%, #f0f0f0 75%);
-  background-size: 1000px 100%;
-  animation: shimmer 2s infinite;
 }

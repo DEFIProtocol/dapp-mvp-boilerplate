@@ -6,31 +6,29 @@ import styles from './styles/MarketHeader.module.css';
 interface MarketHeaderProps {
   symbol: string;
   name: string;
-  price: number;
-  priceChange?: number;
-  fundingRate?: number;
-  markPrice?: number;
-  indexPrice?: number;
-  openInterest?: number;
-  volume24h?: number;
   tokenIcon?: string;
   maxLeverage?: number;
-  nextFunding?: string;
+  priceData?: {
+    price: number;
+    confidence: number;
+    confidence_percent: number;
+    timestamp: number;
+  };
+  fundingData?: {
+    funding_rate: number;
+    funding_rate_percent: number;
+    spot_price: number;
+    ema_price: number;
+  };
 }
 
 export default function MarketHeader({ 
   symbol,
   name,
-  price,
-  priceChange = 0.5,
-  fundingRate = 0.0085,
-  markPrice,
-  indexPrice,
-  openInterest = 125_000_000,
-  volume24h = 2_500_000_000,
   tokenIcon,
   maxLeverage = 50,
-  nextFunding = '4h 23m'
+  priceData,
+  fundingData
 }: MarketHeaderProps) {
   
   const [isScrolled, setIsScrolled] = useState(false);
@@ -62,10 +60,10 @@ export default function MarketHeader({
     }
   };
 
-  const isPriceUp = priceChange >= 0;
-  const mark = markPrice || price;
-  const index = indexPrice || price * 0.9995;
-  const premium = ((mark - index) / index * 100).toFixed(4);
+  // Calculate mark price (using spot price as mark for now)
+  const markPrice = priceData?.price || 0;
+  const indexPrice = markPrice * 0.9995;
+  const premium = markPrice ? ((markPrice - indexPrice) / indexPrice * 100).toFixed(4) : '0.0000';
 
   return (
     <div className={`${styles.header} ${isScrolled ? styles.scrolled : ''}`}>
@@ -73,9 +71,11 @@ export default function MarketHeader({
         {/* Left section - Token Info */}
         <div className={styles.tokenSection}>
           <div className={styles.tokenIconWrapper}>
-            <span className={styles.tokenIcon}>
-              {typeof getTokenIcon() === 'string' ? getTokenIcon() : getTokenIcon()}
-            </span>
+             <span className={styles.tokenIcon}>
+            {symbol === 'BTC' && '₿'}
+            {symbol === 'ETH' && 'Ξ'}
+            {symbol === 'SOL' && 'S◎L'}
+          </span>
           </div>
           <div className={styles.tokenInfo}>
             <div className={styles.tokenNameRow}>
@@ -83,6 +83,11 @@ export default function MarketHeader({
               <span className={styles.tokenSymbol}>{symbol}USDT</span>
               <span className={styles.maxLeverage}>{maxLeverage}x</span>
             </div>
+            {priceData && (
+              <div className={styles.confidence}>
+                ±${priceData.confidence.toFixed(2)} ({priceData.confidence_percent.toFixed(2)}%)
+              </div>
+            )}
           </div>
         </div>
 
@@ -91,10 +96,14 @@ export default function MarketHeader({
           <div className={styles.priceContainer}>
             <span className={styles.priceLabel}>Price</span>
             <div className={styles.priceRow}>
-              <span className={styles.price}>${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <span className={`${styles.priceChange} ${isPriceUp ? styles.positive : styles.negative}`}>
-                {isPriceUp ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
+              <span className={styles.price}>
+                ${priceData?.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
               </span>
+              {priceData && (
+                <span className={`${styles.priceChange} ${styles.neutral}`}>
+                  ±{priceData.confidence_percent.toFixed(2)}%
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -103,11 +112,11 @@ export default function MarketHeader({
         <div className={styles.statsGrid}>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Mark</span>
-            <span className={styles.statValue}>${mark.toFixed(2)}</span>
+            <span className={styles.statValue}>${markPrice.toFixed(2)}</span>
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Index</span>
-            <span className={styles.statValue}>${index.toFixed(2)}</span>
+            <span className={styles.statValue}>${indexPrice.toFixed(2)}</span>
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Premium</span>
@@ -117,21 +126,25 @@ export default function MarketHeader({
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Volume</span>
-            <span className={styles.statValue}>{formatUSD(volume24h)}</span>
+            <span className={styles.statValue}>{formatUSD(125_000_000)}</span>
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>OI</span>
-            <span className={styles.statValue}>{formatUSD(openInterest)}</span>
+            <span className={styles.statValue}>{formatUSD(2_500_000_000)}</span>
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Funding</span>
-            <span className={`${styles.statValue} ${fundingRate > 0 ? styles.positive : styles.negative}`}>
-              {fundingRate > 0 ? '▲' : '▼'} {Math.abs(fundingRate).toFixed(4)}%
+            <span className={`${styles.statValue} ${fundingData?.funding_rate && fundingData.funding_rate > 0 ? styles.positive : styles.negative}`}>
+              {fundingData ? (
+                <>
+                  {fundingData.funding_rate > 0 ? '▲' : '▼'} {Math.abs(fundingData.funding_rate_percent).toFixed(4)}%
+                </>
+              ) : '0.0000%'}
             </span>
           </div>
           <div className={styles.statItem}>
             <span className={styles.statLabel}>Next</span>
-            <span className={styles.statValue}>{nextFunding}</span>
+            <span className={styles.statValue}>4h 23m</span>
           </div>
         </div>
       </div>
