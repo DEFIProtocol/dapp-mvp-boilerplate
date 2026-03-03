@@ -8,7 +8,19 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./app/src/*"]
+      "@/*": ["./app/src/*"],
+      "@dapp/ui": ["../../packages/ui"],
+      "@dapp/ui/*": ["../../packages/ui/*"],
+      "@dapp/hooks": ["./app/src/hooks"],
+      "@dapp/hooks/*": ["./app/src/hooks/*"],
+      "@dapp/utils": ["./app/src/utils"],
+      "@dapp/utils/*": ["./app/src/utils/*"],
+      "@dapp/contracts": ["../../packages/contracts"],
+      "@dapp/contracts/*": ["../../packages/contracts/*"],
+      "@dapp/contexts": ["./app/src/contexts"],
+      "@dapp/contexts/*": ["./app/src/contexts/*"],
+      "@dapp/lib": ["./app/src/lib"],
+      "@dapp/lib/*": ["./app/src/lib/*"]
     }
   },
   "include": [
