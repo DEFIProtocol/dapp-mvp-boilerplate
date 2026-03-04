@@ -2,9 +2,13 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract InsuranceFund is Ownable {
+contract InsuranceFund is Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     IERC20 public immutable collateral;
 
     uint256 public totalReserves;
@@ -19,20 +23,20 @@ contract InsuranceFund is Ownable {
         lastDistribution = block.timestamp;
     }
 
-    function deposit(uint256 amount) external {
-        collateral.transferFrom(msg.sender, address(this), amount);
+    function deposit(uint256 amount) external nonReentrant {
+        collateral.safeTransferFrom(msg.sender, address(this), amount);
         totalReserves += amount;
         emit Deposited(amount);
     }
 
-    function distribute(address to, uint256 amount) external onlyOwner {
+    function distribute(address to, uint256 amount) external onlyOwner nonReentrant {
         require(block.timestamp >= lastDistribution + DISTRIBUTION_INTERVAL, "Too early");
         require(amount <= totalReserves, "Insufficient reserves");
 
         totalReserves -= amount;
         lastDistribution = block.timestamp;
 
-        collateral.transfer(to, amount);
+        collateral.safeTransfer(to, amount);
         emit Distributed(amount);
     }
 }

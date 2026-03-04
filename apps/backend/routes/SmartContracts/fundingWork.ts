@@ -1,5 +1,5 @@
-import { PythService } from "../pyth/pythService";
-import { SettlementService } from "../services/settlementService";
+import { PythService } from "../../pyth/pythService";
+import { SettlementService } from "./settlementService";
 
 const pyth = new PythService();
 const settlement = new SettlementService();

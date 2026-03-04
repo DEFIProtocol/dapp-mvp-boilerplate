@@ -2,9 +2,11 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IInsuranceFund {
     function deposit(uint256 amount) external;
@@ -14,9 +16,10 @@ interface IMarkOracle {
     function getMarkPrice(bytes32 feedId) external view returns (uint256);
 }
 
-contract PerpSettlement is EIP712, Ownable {
+contract PerpSettlement is EIP712, Ownable, ReentrancyGuard {
 
     using ECDSA for bytes32;
+    using SafeERC20 for IERC20;
 
     IERC20 public immutable collateral;
     IInsuranceFund public insuranceFund;
@@ -28,6 +31,7 @@ contract PerpSettlement is EIP712, Ownable {
     uint256 public insuranceBps = 200; // 2%
     uint256 public maintenanceMarginBps = 1000; // 10%
     uint256 public liquidationRewardBps = 500; // 5%
+    uint256 public liquidationPenaltyBps = 1000; // 10%
 
     uint256 public feePool;
 
@@ -73,7 +77,8 @@ contract PerpSettlement is EIP712, Ownable {
     event FundingUpdated(int256 longFunding, int256 shortFunding);
     event CollateralDeposited(address indexed trader, uint256 amount);
     event CollateralWithdrawn(address indexed trader, uint256 amount);
-    event RiskParamsUpdated(uint256 maintenanceMarginBps, uint256 liquidationRewardBps);
+    event RiskParamsUpdated(uint256 maintenanceMarginBps, uint256 liquidationRewardBps, uint256 liquidationPenaltyBps);
+    event FeeParamsUpdated(uint256 makerFeeBps, uint256 takerFeeBps, uint256 insuranceBps);
     event OracleUpdated(address oracle, bytes32 feedId);
 
     constructor(address _collateral, address _insurance, address _oracle, bytes32 _feedId)
@@ -93,26 +98,41 @@ contract PerpSettlement is EIP712, Ownable {
         emit OracleUpdated(_oracle, _feedId);
     }
 
-    function setRiskParams(uint256 _maintenanceMarginBps, uint256 _liquidationRewardBps) external onlyOwner {
+    function setRiskParams(uint256 _maintenanceMarginBps, uint256 _liquidationRewardBps, uint256 _liquidationPenaltyBps) external onlyOwner {
         require(_maintenanceMarginBps <= 5000, "maintenance too high");
         require(_liquidationRewardBps <= 2000, "liq reward too high");
+        require(_liquidationPenaltyBps <= 5000, "liq penalty too high");
+        require(_liquidationRewardBps <= _liquidationPenaltyBps, "reward > penalty");
         maintenanceMarginBps = _maintenanceMarginBps;
         liquidationRewardBps = _liquidationRewardBps;
-        emit RiskParamsUpdated(_maintenanceMarginBps, _liquidationRewardBps);
+        liquidationPenaltyBps = _liquidationPenaltyBps;
+        emit RiskParamsUpdated(_maintenanceMarginBps, _liquidationRewardBps, _liquidationPenaltyBps);
     }
 
-    function depositCollateral(uint256 amount) external {
+    function setFeeParams(uint256 _makerFeeBps, uint256 _takerFeeBps, uint256 _insuranceBps) external onlyOwner {
+        require(_makerFeeBps <= 1000, "maker fee too high");
+        require(_takerFeeBps <= 2000, "taker fee too high");
+        require(_insuranceBps <= 2000, "insurance too high");
+
+        makerFeeBps = _makerFeeBps;
+        takerFeeBps = _takerFeeBps;
+        insuranceBps = _insuranceBps;
+
+        emit FeeParamsUpdated(_makerFeeBps, _takerFeeBps, _insuranceBps);
+    }
+
+    function depositCollateral(uint256 amount) external nonReentrant {
         require(amount > 0, "bad amount");
-        collateral.transferFrom(msg.sender, address(this), amount);
+        collateral.safeTransferFrom(msg.sender, address(this), amount);
         accountCollateral[msg.sender] += amount;
         emit CollateralDeposited(msg.sender, amount);
     }
 
-    function withdrawCollateral(uint256 amount) external {
+    function withdrawCollateral(uint256 amount) external nonReentrant {
         require(amount > 0, "bad amount");
         require(getAvailableCollateral(msg.sender) >= amount, "insufficient available");
         accountCollateral[msg.sender] -= amount;
-        collateral.transfer(msg.sender, amount);
+        collateral.safeTransfer(msg.sender, amount);
         emit CollateralWithdrawn(msg.sender, amount);
     }
 
@@ -138,7 +158,7 @@ contract PerpSettlement is EIP712, Ownable {
         Order calldata shortOrder,
         bytes calldata shortSig,
         uint256 matchSize
-    ) external {
+    ) external nonReentrant {
 
         require(longOrder.side == 0, "Not long");
         require(shortOrder.side == 1, "Not short");
@@ -161,16 +181,17 @@ contract PerpSettlement is EIP712, Ownable {
         usedOrderHash[longHash] = true;
         usedOrderHash[shortHash] = true;
 
-        uint256 fee = (matchSize * takerFeeBps) / 10000;
+        uint256 longFee = (matchSize * takerFeeBps) / 10000;
+        uint256 shortFee = (matchSize * makerFeeBps) / 10000;
         uint256 insuranceCut = (matchSize * insuranceBps) / 10000;
         uint256 longMargin = (matchSize + longOrder.leverage - 1) / longOrder.leverage;
         uint256 shortMargin = (matchSize + shortOrder.leverage - 1) / shortOrder.leverage;
 
-        _requireAvailableCollateral(longOrder.trader, longMargin + fee + insuranceCut);
-        _requireAvailableCollateral(shortOrder.trader, shortMargin + fee + insuranceCut);
+        _requireAvailableCollateral(longOrder.trader, longMargin + longFee + insuranceCut);
+        _requireAvailableCollateral(shortOrder.trader, shortMargin + shortFee + insuranceCut);
 
-        _applyTradingCharges(longOrder.trader, fee, insuranceCut);
-        _applyTradingCharges(shortOrder.trader, fee, insuranceCut);
+        _applyTradingCharges(longOrder.trader, longFee, insuranceCut);
+        _applyTradingCharges(shortOrder.trader, shortFee, insuranceCut);
 
         uint256 entryPrice = (longOrder.limitPrice + shortOrder.limitPrice) / 2;
         if (entryPrice == 0) {
@@ -215,7 +236,7 @@ contract PerpSettlement is EIP712, Ownable {
     // CLOSE POSITION
     // ========================
 
-    function closePosition(uint256 id) external {
+    function closePosition(uint256 id) external nonReentrant {
         Position storage p = positions[id];
         require(p.active, "Inactive");
         require(p.trader == msg.sender, "Not owner");
@@ -232,11 +253,11 @@ contract PerpSettlement is EIP712, Ownable {
         emit PositionClosed(id, p.trader, pnl, funding);
     }
 
-    function liquidate(uint256 positionId) external {
+    function liquidate(uint256 positionId) external nonReentrant {
         _liquidateWithMark(positionId, getMarkPrice(), msg.sender);
     }
 
-    function liquidateWithPrice(uint256 positionId, uint256 markPrice) external onlyOwner {
+    function liquidateWithPrice(uint256 positionId, uint256 markPrice) external onlyOwner nonReentrant {
         _liquidateWithMark(positionId, markPrice, msg.sender);
     }
 
@@ -257,14 +278,26 @@ contract PerpSettlement is EIP712, Ownable {
         uint256 badDebt = _applyAccountDelta(p.trader, netDelta);
 
         uint256 reward = (p.margin * liquidationRewardBps) / 10000;
+        uint256 penalty = (p.margin * liquidationPenaltyBps) / 10000;
         uint256 available = getAvailableCollateral(p.trader);
+
         if (reward > available) {
             reward = available;
         }
 
+        uint256 remainingAvailable = available - reward;
+        if (penalty > remainingAvailable) {
+            penalty = remainingAvailable;
+        }
+
         if (reward > 0) {
             accountCollateral[p.trader] -= reward;
-            collateral.transfer(liquidator, reward);
+            collateral.safeTransfer(liquidator, reward);
+        }
+
+        if (penalty > 0) {
+            accountCollateral[p.trader] -= penalty;
+            feePool += penalty;
         }
 
         emit PositionLiquidated(positionId, p.trader, liquidator, reward, badDebt);
@@ -330,7 +363,7 @@ contract PerpSettlement is EIP712, Ownable {
         feePool += fee;
 
         if (insuranceCut > 0) {
-            collateral.approve(address(insuranceFund), insuranceCut);
+            collateral.forceApprove(address(insuranceFund), insuranceCut);
             insuranceFund.deposit(insuranceCut);
         }
     }
@@ -369,9 +402,9 @@ contract PerpSettlement is EIP712, Ownable {
     // FEE WITHDRAWAL
     // ========================
 
-    function withdrawFees(address to, uint256 amount) external onlyOwner {
+    function withdrawFees(address to, uint256 amount) external onlyOwner nonReentrant {
         require(amount <= feePool, "Too much");
         feePool -= amount;
-        collateral.transfer(to, amount);
+        collateral.safeTransfer(to, amount);
     }
 }

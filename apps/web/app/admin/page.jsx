@@ -9,7 +9,7 @@ import UserManager from "./components/UserManager";
 import PerpsManager from "./components/PerpsManager"; // Add this import
 import styles from "./admin.module.css";
 
-export default function AdminPage() {
+function AdminPageContent() {
     const searchParams = useSearchParams();
     const auth = searchParams.get("auth");
     
@@ -72,5 +72,13 @@ export default function AdminPage() {
                 {activeTab === "perps" && <PerpsManager />}
             </div>
         </div>
+    );
+}
+
+export default function AdminPage() {
+    return (
+        <Suspense fallback={<div className={styles.loading}>Loading admin...</div>}>
+            <AdminPageContent />
+        </Suspense>
     );
 }

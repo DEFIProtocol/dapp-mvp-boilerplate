@@ -5,6 +5,8 @@ interface IPerpSettlement {
     function updateFunding(int256 longFunding, int256 shortFunding) external;
     function liquidateWithPrice(uint256 positionId, uint256 markPrice) external;
     function liquidate(uint256 positionId) external;
+    function setRiskParams(uint256 maintenanceMarginBps, uint256 liquidationRewardBps, uint256 liquidationPenaltyBps) external;
+    function setFeeParams(uint256 makerFeeBps, uint256 takerFeeBps, uint256 insuranceBps) external;
 }
 
 contract SettlementEngine {
@@ -37,6 +39,17 @@ contract SettlementEngine {
 
     function updateFunding(int256 longFunding, int256 shortFunding) external onlyOwner {
         settlement.updateFunding(longFunding, shortFunding);
+    }
+
+    function setRiskParams(uint256 maintenanceMarginBps, uint256 liquidationRewardBps, uint256 liquidationPenaltyBps)
+        external
+        onlyOwner
+    {
+        settlement.setRiskParams(maintenanceMarginBps, liquidationRewardBps, liquidationPenaltyBps);
+    }
+
+    function setFeeParams(uint256 makerFeeBps, uint256 takerFeeBps, uint256 insuranceBps) external onlyOwner {
+        settlement.setFeeParams(makerFeeBps, takerFeeBps, insuranceBps);
     }
 
     function liquidate(uint256 positionId) external {
