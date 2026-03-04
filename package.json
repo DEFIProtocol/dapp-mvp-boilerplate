@@ -10,11 +10,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "contracts:hh": "npm exec -w apps/contracts -- hardhat",
-    "contracts:test": "npm exec -w apps/contracts -- hardhat test",
+  "contracts:hh": "npm exec -w apps/contracts -- hardhat",
     "contracts:compile": "npm exec -w apps/contracts -- hardhat compile",
-    "contracts:node": "npm exec -w apps/contracts -- hardhat node",
-    "contracts:deploy": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts"
+    "contracts:test": "npm exec -w apps/contracts -- hardhat test",
+    "contracts:node": "npm exec -w apps/contracts -- hardhat node --network hardhatMainnet",
+    "contracts:deploy:local": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network hardhatMainnet",
+    "contracts:deploy:sepolia": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network sepolia"
   },
   "keywords": [],
   "author": "",

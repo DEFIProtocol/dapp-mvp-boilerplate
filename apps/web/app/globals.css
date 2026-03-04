@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* Toast overlay for chain switch */
 .chain-toast {
   position: fixed;
