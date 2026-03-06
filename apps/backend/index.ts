@@ -77,7 +77,7 @@ app.use("/api", pricesRouter);
 app.use('/api/klines', klineRoutes);
 app.use("/api/oracle", oracleRouter);
 app.use("/api/pyth", pythRouter); // Add Pyth routes
-app.use("/api/smart-contracts", smartContractsRouter);
+app.use("/api/smart-contracts", smartContractsRouter(pool));
 
 // Health check
 app.get("/health", (_req, res) => {

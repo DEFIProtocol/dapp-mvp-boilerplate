@@ -1,410 +1,469 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "./storage/PerpStorage.sol";
+import "./modules/CollateralManager.sol";
+import "./modules/PositionManager.sol";
+import "./modules/RiskManager.sol";
+import "./modules/LiquidationEngine.sol";
+import "./modules/SettlementEngine.sol";
+import "./modules/FundingEngine.sol";
+import "./library/OrderLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-interface IInsuranceFund {
-    function deposit(uint256 amount) external;
-}
-
-interface IMarkOracle {
-    function getMarkPrice(bytes32 feedId) external view returns (uint256);
-}
-
-contract PerpSettlement is EIP712, Ownable, ReentrancyGuard {
-
-    using ECDSA for bytes32;
+/**
+ * @title PerpEngine
+ * @notice Main router contract that delegates to specialized modules
+ * @dev Single entry point for all user interactions
+ */
+contract PerpEngine is Ownable {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable collateral;
-    IInsuranceFund public insuranceFund;
-    IMarkOracle public markOracle;
-    bytes32 public marketFeedId;
+    // Storage
+    PerpStorage public perpStorage;
+    
+    // Modules
+    CollateralManager public collateralManager;
+    PositionManager public positionManager;
+    RiskManager public riskManager;
+    LiquidationEngine public liquidationEngine;
+    SettlementEngine public settlementEngine;
+    FundingEngine public fundingEngine;
 
-    uint256 public makerFeeBps = 5;
-    uint256 public takerFeeBps = 10;
-    uint256 public insuranceBps = 200; // 2%
-    uint256 public maintenanceMarginBps = 1000; // 10%
-    uint256 public liquidationRewardBps = 500; // 5%
-    uint256 public liquidationPenaltyBps = 1000; // 10%
+    // Events
+    event ModuleInitialized(string name, address moduleAddress);
+    event EnginePaused(bool paused);
+    event OracleUpdated(address oldOracle, address newOracle, bytes32 feedId);
 
-    uint256 public feePool;
+    constructor(
+        address _collateral,
+        address _insurance,
+        address _oracle,
+        bytes32 _feedId
+    ) Ownable(msg.sender) {
+        // Deploy storage first
+        perpStorage = new PerpStorage();
+        
+        // Initialize storage with basic parameters
+        perpStorage.setCollateral(IERC20(_collateral));
+        perpStorage.setInsuranceFund(_insurance);
+        perpStorage.setMarkOracle(_oracle);
+        perpStorage.setMarketFeedId(_feedId);
+        
+        // Set default parameters
+        perpStorage.setMakerFeeBps(5);
+        perpStorage.setTakerFeeBps(10);
+        perpStorage.setInsuranceBps(200);
+        perpStorage.setMaintenanceMarginBps(1000);  // 10%
+        perpStorage.setLiquidationRewardBps(500);   // 5%
+        perpStorage.setLiquidationPenaltyBps(1000); // 10%
+        
+        // Set initial funding time
+        perpStorage.setLastFundingUpdate(block.timestamp);
+        perpStorage.setNextFundingTime(block.timestamp + 1 hours);
 
-    int256 public cumulativeFundingLong;
-    int256 public cumulativeFundingShort;
+        // Deploy modules
+        _deployModules();
+        
+        // Authorize modules in storage
+        _authorizeModules();
+        
+        // Transfer storage ownership to this contract
+        perpStorage.transferOwnership(address(this));
+    }
 
-    bytes32 public constant ORDER_TYPEHASH =
-        keccak256(
-            "Order(address trader,uint8 side,uint256 exposure,uint256 leverage,uint256 limitPrice,uint256 expiry,uint256 nonce)"
+    /**
+     * @notice Deploy all modules
+     */
+    function _deployModules() internal {
+        // Deploy base modules (no dependencies)
+        collateralManager = new CollateralManager(address(perpStorage));
+        emit ModuleInitialized("CollateralManager", address(collateralManager));
+        
+        riskManager = new RiskManager(address(perpStorage));
+        emit ModuleInitialized("RiskManager", address(riskManager));
+        
+        fundingEngine = new FundingEngine(address(perpStorage), address(collateralManager));
+        emit ModuleInitialized("FundingEngine", address(fundingEngine));
+        
+        // Deploy PositionManager (depends on CollateralManager)
+        positionManager = new PositionManager(
+            address(perpStorage),
+            address(collateralManager)
         );
-
-    struct Order {
-        address trader;
-        uint8 side; // 0 long, 1 short
-        uint256 exposure;
-        uint256 leverage;
-        uint256 limitPrice;
-        uint256 expiry;
-        uint256 nonce;
+        emit ModuleInitialized("PositionManager", address(positionManager));
+        
+        // Deploy SettlementEngine (depends on multiple modules)
+        settlementEngine = new SettlementEngine(
+            address(perpStorage),
+            address(collateralManager),
+            address(positionManager),
+            address(riskManager)
+        );
+        emit ModuleInitialized("SettlementEngine", address(settlementEngine));
+        
+        // Deploy LiquidationEngine (depends on most modules)
+        liquidationEngine = new LiquidationEngine(
+            address(perpStorage),
+            address(collateralManager),
+            address(positionManager),
+            address(riskManager)
+        );
+        emit ModuleInitialized("LiquidationEngine", address(liquidationEngine));
     }
 
-    struct Position {
-        address trader;
-        uint8 side;
-        uint256 exposure;
-        uint256 leverage;
-        uint256 margin;
-        uint256 entryPrice;
-        int256 entryFunding;
-        bool active;
+    /**
+     * @notice Authorize all modules in storage
+     */
+    function _authorizeModules() internal {
+        address[] memory modules = new address[](6);
+        modules[0] = address(collateralManager);
+        modules[1] = address(positionManager);
+        modules[2] = address(riskManager);
+        modules[3] = address(liquidationEngine);
+        modules[4] = address(settlementEngine);
+        modules[5] = address(fundingEngine);
+        
+        for (uint256 i = 0; i < modules.length; i++) {
+            perpStorage.setAuthorizedModule(modules[i], true);
+        }
     }
 
-    mapping(bytes32 => bool) public usedOrderHash;
-    mapping(uint256 => Position) public positions;
-    mapping(address => uint256) public accountCollateral;
-    mapping(address => uint256) public reservedMargin;
-    uint256 public nextPositionId;
+    // ============ USER FACING FUNCTIONS ============
 
-    event PositionOpened(uint256 id, address trader, uint8 side, uint256 exposure, uint256 entryPrice, uint256 margin);
-    event PositionClosed(uint256 id, address trader, int256 pnl, int256 funding);
-    event PositionLiquidated(uint256 id, address trader, address liquidator, uint256 reward, uint256 badDebt);
-    event MatchSettled(address longTrader, address shortTrader, uint256 size);
-    event FundingUpdated(int256 longFunding, int256 shortFunding);
-    event CollateralDeposited(address indexed trader, uint256 amount);
-    event CollateralWithdrawn(address indexed trader, uint256 amount);
-    event RiskParamsUpdated(uint256 maintenanceMarginBps, uint256 liquidationRewardBps, uint256 liquidationPenaltyBps);
-    event FeeParamsUpdated(uint256 makerFeeBps, uint256 takerFeeBps, uint256 insuranceBps);
-    event OracleUpdated(address oracle, bytes32 feedId);
-
-    constructor(address _collateral, address _insurance, address _oracle, bytes32 _feedId)
-        EIP712("PerpSettlement", "1")
-        Ownable(msg.sender)
-    {
-        collateral = IERC20(_collateral);
-        insuranceFund = IInsuranceFund(_insurance);
-        markOracle = IMarkOracle(_oracle);
-        marketFeedId = _feedId;
+    /**
+     * @notice Deposit collateral
+     */
+    function depositCollateral(uint256 amount) external {
+        collateralManager.depositCollateral(amount);
     }
 
-    function setOracle(address _oracle, bytes32 _feedId) external onlyOwner {
-        require(_oracle != address(0), "bad oracle");
-        markOracle = IMarkOracle(_oracle);
-        marketFeedId = _feedId;
-        emit OracleUpdated(_oracle, _feedId);
+    /**
+     * @notice Withdraw collateral
+     */
+    function withdrawCollateral(uint256 amount) external {
+        collateralManager.withdrawCollateral(amount);
     }
 
-    function setRiskParams(uint256 _maintenanceMarginBps, uint256 _liquidationRewardBps, uint256 _liquidationPenaltyBps) external onlyOwner {
-        require(_maintenanceMarginBps <= 5000, "maintenance too high");
-        require(_liquidationRewardBps <= 2000, "liq reward too high");
-        require(_liquidationPenaltyBps <= 5000, "liq penalty too high");
-        require(_liquidationRewardBps <= _liquidationPenaltyBps, "reward > penalty");
-        maintenanceMarginBps = _maintenanceMarginBps;
-        liquidationRewardBps = _liquidationRewardBps;
-        liquidationPenaltyBps = _liquidationPenaltyBps;
-        emit RiskParamsUpdated(_maintenanceMarginBps, _liquidationRewardBps, _liquidationPenaltyBps);
-    }
-
-    function setFeeParams(uint256 _makerFeeBps, uint256 _takerFeeBps, uint256 _insuranceBps) external onlyOwner {
-        require(_makerFeeBps <= 1000, "maker fee too high");
-        require(_takerFeeBps <= 2000, "taker fee too high");
-        require(_insuranceBps <= 2000, "insurance too high");
-
-        makerFeeBps = _makerFeeBps;
-        takerFeeBps = _takerFeeBps;
-        insuranceBps = _insuranceBps;
-
-        emit FeeParamsUpdated(_makerFeeBps, _takerFeeBps, _insuranceBps);
-    }
-
-    function depositCollateral(uint256 amount) external nonReentrant {
-        require(amount > 0, "bad amount");
-        collateral.safeTransferFrom(msg.sender, address(this), amount);
-        accountCollateral[msg.sender] += amount;
-        emit CollateralDeposited(msg.sender, amount);
-    }
-
-    function withdrawCollateral(uint256 amount) external nonReentrant {
-        require(amount > 0, "bad amount");
-        require(getAvailableCollateral(msg.sender) >= amount, "insufficient available");
-        accountCollateral[msg.sender] -= amount;
-        collateral.safeTransfer(msg.sender, amount);
-        emit CollateralWithdrawn(msg.sender, amount);
-    }
-
-    function getAvailableCollateral(address trader) public view returns (uint256) {
-        uint256 balance = accountCollateral[trader];
-        uint256 reserved = reservedMargin[trader];
-        return balance > reserved ? balance - reserved : 0;
-    }
-
-    function getMarkPrice() public view returns (uint256) {
-        uint256 mark = markOracle.getMarkPrice(marketFeedId);
-        require(mark > 0, "bad mark");
-        return mark;
-    }
-
-    // ========================
-    // MATCH SETTLEMENT
-    // ========================
-
+    /**
+     * @notice Settle a single match between orders
+     */
     function settleMatch(
-        Order calldata longOrder,
+        OrderLib.Order calldata longOrder,
         bytes calldata longSig,
-        Order calldata shortOrder,
+        OrderLib.Order calldata shortOrder,
         bytes calldata shortSig,
         uint256 matchSize
-    ) external nonReentrant {
+    ) external returns (bytes32 matchId) {
+        return settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, matchSize);
+    }
 
-        require(longOrder.side == 0, "Not long");
-        require(shortOrder.side == 1, "Not short");
+    /**
+     * @notice Settle multiple matches
+     */
+    function settleMatches(
+        OrderLib.Order[] calldata longs,
+        bytes[] calldata longSigs,
+        OrderLib.Order[] calldata shorts,
+        bytes[] calldata shortSigs,
+        uint256[] calldata sizes
+    ) external returns (bytes32[] memory matchIds) {
+        return settlementEngine.settleMatches(longs, longSigs, shorts, shortSigs, sizes);
+    }
 
-        require(block.timestamp <= longOrder.expiry, "Long expired");
-        require(block.timestamp <= shortOrder.expiry, "Short expired");
+    /**
+     * @notice Close a position
+     */
+    function closePosition(uint256 positionId) external {
+        // Need price at closing
+        uint256 closePrice = riskManager.getMarkPrice();
+        positionManager.closePosition(positionId, closePrice);
+    }
 
-        bytes32 longHash = _hashOrder(longOrder);
-        bytes32 shortHash = _hashOrder(shortOrder);
+    /**
+     * @notice Liquidate a position
+     */
+    function liquidate(uint256 positionId) external {
+        liquidationEngine.liquidate(positionId);
+    }
 
-        require(!usedOrderHash[longHash], "Long used");
-        require(!usedOrderHash[shortHash], "Short used");
+    /**
+     * @notice Add margin to a position
+     */
+    function addMargin(uint256 positionId, uint256 amount) external {
+        positionManager.addMargin(positionId, amount);
+    }
 
-        require(_verify(longOrder, longSig), "Bad long sig");
-        require(_verify(shortOrder, shortSig), "Bad short sig");
+    /**
+     * @notice Remove margin from a position
+     */
+    function removeMargin(uint256 positionId, uint256 amount) external {
+        positionManager.removeMargin(positionId, amount);
+    }
 
-        require(longOrder.leverage > 0, "bad long lev");
-        require(shortOrder.leverage > 0, "bad short lev");
+    /**
+     * @notice Cancel a specific nonce
+     */
+    function cancelNonce(uint256 nonce) external {
+        settlementEngine.cancelNonce(nonce);
+    }
 
-        usedOrderHash[longHash] = true;
-        usedOrderHash[shortHash] = true;
+    /**
+     * @notice Cancel all nonces up to a value
+     */
+    function cancelUpTo(uint256 nonce) external {
+        settlementEngine.cancelUpTo(nonce);
+    }
 
-        uint256 longFee = (matchSize * takerFeeBps) / 10000;
-        uint256 shortFee = (matchSize * makerFeeBps) / 10000;
-        uint256 insuranceCut = (matchSize * insuranceBps) / 10000;
-        uint256 longMargin = (matchSize + longOrder.leverage - 1) / longOrder.leverage;
-        uint256 shortMargin = (matchSize + shortOrder.leverage - 1) / shortOrder.leverage;
+    // ============ VIEW FUNCTIONS ============
 
-        _requireAvailableCollateral(longOrder.trader, longMargin + longFee + insuranceCut);
-        _requireAvailableCollateral(shortOrder.trader, shortMargin + shortFee + insuranceCut);
+    /**
+     * @notice Get current mark price
+     */
+    function getMarkPrice() external view returns (uint256) {
+        return riskManager.getMarkPrice();
+    }
 
-        _applyTradingCharges(longOrder.trader, longFee, insuranceCut);
-        _applyTradingCharges(shortOrder.trader, shortFee, insuranceCut);
+    /**
+     * @notice Get account equity
+     */
+    function getAccountEquity(address trader) external view returns (int256) {
+        return riskManager.getAccountEquity(trader);
+    }
 
-        uint256 entryPrice = (longOrder.limitPrice + shortOrder.limitPrice) / 2;
-        if (entryPrice == 0) {
-            entryPrice = getMarkPrice();
+    /**
+     * @notice Get available collateral
+     */
+    function getAvailableCollateral(address trader) external view returns (uint256) {
+        return collateralManager.getAvailableCollateral(trader);
+    }
+
+    /**
+     * @notice Get total collateral
+     */
+    function getTotalCollateral(address trader) external view returns (uint256) {
+        return collateralManager.getTotalCollateral(trader);
+    }
+
+    /**
+     * @notice Get account health ratio
+     */
+    function getAccountHealthRatio(address trader) external view returns (uint256) {
+        return riskManager.getAccountHealthRatio(trader);
+    }
+
+    /**
+     * @notice Get account maintenance requirement
+     */
+    function getAccountMaintenanceRequirement(address trader) external view returns (uint256) {
+        return riskManager.getAccountMaintenanceRequirement(trader);
+    }
+
+    /**
+     * @notice Get position details
+     */
+    function getPosition(uint256 positionId) external view returns (PerpStorage.Position memory) {
+        return perpStorage.getPosition(positionId);
+    }
+
+    /**
+     * @notice Get position with current PnL
+     */
+    function getPositionWithPnL(uint256 positionId) external view returns (
+        PerpStorage.Position memory position,
+        int256 unrealizedPnl,
+        int256 unrealizedFunding,
+        int256 equity
+    ) {
+        return positionManager.getPositionWithPnL(positionId, riskManager.getMarkPrice());
+    }
+
+    /**
+     * @notice Get trader's positions
+     */
+    function getTraderPositions(address trader) external view returns (uint256[] memory) {
+        return positionManager.getTraderPositions(trader);
+    }
+
+    /**
+     * @notice Check if position is liquidatable
+     */
+    function isPositionLiquidatable(uint256 positionId) external view returns (bool) {
+        return riskManager.isPositionLiquidatable(positionId);
+    }
+
+    /**
+     * @notice Get liquidation price for a position
+     */
+    function getLiquidationPrice(uint256 positionId) external view returns (uint256) {
+        return riskManager.getLiquidationPrice(positionId);
+    }
+
+    /**
+     * @notice Get estimated liquidation reward
+     */
+    function getEstimatedLiquidationReward(uint256 positionId) external view returns (uint256) {
+        return liquidationEngine.getEstimatedLiquidationReward(positionId);
+    }
+
+    /**
+     * @notice Get order fill status
+     */
+    function getOrderFillStatus(OrderLib.Order calldata order) external view returns (uint256 filled, uint256 remaining) {
+        return settlementEngine.getOrderFillStatus(order);
+    }
+
+    /**
+     * @notice Get current funding rate
+     */
+    function getCurrentFundingRate() external view returns (int256 longRate, int256 shortRate) {
+        return fundingEngine.getCurrentFundingRate();
+    }
+
+    /**
+     * @notice Get funding owed for a position
+     */
+    function getPositionFundingOwed(uint256 positionId) external view returns (int256) {
+        return fundingEngine.getPositionFundingOwed(positionId);
+    }
+
+    /**
+     * @notice Get total funding owed by a trader
+     */
+    function getTraderFundingOwed(address trader) external view returns (int256) {
+        return fundingEngine.getTraderFundingOwed(trader);
+    }
+
+    /**
+     * @notice Get protocol stats
+     */
+    function getProtocolStats() external view returns (
+        uint256 totalValueLocked,
+        uint256 totalLongExposure,
+        uint256 totalShortExposure,
+        uint256 openInterest,
+        uint256 feePool,
+        uint256 insuranceFundBalance,
+        uint256 totalBadDebt,
+        uint256 nextFundingTime
+    ) {
+        totalValueLocked = perpStorage.collateral().balanceOf(address(this));
+        totalLongExposure = perpStorage.totalLongExposure();
+        totalShortExposure = perpStorage.totalShortExposure();
+        openInterest = totalLongExposure + totalShortExposure;
+        feePool = perpStorage.feePool();
+        insuranceFundBalance = perpStorage.insuranceFundBalance();
+        totalBadDebt = perpStorage.totalBadDebt();
+        nextFundingTime = perpStorage.nextFundingTime();
+    }
+
+    // ============ ADMIN FUNCTIONS ============
+
+    /**
+     * @notice Update risk parameters
+     */
+    function setRiskParams(
+        uint256 _maintenanceMarginBps,
+        uint256 _liquidationRewardBps,
+        uint256 _liquidationPenaltyBps
+    ) external onlyOwner {
+        require(_maintenanceMarginBps <= 5000, "Maintenance too high");
+        require(_liquidationRewardBps <= 2000, "Reward too high");
+        require(_liquidationPenaltyBps <= 5000, "Penalty too high");
+        require(_liquidationRewardBps <= _liquidationPenaltyBps, "Reward > penalty");
+        
+        perpStorage.setMaintenanceMarginBps(_maintenanceMarginBps);
+        perpStorage.setLiquidationRewardBps(_liquidationRewardBps);
+        perpStorage.setLiquidationPenaltyBps(_liquidationPenaltyBps);
+    }
+
+    /**
+     * @notice Update fee parameters
+     */
+    function setFeeParams(
+        uint256 _makerFeeBps,
+        uint256 _takerFeeBps,
+        uint256 _insuranceBps
+    ) external onlyOwner {
+        require(_makerFeeBps <= 1000, "Maker fee too high");
+        require(_takerFeeBps <= 2000, "Taker fee too high");
+        require(_insuranceBps <= 2000, "Insurance too high");
+        
+        perpStorage.setMakerFeeBps(_makerFeeBps);
+        perpStorage.setTakerFeeBps(_takerFeeBps);
+        perpStorage.setInsuranceBps(_insuranceBps);
+    }
+
+    /**
+     * @notice Update oracle
+     */
+    function setOracle(address _oracle, bytes32 _feedId) external onlyOwner {
+        require(_oracle != address(0), "Invalid oracle");
+        
+        address oldOracle = perpStorage.markOracle();
+        perpStorage.setMarkOracle(_oracle);
+        perpStorage.setMarketFeedId(_feedId);
+        
+        emit OracleUpdated(oldOracle, _oracle, _feedId);
+    }
+
+    /**
+     * @notice Set funding parameters
+     */
+    function setFundingParams(uint256 interval, uint256 maxRate) external onlyOwner {
+        if (interval > 0) {
+            fundingEngine.setFundingInterval(interval);
         }
-
-        _openPosition(longOrder.trader, 0, matchSize, longOrder.leverage, longMargin, entryPrice);
-        _openPosition(shortOrder.trader, 1, matchSize, shortOrder.leverage, shortMargin, entryPrice);
-
-        emit MatchSettled(longOrder.trader, shortOrder.trader, matchSize);
-    }
-
-    function _openPosition(
-        address trader,
-        uint8 side,
-        uint256 exposure,
-        uint256 leverage,
-        uint256 margin,
-        uint256 entryPrice
-    ) internal {
-
-        reservedMargin[trader] += margin;
-
-        int256 fundingSnapshot = side == 0 ? cumulativeFundingLong : cumulativeFundingShort;
-
-        positions[nextPositionId] = Position({
-            trader: trader,
-            side: side,
-            exposure: exposure,
-            leverage: leverage,
-            margin: margin,
-            entryPrice: entryPrice,
-            entryFunding: fundingSnapshot,
-            active: true
-        });
-
-        emit PositionOpened(nextPositionId, trader, side, exposure, entryPrice, margin);
-        nextPositionId++;
-    }
-
-    // ========================
-    // CLOSE POSITION
-    // ========================
-
-    function closePosition(uint256 id) external nonReentrant {
-        Position storage p = positions[id];
-        require(p.active, "Inactive");
-        require(p.trader == msg.sender, "Not owner");
-
-        uint256 markPrice = getMarkPrice();
-        (int256 pnl, int256 funding) = _computePositionPnlAndFunding(p, markPrice);
-        int256 netDelta = pnl - funding;
-
-        p.active = false;
-        reservedMargin[p.trader] -= p.margin;
-
-        _applyAccountDelta(p.trader, netDelta);
-
-        emit PositionClosed(id, p.trader, pnl, funding);
-    }
-
-    function liquidate(uint256 positionId) external nonReentrant {
-        _liquidateWithMark(positionId, getMarkPrice(), msg.sender);
-    }
-
-    function liquidateWithPrice(uint256 positionId, uint256 markPrice) external onlyOwner nonReentrant {
-        _liquidateWithMark(positionId, markPrice, msg.sender);
-    }
-
-    function _liquidateWithMark(uint256 positionId, uint256 markPrice, address liquidator) internal {
-        Position storage p = positions[positionId];
-        require(p.active, "Inactive");
-
-        (int256 pnl, int256 funding) = _computePositionPnlAndFunding(p, markPrice);
-        int256 netDelta = pnl - funding;
-
-        int256 equity = int256(p.margin) + netDelta;
-        uint256 maintenanceMargin = (p.exposure * maintenanceMarginBps) / 10000;
-        require(equity < int256(maintenanceMargin), "Position healthy");
-
-        p.active = false;
-        reservedMargin[p.trader] -= p.margin;
-
-        uint256 badDebt = _applyAccountDelta(p.trader, netDelta);
-
-        uint256 reward = (p.margin * liquidationRewardBps) / 10000;
-        uint256 penalty = (p.margin * liquidationPenaltyBps) / 10000;
-        uint256 available = getAvailableCollateral(p.trader);
-
-        if (reward > available) {
-            reward = available;
-        }
-
-        uint256 remainingAvailable = available - reward;
-        if (penalty > remainingAvailable) {
-            penalty = remainingAvailable;
-        }
-
-        if (reward > 0) {
-            accountCollateral[p.trader] -= reward;
-            collateral.safeTransfer(liquidator, reward);
-        }
-
-        if (penalty > 0) {
-            accountCollateral[p.trader] -= penalty;
-            feePool += penalty;
-        }
-
-        emit PositionLiquidated(positionId, p.trader, liquidator, reward, badDebt);
-    }
-
-
-    // ========================
-    // FUNDING UPDATE
-    // ========================
-
-    function updateFunding(int256 longFunding, int256 shortFunding) external onlyOwner {
-        cumulativeFundingLong += longFunding;
-        cumulativeFundingShort += shortFunding;
-        emit FundingUpdated(longFunding, shortFunding);
-    }
-
-    function _computePositionPnlAndFunding(Position storage p, uint256 markPrice)
-        internal
-        view
-        returns (int256 pnl, int256 funding)
-    {
-        require(p.entryPrice > 0, "bad entry");
-
-        int256 exposure = int256(p.exposure);
-        int256 mark = int256(markPrice);
-        int256 entry = int256(p.entryPrice);
-
-        if (p.side == 0) {
-            pnl = (exposure * (mark - entry)) / entry;
-            funding = (exposure * (cumulativeFundingLong - p.entryFunding)) / 1e18;
-        } else {
-            pnl = (exposure * (entry - mark)) / entry;
-            funding = (exposure * (cumulativeFundingShort - p.entryFunding)) / 1e18;
+        if (maxRate > 0) {
+            fundingEngine.setMaxFundingRate(maxRate);
         }
     }
 
-    function _applyAccountDelta(address trader, int256 delta) internal returns (uint256 badDebt) {
-        if (delta >= 0) {
-            accountCollateral[trader] += uint256(delta);
-            return 0;
+    /**
+     * @notice Update funding (can be called by anyone, but only when ready)
+     */
+    function updateFunding() external returns (int256 longRate, int256 shortRate) {
+        return fundingEngine.updateFunding();
+    }
+
+    /**
+     * @notice Emergency pause
+     */
+    function setEmergencyPause(bool paused) external onlyOwner {
+        perpStorage.setEmergencyPause(paused);
+        emit EnginePaused(paused);
+    }
+
+    /**
+     * @notice Freeze/unfreeze account
+     */
+    function freezeAccount(address trader, bool frozen) external onlyOwner {
+        perpStorage.setFrozenAccount(trader, frozen);
+    }
+
+    /**
+     * @notice Withdraw fees
+     */
+    function withdrawFees(address to, uint256 amount) external onlyOwner {
+        uint256 feePool = perpStorage.feePool();
+        require(amount <= feePool, "Insufficient fees");
+        
+        perpStorage.setFeePool(feePool - amount);
+        perpStorage.collateral().safeTransfer(to, amount);
+    }
+
+    /**
+     * @notice Upgrade a module (advanced)
+     */
+    function upgradeModule(string calldata moduleName, address newModule) external onlyOwner {
+        // De-authorize old module, authorize new one
+        // This is simplified - in production you'd need careful migration
+        if (keccak256(bytes(moduleName)) == keccak256(bytes("CollateralManager"))) {
+            perpStorage.setAuthorizedModule(address(collateralManager), false);
+            collateralManager = CollateralManager(newModule);
+            perpStorage.setAuthorizedModule(newModule, true);
         }
-
-        uint256 loss = uint256(-delta);
-        uint256 balance = accountCollateral[trader];
-
-        if (loss >= balance) {
-            badDebt = loss - balance;
-            accountCollateral[trader] = 0;
-            return badDebt;
-        }
-
-        accountCollateral[trader] = balance - loss;
-        return 0;
-    }
-
-    function _requireAvailableCollateral(address trader, uint256 amount) internal view {
-        require(getAvailableCollateral(trader) >= amount, "insufficient collateral");
-    }
-
-    function _applyTradingCharges(address trader, uint256 fee, uint256 insuranceCut) internal {
-        uint256 totalCharge = fee + insuranceCut;
-        accountCollateral[trader] -= totalCharge;
-        feePool += fee;
-
-        if (insuranceCut > 0) {
-            collateral.forceApprove(address(insuranceFund), insuranceCut);
-            insuranceFund.deposit(insuranceCut);
-        }
-    }
-
-    // ========================
-    // SIGNATURE VERIFICATION
-    // ========================
-
-    function _hashOrder(Order calldata order) internal view returns (bytes32) {
-        return _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    ORDER_TYPEHASH,
-                    order.trader,
-                    order.side,
-                    order.exposure,
-                    order.leverage,
-                    order.limitPrice,
-                    order.expiry,
-                    order.nonce
-                )
-            )
-        );
-    }
-
-    function _verify(Order calldata order, bytes calldata signature)
-        internal
-        view
-        returns (bool)
-    {
-        address signer = _hashOrder(order).recover(signature);
-        return signer == order.trader;
-    }
-
-    // ========================
-    // FEE WITHDRAWAL
-    // ========================
-
-    function withdrawFees(address to, uint256 amount) external onlyOwner nonReentrant {
-        require(amount <= feePool, "Too much");
-        feePool -= amount;
-        collateral.safeTransfer(to, amount);
+        // Add similar for other modules...
     }
 }

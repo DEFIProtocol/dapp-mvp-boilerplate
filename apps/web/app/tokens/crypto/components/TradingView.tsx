@@ -87,8 +87,6 @@ export default function TradingView({
           <div className={styles.perpetualColumn}>
             <PerpetualCard 
               symbol={selectedSymbol}
-              tokenName={selectedToken.name}
-              perpAddress={selectedToken.token_address}
               price={priceData?.price || 0}
               fundingRate={fundingData?.funding_rate || 0.0085}
             />

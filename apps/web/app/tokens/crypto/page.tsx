@@ -1,6 +1,7 @@
 // app/crypto/page.tsx
 "use client";
 import { useState } from "react";
+import { usePerps } from "@/contexts/PerpsContext";
 import TokenSelector from "./components/TokenSelector";
 import TradingView from "./components/TradingView";
 import styles from "./page.module.css";
