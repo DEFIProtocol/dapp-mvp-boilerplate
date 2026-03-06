@@ -1,40 +1,26 @@
 // components/trading/PerpetualCard.tsx
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { getTraderPerpPositions, placePerpOrder } from '@/lib/api/perpsTrading';
-import type { OrderType, TraderPositionSnapshot, PendingPerpOrder } from '@/types/perpsTrading';
 import styles from './styles/PerpetualCard.module.css';
 
 interface PerpetualCardProps {
   symbol: string;
-  tokenName: string;
-  perpAddress?: string;
   price: number;
   fundingRate?: number;
 }
 
 export default function PerpetualCard({ 
   symbol, 
-  tokenName,
-  perpAddress,
   price,
   fundingRate = 0.001, // 0.1% = 0.001
 }: PerpetualCardProps) {
-  const { address } = useAccount();
   const [leverage, setLeverage] = useState(1);
   const [isEditingLeverage, setIsEditingLeverage] = useState(false);
   const [leverageInput, setLeverageInput] = useState('1');
   const [positionSize, setPositionSize] = useState<number | null>(null);
-  const [orderType, setOrderType] = useState<OrderType>('limit');
+  const [orderType, setOrderType] = useState<'market' | 'limit'>('limit');
   const [limitPrice, setLimitPrice] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [apiMessage, setApiMessage] = useState<string | null>(null);
-  const [positions, setPositions] = useState<TraderPositionSnapshot[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<PendingPerpOrder[]>([]);
-  const [markPriceUsd, setMarkPriceUsd] = useState<number>(0);
+  const [showPositionData, setShowPositionData] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,41 +30,22 @@ export default function PerpetualCard({
   // Calculate track fill percentage for slider
   const trackFillPercentage = (leverage / 50) * 100;
 
+  // Animate position data when positionSize changes
+  useEffect(() => {
+    if (positionSize && !showPositionData) {
+      setShowPositionData(true);
+    } else if (!positionSize && showPositionData) {
+      const timer = setTimeout(() => setShowPositionData(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [positionSize, showPositionData]);
+
   // Focus input when editing
   useEffect(() => {
     if (isEditingLeverage && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isEditingLeverage]);
-
-  const refreshPositions = async () => {
-    if (!address || !perpAddress) {
-      setPositions([]);
-      setPendingOrders([]);
-      return;
-    }
-
-    setRefreshing(true);
-    try {
-      const snapshot = await getTraderPerpPositions(address, symbol, perpAddress);
-      setPositions(snapshot.positions ?? []);
-      setPendingOrders(snapshot.pendingOrders ?? []);
-      setMarkPriceUsd(snapshot.markPriceUsd ?? 0);
-      setApiError(null);
-    } catch (error) {
-      setApiError(error instanceof Error ? error.message : 'Failed to load trader positions');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!address || !perpAddress) return;
-
-    refreshPositions();
-    const timer = setInterval(refreshPositions, 15000);
-    return () => clearInterval(timer);
-  }, [address, perpAddress, symbol]);
 
   const calculateLiquidationPrice = () => {
     const maintenanceMargin = 0.005;
@@ -116,62 +83,6 @@ export default function PerpetualCard({
     }
   };
 
-  const handleSubmitOrder = async (side: 'LONG' | 'SHORT') => {
-    if (!address) {
-      setApiError('Connect wallet to place an order.');
-      return;
-    }
-
-    if (!perpAddress) {
-      setApiError(`No Base contract address configured for ${symbol}.`);
-      return;
-    }
-
-    if (!positionSize || positionSize <= 0) {
-      setApiError('Enter a position size before submitting.');
-      return;
-    }
-
-    if (orderType === 'limit' && (!limitPrice || limitPrice <= 0)) {
-      setApiError('Enter a valid limit price for limit orders.');
-      return;
-    }
-
-    setSubmitting(true);
-    setApiError(null);
-    setApiMessage(null);
-
-    try {
-      const exposureUsd = positionSize * leverage;
-      const response = await placePerpOrder({
-        symbol,
-        perpAddress,
-        trader: address,
-        side,
-        orderType,
-        exposureUsd,
-        leverage,
-        limitPrice: orderType === 'limit' ? (limitPrice ?? undefined) : undefined,
-      });
-
-      setApiMessage(
-        `Order queued (${response.order?.id ?? 'n/a'}) at mark $${(response.onChain?.markPriceUsd ?? 0).toFixed(2)}`
-      );
-      await refreshPositions();
-    } catch (error) {
-      setApiError(error instanceof Error ? error.message : 'Failed to place order');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const formatSigned = (value: string) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return value;
-    const sign = parsed > 0 ? '+' : '';
-    return `${sign}${parsed.toFixed(2)}`;
-  };
-
   return (
     <div className={styles.card}>
       {/* Header - Only funding rate remains */}
@@ -184,10 +95,6 @@ export default function PerpetualCard({
           </span>
           <div>
             <h3 className={styles.symbol}>{symbol}USDT Perpetual</h3>
-            <div className={styles.contractMeta}>{tokenName}</div>
-            <div className={styles.contractAddress}>
-              {perpAddress ? `${perpAddress.slice(0, 8)}...${perpAddress.slice(-6)}` : 'No Base address'}
-            </div>
             <span className={styles.maxLeverage}>Up to 50x</span>
           </div>
         </div>
@@ -354,23 +261,13 @@ export default function PerpetualCard({
 
         {/* Action Buttons */}
         <div className={styles.actionButtons}>
-          <button
-            className={`${styles.actionBtn} ${styles.buyBtn}`}
-            onClick={() => handleSubmitOrder('LONG')}
-            disabled={submitting}
-          >
+          <button className={`${styles.actionBtn} ${styles.buyBtn}`}>
             {orderType === 'limit' ? 'Place Limit Order' : 'Buy / Long'} {symbol}
           </button>
-          <button
-            className={`${styles.actionBtn} ${styles.sellBtn}`}
-            onClick={() => handleSubmitOrder('SHORT')}
-            disabled={submitting}
-          >
+          <button className={`${styles.actionBtn} ${styles.sellBtn}`}>
             {orderType === 'limit' ? 'Place Limit Order' : 'Sell / Short'} {symbol}
           </button>
         </div>
-        {apiError && <div className={styles.errorText}>{apiError}</div>}
-        {apiMessage && <div className={styles.successText}>{apiMessage}</div>}
       </div>
 
       {/* Risk Warning - Only shows when positionSize has a value */}
@@ -379,44 +276,6 @@ export default function PerpetualCard({
           ⚠️ Leverage trading carries high risk. Liquidation at {calculateLiquidationPrice().toFixed(2)} USD
         </div>
       )}
-
-      <div className={styles.positionsPanel}>
-        <div className={styles.positionsHeader}>
-          <h4>Trader Positions</h4>
-          <span>{refreshing ? 'Refreshing...' : `Mark: $${markPriceUsd.toFixed(2)}`}</span>
-        </div>
-        {!address && <div className={styles.emptyText}>Connect wallet to load positions and PnL.</div>}
-        {address && positions.length === 0 && <div className={styles.emptyText}>No open on-chain positions.</div>}
-        {positions.map((position) => (
-          <div key={position.positionId} className={styles.positionRow}>
-            <div className={styles.positionTopRow}>
-              <span>#{position.positionId}</span>
-              <span className={position.side === 'LONG' ? styles.positive : styles.negative}>{position.side}</span>
-            </div>
-            <div className={styles.positionGrid}>
-              <span>Entry: ${Number(position.entryPriceUsd).toFixed(2)}</span>
-              <span>Exposure: ${Number(position.exposureUsd).toFixed(2)}</span>
-              <span>Margin: ${Number(position.marginUsd).toFixed(2)}</span>
-              <span className={Number(position.unrealizedPnlUsd) >= 0 ? styles.positive : styles.negative}>
-                PnL: {formatSigned(position.unrealizedPnlUsd)}
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {pendingOrders.length > 0 && (
-          <div className={styles.pendingPanel}>
-            <div className={styles.pendingTitle}>Pending Orders</div>
-            {pendingOrders.slice(0, 3).map((order) => (
-              <div key={order.id} className={styles.pendingRow}>
-                <span>{order.side} {order.orderType}</span>
-                <span>${order.exposureUsd.toFixed(2)}</span>
-                <span>{order.status}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -10,12 +10,16 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-  "contracts:hh": "npm exec -w apps/contracts -- hardhat",
+    "contracts:hh": "npm exec -w apps/contracts -- hardhat",
     "contracts:compile": "npm exec -w apps/contracts -- hardhat compile",
     "contracts:test": "npm exec -w apps/contracts -- hardhat test",
+    "contracts:test:trace": "npm exec -w apps/contracts -- hardhat test --network hardhatMainnet --show-stack-traces --verbosity 3",
+    "contracts:test:fulltrace": "npm exec -w apps/contracts -- hardhat test --network hardhatMainnet --show-stack-traces --verbosity 4 --gas-stats",
     "contracts:node": "npm exec -w apps/contracts -- hardhat node --network hardhatMainnet",
     "contracts:deploy:local": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network hardhatMainnet",
-    "contracts:deploy:sepolia": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network sepolia"
+    "contracts:deploy:sepolia": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network sepolia",
+    "test:trace": "npm run contracts:test:trace",
+    "test:fulltrace": "npm run contracts:test:fulltrace"
   },
   "keywords": [],
   "author": "",

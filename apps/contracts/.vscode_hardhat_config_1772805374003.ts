@@ -29,20 +29,13 @@ export default defineConfig({
     },
   },
   networks: {
-    hardhat: {
-      type: "edr-simulated",
-      chainType: "l1",
-      allowUnlimitedContractSize: true,
-    },
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
-      allowUnlimitedContractSize: true,
     },
     hardhatOp: {
       type: "edr-simulated",
       chainType: "op",
-      allowUnlimitedContractSize: true,
     },
     sepolia: {
       type: "http",
