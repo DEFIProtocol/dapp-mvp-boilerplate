@@ -3,6 +3,9 @@ import { network } from "hardhat";
 import { isAddress, isHexString, type BaseContract } from "ethers";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 type DeployConfig = {
   collateralToken: string;
