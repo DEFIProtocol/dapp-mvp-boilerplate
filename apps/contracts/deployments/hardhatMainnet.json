@@ -1,6 +1,6 @@
 {
   "network": "hardhatMainnet",
-  "timestamp": "2026-03-06T20:29:25.525Z",
+  "timestamp": "2026-03-09T02:54:20.987Z",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "addresses": {
     "perpEngine": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
@@ -13,11 +13,11 @@
     "fundingEngine": "0x10C6E9530F1C1AF873a391030a1D9E8ed0630D26"
   },
   "constructorArgs": {
-    "collateralToken": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "insuranceFund": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "oracle": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "collateralToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "insuranceFund": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
+    "oracle": "0x694AA1769357215DE4FAC081bf1f309aDC325306",
     "feedId": "0x4554482f55534400000000000000000000000000000000000000000000000000"
   },
-  "transactionHash": "0xa498742e158aaa84a5f654c0d17c4ee6f25e02222ac767ef1e22e7b9d7979bd8",
+  "transactionHash": "0x42cf3e962092eaa43174844400551c4ddcec0f26aef8ca9c1b411ed35c36ecf9",
   "blockNumber": 1
 }
