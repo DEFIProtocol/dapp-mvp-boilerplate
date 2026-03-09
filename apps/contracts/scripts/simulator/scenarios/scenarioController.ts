@@ -19,6 +19,15 @@ export interface SimulationState {
   insurancePayouts: bigint;
   protocolRevenue: bigint;
   badDebt: bigint;
+  makerFeesCollected: bigint;
+  takerFeesCollected: bigint;
+  fundingFeesTransferred: bigint;
+  insuranceFundInflow: bigint;
+  insuranceFundOutflow: bigint;
+  liquidatorOrders: number;
+  liquidatorRewardsPaid: bigint;
+  liquidationPenaltyCollected: bigint;
+  marginReturnedFromLiquidation: bigint;
   openOrders: number;
   newOrders: number;
   filledOrders: number;
@@ -37,6 +46,12 @@ export interface SimulationState {
 }
 
 export class ScenarioController {
+  private static readonly MAKER_FEE_BPS = 3; // 0.03%
+  private static readonly TAKER_FEE_BPS = 5; // 0.05%
+  private static readonly LIQUIDATION_PENALTY_BPS = 150; // 1.5%
+  private static readonly LIQUIDATOR_REWARD_BPS = 80; // 0.8%
+  private static readonly INSURANCE_FEE_CUT_BPS = 20; // 0.2% insurance contribution on taker notional
+
   private readonly random: DeterministicRandom;
   private readonly marketPrice: MarketPriceEngine;
   private readonly agents: BaseAgent[] = [];
@@ -76,6 +91,15 @@ export class ScenarioController {
       insurancePayouts: 0n,
       protocolRevenue: 0n,
       badDebt: 0n,
+      makerFeesCollected: 0n,
+      takerFeesCollected: 0n,
+      fundingFeesTransferred: 0n,
+      insuranceFundInflow: 0n,
+      insuranceFundOutflow: 0n,
+      liquidatorOrders: 0,
+      liquidatorRewardsPaid: 0n,
+      liquidationPenaltyCollected: 0n,
+      marginReturnedFromLiquidation: 0n,
       openOrders: 0,
       newOrders: 0,
       filledOrders: 0,
@@ -169,6 +193,9 @@ export class ScenarioController {
 
     const avgNotional = this.getAvgTradeNotional();
     const totalStepVolumeUsd = trades * avgNotional;
+    const makerFeeStep = totalStepVolumeUsd * (ScenarioController.MAKER_FEE_BPS / 10000);
+    const takerFeeStep = totalStepVolumeUsd * (ScenarioController.TAKER_FEE_BPS / 10000);
+    const insuranceFeeCutStep = totalStepVolumeUsd * (ScenarioController.INSURANCE_FEE_CUT_BPS / 10000);
 
     const trendBias = trend === 'up' ? 0.08 : trend === 'down' ? -0.08 : 0;
     const scenarioBias = scenario.name.includes('Bull') ? 0.06 : scenario.name.includes('Bear') ? -0.06 : 0;
@@ -208,23 +235,49 @@ export class ScenarioController {
     this.state.liquidations = Math.min(liqCapacity, Math.max(0, liqEstimate));
     this.state.totalLiquidations += this.state.liquidations;
 
-    const payoutPerLiq = avgNotional * this.state.averageLeverage * this.random.range(0.05, 0.16);
-    const stepInsurancePayout = this.state.liquidations * payoutPerLiq;
-    const feeRate = 0.0005;
+    const liquidatorOrders = this.state.liquidations + Math.floor(this.state.positionsAtRisk * 0.12);
+    this.state.liquidatorOrders = liquidatorOrders;
+
+    const liquidatedMarginNotional = this.state.liquidations * (avgNotional / Math.max(1.5, this.state.averageLeverage));
+    const liquidationPenaltyStep = liquidatedMarginNotional * (ScenarioController.LIQUIDATION_PENALTY_BPS / 10000);
+    const liquidatorRewardStep = liquidatedMarginNotional * (ScenarioController.LIQUIDATOR_REWARD_BPS / 10000);
+    const residualMargin = Math.max(0, liquidatedMarginNotional - liquidationPenaltyStep - liquidatorRewardStep);
+    const stressLoss = this.state.liquidations * avgNotional * this.random.range(0.01, 0.07);
+    const stepInsurancePayout = Math.max(0, stressLoss - residualMargin * 0.4);
+
     const fundingRate = (this.state.longShortRatio - 1) * 0.0002;
     const fundingFlow = Math.max(0, Number(this.state.openInterest) * Math.abs(fundingRate) * 0.00002);
-    const stepFees = totalStepVolumeUsd * feeRate + fundingFlow;
+    const stepFees = makerFeeStep + takerFeeStep;
 
-    const insuranceContribution = stepFees * 0.35;
-    this.state.protocolRevenue += BigInt(Math.floor(stepFees));
-    this.state.insurancePayouts += BigInt(Math.floor(stepInsurancePayout));
+    const insuranceContribution = insuranceFeeCutStep + liquidationPenaltyStep;
 
-    const insuranceNext = Number(this.state.insuranceFundBalance) + insuranceContribution - stepInsurancePayout;
-    if (insuranceNext < 0) {
-      this.state.badDebt += BigInt(Math.floor(Math.abs(insuranceNext)));
+    const stepFeesUnits = this.toUnits(stepFees);
+    const makerFeeUnits = this.toUnits(makerFeeStep);
+    const takerFeeUnits = this.toUnits(takerFeeStep);
+    const fundingFlowUnits = this.toUnits(fundingFlow);
+    const insuranceInflowUnits = this.toUnits(insuranceContribution);
+    const insuranceOutflowUnits = this.toUnits(stepInsurancePayout);
+    const liquidatorRewardUnits = this.toUnits(liquidatorRewardStep);
+    const liquidationPenaltyUnits = this.toUnits(liquidationPenaltyStep);
+    const marginReturnedUnits = this.toUnits(residualMargin);
+
+    this.state.protocolRevenue += stepFeesUnits;
+    this.state.insurancePayouts += insuranceOutflowUnits;
+    this.state.makerFeesCollected += makerFeeUnits;
+    this.state.takerFeesCollected += takerFeeUnits;
+    this.state.fundingFeesTransferred += fundingFlowUnits;
+    this.state.insuranceFundInflow += insuranceInflowUnits;
+    this.state.insuranceFundOutflow += insuranceOutflowUnits;
+    this.state.liquidatorRewardsPaid += liquidatorRewardUnits;
+    this.state.liquidationPenaltyCollected += liquidationPenaltyUnits;
+    this.state.marginReturnedFromLiquidation += marginReturnedUnits;
+
+    const insuranceAvailable = this.state.insuranceFundBalance + insuranceInflowUnits;
+    if (insuranceOutflowUnits > insuranceAvailable) {
+      this.state.badDebt += insuranceOutflowUnits - insuranceAvailable;
       this.state.insuranceFundBalance = 0n;
     } else {
-      this.state.insuranceFundBalance = BigInt(Math.floor(insuranceNext));
+      this.state.insuranceFundBalance = insuranceAvailable - insuranceOutflowUnits;
     }
 
     const collateralBase = 4500000 + Number(this.state.insuranceFundBalance) * 0.4;
@@ -314,6 +367,10 @@ export class ScenarioController {
 
   private clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
+  }
+
+  private toUnits(amountUsd: number): bigint {
+    return BigInt(Math.floor(amountUsd * 1_000_000));
   }
 
   private logAgentSummary(): void {

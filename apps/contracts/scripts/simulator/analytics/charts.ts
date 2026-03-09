@@ -38,6 +38,9 @@ export class ChartGenerator {
     charts.push(await this.generateVolumeChart(metrics));
     charts.push(await this.generateLongevityChart(metrics));
     charts.push(await this.generateLiquidationEfficiencyChart(metrics));
+    charts.push(await this.generateFeesChart(metrics));
+    charts.push(await this.generateFundingChart(metrics));
+    charts.push(await this.generateLiquidatorFlowChart(metrics));
     charts.push(await this.generateDashboard(metrics));
     
     console.log(`\nGenerated ${charts.length} charts in ${this.outputDir}`);
@@ -199,7 +202,7 @@ export class ChartGenerator {
             position: 'left',
             title: {
               display: true,
-              text: 'Balance (USD Millions)'
+              text: 'Balance (USD)'
             }
           },
           y1: {
@@ -630,6 +633,214 @@ export class ChartGenerator {
 
     const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
     const filename = '08_liquidation_efficiency.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateFeesChart(metrics: ProtocolMetrics[]): Promise<string> {
+    const steps = metrics.map((_, i) => i);
+    const makerFees = metrics.map((m) => Number(m.makerFeesCollected) / 1e6);
+    const takerFees = metrics.map((m) => Number(m.takerFeesCollected) / 1e6);
+    const totalFees = metrics.map((m) => Number(m.protocolRevenue) / 1e6);
+
+    const configuration = {
+      type: 'line' as any,
+      data: {
+        labels: steps,
+        datasets: [
+          {
+            label: 'Cumulative Maker Fees (0.03%)',
+            data: makerFees,
+            borderColor: 'rgb(46, 204, 113)',
+            fill: false,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Cumulative Taker Fees (0.05%)',
+            data: takerFees,
+            borderColor: 'rgb(231, 76, 60)',
+            fill: false,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Cumulative Total Fees',
+            data: totalFees,
+            borderColor: 'rgb(52, 73, 94)',
+            borderDash: [6, 4],
+            fill: false,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Fee Accrual (Maker 0.03%, Taker 0.05%)'
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            title: {
+              display: true,
+              text: 'USD'
+            }
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '09_fees.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateFundingChart(metrics: ProtocolMetrics[]): Promise<string> {
+    const steps = metrics.map((_, i) => i);
+    const fundingRateBps = metrics.map((m) => m.fundingRate * 10000);
+    const cumulativeFundingTransferred = metrics.map((m) => Number(m.fundingFeesTransferred) / 1e6);
+
+    const configuration = {
+      type: 'line' as any,
+      data: {
+        labels: steps,
+        datasets: [
+          {
+            label: 'Funding Rate (bps)',
+            data: fundingRateBps,
+            borderColor: 'rgb(155, 89, 182)',
+            fill: false,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Cumulative Funding Transferred (USD)',
+            data: cumulativeFundingTransferred,
+            borderColor: 'rgb(52, 152, 219)',
+            fill: false,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Funding Rate and Funding Transfer Over Time'
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Funding Rate (bps)'
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'USD'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '10_funding.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateLiquidatorFlowChart(metrics: ProtocolMetrics[]): Promise<string> {
+    const steps = metrics.map((_, i) => i);
+    const liquidatorOrders = metrics.map((m) => m.liquidatorOrders);
+    const rewardsPaid = metrics.map((m) => Number(m.liquidatorRewardsPaid) / 1e6);
+    const marginReturned = metrics.map((m) => Number(m.marginReturnedFromLiquidation) / 1e6);
+    const insuranceUsed = metrics.map((m) => Number(m.insuranceFundOutflow) / 1e6);
+
+    const configuration = {
+      type: 'line' as any,
+      data: {
+        labels: steps,
+        datasets: [
+          {
+            label: 'Liquidator Orders',
+            data: liquidatorOrders,
+            borderColor: 'rgb(243, 156, 18)',
+            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+            type: 'bar',
+            yAxisID: 'y'
+          },
+          {
+            label: 'Margin Returned (USD)',
+            data: marginReturned,
+            borderColor: 'rgb(39, 174, 96)',
+            fill: false,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'Liquidator Rewards Paid (USD)',
+            data: rewardsPaid,
+            borderColor: 'rgb(41, 128, 185)',
+            fill: false,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'Insurance Used (USD)',
+            data: insuranceUsed,
+            borderColor: 'rgb(192, 57, 43)',
+            fill: false,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Liquidator Activity and Insurance Usage'
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Order Count'
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'USD'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '11_liquidator_flow.png';
     fs.writeFileSync(path.join(this.outputDir, filename), image);
     return filename;
   }

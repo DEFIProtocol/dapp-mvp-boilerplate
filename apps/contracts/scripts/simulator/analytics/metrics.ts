@@ -23,6 +23,15 @@ export interface ProtocolMetrics {
   insuranceCoverageRatio: number;
 
   protocolRevenue: bigint;
+  makerFeesCollected: bigint;
+  takerFeesCollected: bigint;
+  fundingFeesTransferred: bigint;
+  insuranceFundInflow: bigint;
+  insuranceFundOutflow: bigint;
+  liquidatorOrders: number;
+  liquidatorRewardsPaid: bigint;
+  liquidationPenaltyCollected: bigint;
+  marginReturnedFromLiquidation: bigint;
   volume24h: bigint;
   tradeCount: number;
   uniqueTraders: number;
@@ -131,6 +140,15 @@ export class MetricsCollector {
       insuranceCoverageRatio,
 
       protocolRevenue: state.protocolRevenue,
+      makerFeesCollected: state.makerFeesCollected,
+      takerFeesCollected: state.takerFeesCollected,
+      fundingFeesTransferred: state.fundingFeesTransferred,
+      insuranceFundInflow: state.insuranceFundInflow,
+      insuranceFundOutflow: state.insuranceFundOutflow,
+      liquidatorOrders: state.liquidatorOrders,
+      liquidatorRewardsPaid: state.liquidatorRewardsPaid,
+      liquidationPenaltyCollected: state.liquidationPenaltyCollected,
+      marginReturnedFromLiquidation: state.marginReturnedFromLiquidation,
       volume24h: rollingVolume,
       tradeCount: state.trades,
       uniqueTraders: state.uniqueTraders,
@@ -221,9 +239,18 @@ export class MetricsCollector {
     }
 
     const totalLiquidations = this.metricsHistory.reduce((sum, m) => sum + m.liquidationCount, 0);
+    const totalLiquidatorOrders = this.metricsHistory.reduce((sum, m) => sum + m.liquidatorOrders, 0);
     const insolventSteps = this.metricsHistory.filter((m) => m.isInsolvent).length;
     const totalOrdersPlaced = this.metricsHistory.reduce((sum, m) => sum + m.newOrders, 0);
     const totalOrdersFilled = this.metricsHistory.reduce((sum, m) => sum + m.filledOrders, 0);
+    const totalMakerFees = latest.makerFeesCollected;
+    const totalTakerFees = latest.takerFeesCollected;
+    const totalFundingTransferred = latest.fundingFeesTransferred;
+    const totalLiqRewards = latest.liquidatorRewardsPaid;
+    const totalLiqPenalty = latest.liquidationPenaltyCollected;
+    const totalMarginReturned = latest.marginReturnedFromLiquidation;
+    const totalInsuranceInflow = latest.insuranceFundInflow;
+    const totalInsuranceOutflow = latest.insuranceFundOutflow;
 
     const cumulativeVolume = this.stepVolumeHistory.reduce((sum, v) => sum + v, 0n);
 
@@ -267,6 +294,22 @@ export class MetricsCollector {
       },
       revenue: {
         protocolFees: formatUnits(latest.protocolRevenue, 6),
+        makerFees: formatUnits(totalMakerFees, 6),
+        takerFees: formatUnits(totalTakerFees, 6),
+      },
+      funding: {
+        transferred: formatUnits(totalFundingTransferred, 6),
+      },
+      liquidator: {
+        orders: totalLiquidatorOrders,
+        rewardsPaid: formatUnits(totalLiqRewards, 6),
+        penaltyCollected: formatUnits(totalLiqPenalty, 6),
+        marginReturned: formatUnits(totalMarginReturned, 6),
+        insuranceUsed: formatUnits(totalInsuranceOutflow, 6),
+      },
+      insuranceFlow: {
+        inflow: formatUnits(totalInsuranceInflow, 6),
+        outflow: formatUnits(totalInsuranceOutflow, 6),
       },
       marketQuality: {
         avgSpreadBps: (this.metricsHistory.reduce((sum, m) => sum + m.spreadBps, 0) / this.metricsHistory.length).toFixed(2),

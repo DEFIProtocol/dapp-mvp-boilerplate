@@ -7,8 +7,14 @@ export interface ScenarioConfig {
     initialPrice: number;
     volatility: number; // daily volatility
     trend?: number; // trend strength (positive or negative)
+    targetReturnPct?: number; // total return target over scenario (e.g. 133 for +133%)
+    targetReturnHorizonSteps?: number; // steps over which target return should be achieved
+    maxStepMovePct?: number; // hard cap for sideways models (e.g. 0.005 = +/-0.5%)
     shockStep?: number; // step at which shock occurs
     shockMagnitude?: number; // -0.3 for 30% drop
+    shockDirection?: 'up' | 'down' | 'either';
+    shockMagnitudeMin?: number;
+    shockMagnitudeMax?: number;
   };
   traderActivity: {
     baseFrequency: number; // base trade probability
@@ -19,12 +25,13 @@ export interface ScenarioConfig {
 export const SCENARIOS: Record<string, ScenarioConfig> = {
   normal: {
     name: 'Normal Market',
-    description: 'Low volatility, steady trading',
+    description: 'Sideways market with small bounded moves',
     duration: 10000,
     priceModel: {
       type: 'randomWalk',
       initialPrice: 2000,
-      volatility: 0.002 // 0.2% per step
+      volatility: 0.002,
+      maxStepMovePct: 0.005 // +/-0.5% step bound
     },
     traderActivity: {
       baseFrequency: 0.2,
@@ -34,13 +41,15 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   
   bullRun: {
     name: 'Bull Run',
-    description: 'Strong upward trend with high trading volume',
+    description: 'Persistent uptrend with a target +133% move over the run',
     duration: 15000,
     priceModel: {
       type: 'trending',
       initialPrice: 2000,
-      volatility: 0.003,
-      trend: 0.005 // 0.5% upward per step
+      volatility: 0.001,
+      targetReturnPct: 133,
+      targetReturnHorizonSteps: 1000,
+      trend: 0.001
     },
     traderActivity: {
       baseFrequency: 0.3,
@@ -50,13 +59,15 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   
   bearMarket: {
     name: 'Bear Market',
-    description: 'Strong downward trend with panic selling',
+    description: 'Persistent downtrend mirroring bull-run magnitude',
     duration: 15000,
     priceModel: {
       type: 'trending',
       initialPrice: 2000,
-      volatility: 0.004,
-      trend: -0.006 // 0.6% downward per step
+      volatility: 0.001,
+      targetReturnPct: -57,
+      targetReturnHorizonSteps: 1000,
+      trend: -0.001
     },
     traderActivity: {
       baseFrequency: 0.35,
@@ -83,14 +94,60 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   
   blackSwan: {
     name: 'Black Swan Crash',
-    description: 'Extreme market event - tests insurance fund',
+    description: 'Normal regime, one-off extreme shock, then normal regime resumes',
     duration: 8000,
     priceModel: {
       type: 'blackSwan',
       initialPrice: 2000,
       volatility: 0.002,
-      shockStep: 3000,
-      shockMagnitude: -0.7 // 70% crash!
+      shockStep: 300,
+      maxStepMovePct: 0.005,
+      shockDirection: 'either',
+      shockMagnitudeMin: 0.6,
+      shockMagnitudeMax: 0.8,
+      shockMagnitude: -0.7 // fallback for compatibility
+    },
+    traderActivity: {
+      baseFrequency: 0.25,
+      volumeMultiplier: 1.2
+    }
+  },
+
+  blackSwanDown: {
+    name: 'Black Swan Crash (Forced Down)',
+    description: 'Normal regime, forced one-off 60-80% crash, then normal regime resumes',
+    duration: 8000,
+    priceModel: {
+      type: 'blackSwan',
+      initialPrice: 2000,
+      volatility: 0.002,
+      shockStep: 300,
+      maxStepMovePct: 0.005,
+      shockDirection: 'down',
+      shockMagnitudeMin: 0.6,
+      shockMagnitudeMax: 0.8,
+      shockMagnitude: -0.7
+    },
+    traderActivity: {
+      baseFrequency: 0.25,
+      volumeMultiplier: 1.2
+    }
+  },
+
+  blackSwanUp: {
+    name: 'Black Swan Melt-up (Forced Up)',
+    description: 'Normal regime, forced one-off +500% to +600% appreciation, then normal regime resumes',
+    duration: 8000,
+    priceModel: {
+      type: 'blackSwan',
+      initialPrice: 2000,
+      volatility: 0.002,
+      shockStep: 300,
+      maxStepMovePct: 0.005,
+      shockDirection: 'up',
+      shockMagnitudeMin: 0.6,
+      shockMagnitudeMax: 0.8,
+      shockMagnitude: 5.5
     },
     traderActivity: {
       baseFrequency: 0.25,
@@ -145,3 +202,6 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     }
   }
 };
+
+// Alias to support CLI usage with "bearRun"
+SCENARIOS.bearRun = SCENARIOS.bearMarket;

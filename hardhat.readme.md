@@ -19,4 +19,7 @@ npm run contracts:simulate -- normal 12345 --deploy --charts
 npm run contracts:simulate -- normal 12345 --deploy --steps 1000 --charts
 npm run contracts:simulate -- bullRun 12345 --deploy --steps 1000 --charts
 npm run contracts:simulate -- bearMarket 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- bearRun 12345 --deploy --steps 1000 --charts
 npm run contracts:simulate -- blackSwan 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- blackSwanUp 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- blackSwanDown 12345 --deploy --steps 1000 --charts
