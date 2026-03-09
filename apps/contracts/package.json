@@ -1,7 +1,7 @@
 {
   "name": "contracts",
   "version": "1.0.0",
-  "type": "module",
+    "type": "commonjs",
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.4",
     "@nomicfoundation/hardhat-ignition": "^3.0.7",
