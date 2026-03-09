@@ -18,6 +18,8 @@
     "contracts:node": "npm exec -w apps/contracts -- hardhat node --network hardhatMainnet",
     "contracts:deploy:local": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network hardhatMainnet",
     "contracts:deploy:sepolia": "npm exec -w apps/contracts -- hardhat run scripts/deploy.ts --network sepolia",
+    "contracts:simulate": "npm exec -w apps/contracts -- ts-node scripts/simulator/runSimulator.ts",
+    "contracts:simulate:quick": "npm exec -w apps/contracts -- ts-node scripts/simulator/runSimulator.ts normal 12345 --deploy --steps 5",
     "test:trace": "npm run contracts:test:trace",
     "test:fulltrace": "npm run contracts:test:fulltrace"
   },
