@@ -1,0 +1,23 @@
+{
+  "network": "baseSepolia",
+  "timestamp": "2026-03-08T01:52:52.853Z",
+  "deployer": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
+  "addresses": {
+    "perpEngine": "",
+    "perpStorage": "0xE422436bbA342C2e109889464B77Fdbc5e309d23",
+    "collateralManager": "0x127cc69E5736560bC3C3EC045a661c4e73DD075f",
+    "positionManager": "0x2ba430c867E046823BE5d06a5216C6166e9467A3",
+    "riskManager": "0x37658fCA52244E01E8B35b8A25df03434C8637C4",
+    "liquidationEngine": "0xa451C8A6dC12A31C2d947fF5025f29a5af7791F9",
+    "settlementEngine": "0x6D1e66b2E58Bb7b7dcE10742a4C2D28E54A12db0",
+    "fundingEngine": "0xF5257f0cE8ff9D0eA47C0D398Cb68412c01a68C8"
+  },
+  "constructorArgs": {
+    "collateralToken": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "insuranceFund": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
+    "oracle": "0x694AA1769357215DE4FAC081bf1f309aDC325306",
+    "feedId": "0x4554482f55534400000000000000000000000000000000000000000000000000"
+  },
+  "transactionHash": "",
+  "blockNumber": 0
+}
