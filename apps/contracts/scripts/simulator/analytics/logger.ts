@@ -95,7 +95,16 @@ export class SimulationLogger {
       formatUnits(metrics.insuranceBalance, 6),
       formatUnits(metrics.badDebt, 6),
       formatUnits(metrics.protocolRevenue, 6),
+      formatUnits(metrics.makerFeesCollected, 6),
+      formatUnits(metrics.takerFeesCollected, 6),
+      formatUnits(metrics.fundingFeesTransferred, 6),
+      formatUnits(metrics.insuranceFundInflow, 6),
+      formatUnits(metrics.insuranceFundOutflow, 6),
       metrics.liquidationCount,
+      metrics.liquidatorOrders,
+      formatUnits(metrics.liquidatorRewardsPaid, 6),
+      formatUnits(metrics.liquidationPenaltyCollected, 6),
+      formatUnits(metrics.marginReturnedFromLiquidation, 6),
       metrics.positionsAtRisk,
       metrics.tradeCount,
       metrics.uniqueTraders,
@@ -121,7 +130,16 @@ export class SimulationLogger {
         'insuranceBalance',
         'badDebt',
         'protocolRevenue',
+        'makerFeesCollected',
+        'takerFeesCollected',
+        'fundingFeesTransferred',
+        'insuranceFundInflow',
+        'insuranceFundOutflow',
         'liquidations',
+        'liquidatorOrders',
+        'liquidatorRewardsPaid',
+        'liquidationPenaltyCollected',
+        'marginReturnedFromLiquidation',
         'positionsAtRisk',
         'trades',
         'uniqueTraders',
@@ -182,6 +200,8 @@ export class SimulationLogger {
     const summaryPath = path.join(this.logDir, 'summary.txt');
     fs.writeFileSync(summaryPath, this.formatSummaryText(summary));
 
+    this.saveLiquidatorActivityTable();
+
     console.log(`\nResults saved to: ${this.logDir}`);
   }
 
@@ -219,8 +239,49 @@ export class SimulationLogger {
       '',
       'REVENUE',
       `Protocol Fees: $${summary.revenue.protocolFees}`,
+      `Maker Fees: $${summary.revenue.makerFees}`,
+      `Taker Fees: $${summary.revenue.takerFees}`,
+      '',
+      'FUNDING',
+      `Funding Transferred: $${summary.funding.transferred}`,
+      '',
+      'LIQUIDATOR FLOW',
+      `Liquidator Orders: ${summary.liquidator.orders}`,
+      `Liquidator Rewards Paid: $${summary.liquidator.rewardsPaid}`,
+      `Liquidation Penalty Collected: $${summary.liquidator.penaltyCollected}`,
+      `Margin Returned: $${summary.liquidator.marginReturned}`,
+      `Insurance Used: $${summary.liquidator.insuranceUsed}`,
+      '',
+      'INSURANCE FLOW',
+      `Insurance Inflow: $${summary.insuranceFlow.inflow}`,
+      `Insurance Outflow: $${summary.insuranceFlow.outflow}`,
       '',
     ].join('\n');
+  }
+
+  private saveLiquidatorActivityTable(): void {
+    const outputPath = path.join(this.logDir, 'liquidator_activity.csv');
+    const header = [
+      'step',
+      'liquidatorOrders',
+      'liquidations',
+      'liquidatorRewardsPaid',
+      'liquidationPenaltyCollected',
+      'marginReturnedFromLiquidation',
+      'insuranceFundOutflow',
+    ].join(',');
+
+    const lines = this.logs.metrics.map((m, idx) => [
+      idx,
+      m.liquidatorOrders,
+      m.liquidationCount,
+      formatUnits(m.liquidatorRewardsPaid, 6),
+      formatUnits(m.liquidationPenaltyCollected, 6),
+      formatUnits(m.marginReturnedFromLiquidation, 6),
+      formatUnits(m.insuranceFundOutflow, 6),
+    ].join(','));
+
+    fs.writeFileSync(outputPath, header + '\n' + lines.join('\n') + '\n');
   }
 
   logStep(step: number, totalSteps: number, metrics: ProtocolMetrics, elapsedMs: number): void {
