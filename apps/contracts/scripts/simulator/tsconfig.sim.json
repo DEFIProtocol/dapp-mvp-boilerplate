@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/simulator",
+    "rootDir": "./",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [
+      "node",
+      "hardhat",
+      "@nomicfoundation/hardhat-ethers" 
+    ]
+  },
+  "include": [
+    "./**/*.ts",
+    "../../hardhat.config.ts" 
+  ],
+  "files": [
+    "../../hardhat.config.ts"
+  ]
+}
