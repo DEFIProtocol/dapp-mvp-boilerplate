@@ -109,8 +109,8 @@ export class RetailTraderAgent extends BaseAgent {
     const maxSize = Number(this.config.behavior.maxTradeSize);
     const size = minSize + (maxSize - minSize) * sizeFactor;
     
-    // Random leverage (but retail tends to use higher leverage)
-    const leverage = this.random.range(5, 10);
+    // Retail is modeled as highly levered.
+    const leverage = this.random.range(this.config.behavior.minLeverage, this.config.behavior.maxLeverage);
     
     console.log(`${this.id} (retail) placing random ${side} of $${size.toFixed(0)} with ${leverage}x leverage`);
     
@@ -142,7 +142,8 @@ export class WhaleAgent extends BaseAgent {
           Number(this.config.behavior.maxTradeSize) * 0.3
         );
         
-        console.log(`${this.id} (whale) adding to ${existingPos.side} position: +$${additionalSize.toFixed(0)}`);
+        const leverage = this.random.range(this.config.behavior.minLeverage, this.config.behavior.maxLeverage);
+        console.log(`${this.id} (whale) adding to ${existingPos.side} position: +$${additionalSize.toFixed(0)} at ${leverage.toFixed(1)}x`);
       } else {
         // Reverse position (close + open opposite)
         console.log(`${this.id} (whale) reversing position from ${existingPos.side} to ${existingPos.side === 'long' ? 'short' : 'long'}`);
@@ -164,8 +165,9 @@ export class WhaleAgent extends BaseAgent {
         Number(this.config.behavior.minTradeSize) * 0.8,
         Number(this.config.behavior.maxTradeSize)
       );
+      const leverage = this.random.range(this.config.behavior.minLeverage, this.config.behavior.maxLeverage);
       
-      console.log(`${this.id} (whale) opening massive ${side} position: $${size.toFixed(0)}`);
+      console.log(`${this.id} (whale) opening massive ${side} position: $${size.toFixed(0)} at ${leverage.toFixed(1)}x`);
     }
   }
 }
