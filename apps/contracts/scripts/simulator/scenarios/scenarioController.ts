@@ -19,6 +19,10 @@ export interface SimulationState {
   insurancePayouts: bigint;
   protocolRevenue: bigint;
   badDebt: bigint;
+  openOrders: number;
+  newOrders: number;
+  filledOrders: number;
+  cancelledOrders: number;
   trades: number;
   totalTrades: number;
   liquidations: number;
@@ -72,6 +76,10 @@ export class ScenarioController {
       insurancePayouts: 0n,
       protocolRevenue: 0n,
       badDebt: 0n,
+      openOrders: 0,
+      newOrders: 0,
+      filledOrders: 0,
+      cancelledOrders: 0,
       trades: 0,
       totalTrades: 0,
       liquidations: 0,
@@ -145,6 +153,20 @@ export class ScenarioController {
     const shockBoost = this.isShockRegime() ? 1.45 : 1;
     const trades = Math.max(1, Math.floor(baselineTrades * volTradeBoost * shockBoost));
 
+    const orderMultiplier = this.random.range(1.0, 1.8);
+    const newOrders = Math.max(trades, Math.floor(trades * orderMultiplier));
+    const fillRate = this.clamp(0.74 - absReturn * 2.5 - this.state.spreadBps / 1000, 0.2, 0.92);
+    const filledOrders = Math.min(newOrders, Math.floor(newOrders * fillRate));
+    const cancelRate = this.isShockRegime() ? 0.24 : 0.14;
+    const cancelledOrders = Math.floor((newOrders - filledOrders) * cancelRate);
+    const carryDecay = this.isShockRegime() ? 0.04 : 0.1;
+    const carriedOrders = Math.floor(this.state.openOrders * (1 - carryDecay));
+
+    this.state.newOrders = newOrders;
+    this.state.filledOrders = filledOrders;
+    this.state.cancelledOrders = cancelledOrders;
+    this.state.openOrders = Math.max(0, carriedOrders + newOrders - filledOrders - cancelledOrders);
+
     const avgNotional = this.getAvgTradeNotional();
     const totalStepVolumeUsd = trades * avgNotional;
 
@@ -166,17 +188,24 @@ export class ScenarioController {
     this.state.openInterest = this.state.longOpenInterest + this.state.shortOpenInterest;
     this.state.longShortRatio = updatedShortOi > 0 ? updatedLongOi / updatedShortOi : 0;
 
-    const leverageBase = scenario.name.includes('Liquidity Crisis') ? 4.8 : 3.1;
-    const leverageVolBump = absReturn * 45;
-    const leverageNoise = this.random.range(-0.35, 0.35);
-    this.state.averageLeverage = this.clamp(leverageBase + leverageVolBump + leverageNoise, 1.1, 12);
+    const targetLeverage = this.computeTargetLeverage(absReturn);
+    this.state.averageLeverage = this.clamp(this.state.averageLeverage * 0.7 + targetLeverage * 0.3, 1.1, 45);
 
-    const riskBase = this.state.averageLeverage * 1.8 + absReturn * 200;
-    const riskShockBoost = this.isShockRegime() ? 18 : 0;
+    const riskBase = this.state.averageLeverage * 2.6 + absReturn * 260;
+    const riskShockBoost = this.isShockRegime() ? 30 : 0;
     this.state.positionsAtRisk = Math.max(0, Math.floor(riskBase + riskShockBoost + this.random.range(0, 8)));
 
-    const liqPressure = this.state.positionsAtRisk * (0.04 + absReturn * 2.2);
-    this.state.liquidations = Math.floor(Math.max(0, liqPressure + this.random.range(0, 1.5)));
+    const liqConversionRate = this.clamp(
+      0.03 +
+        Math.max(0, this.state.averageLeverage - 6) * 0.01 +
+        absReturn * 1.4 +
+        (this.isShockRegime() ? 0.04 : 0),
+      0.01,
+      0.35
+    );
+    const liqCapacity = Math.max(1, Math.floor(this.state.openOrders * 0.18));
+    const liqEstimate = Math.floor(this.state.positionsAtRisk * liqConversionRate + this.random.range(0, 2.2));
+    this.state.liquidations = Math.min(liqCapacity, Math.max(0, liqEstimate));
     this.state.totalLiquidations += this.state.liquidations;
 
     const payoutPerLiq = avgNotional * this.state.averageLeverage * this.random.range(0.05, 0.16);
@@ -218,6 +247,41 @@ export class ScenarioController {
     this.stateHistory.push({ ...this.state });
 
     return this.state;
+  }
+
+  private computeTargetLeverage(absReturn: number): number {
+    // Weighted by typical notional impact of each cohort, not just headcount.
+    const cohortNotionalWeight: Record<string, number> = {
+      marketMaker: 0.12,
+      momentum: 0.16,
+      retail: 0.42,
+      whale: 0.26,
+      arbitrageur: 0.04,
+    };
+
+    let weightedLeverage = 0;
+    let totalWeight = 0;
+
+    for (const config of AGENT_CONFIGS) {
+      if (config.type === 'liquidator') continue;
+      const weight = cohortNotionalWeight[config.type] ?? 0;
+      const base = (config.behavior.minLeverage + config.behavior.maxLeverage) / 2;
+      weightedLeverage += base * weight;
+      totalWeight += weight;
+    }
+
+    const cohortBaseline = totalWeight > 0 ? weightedLeverage / totalWeight : 6;
+    const volatilityBump = absReturn * 55;
+    const shockBump = this.isShockRegime() ? 3.5 : 0;
+    const scenarioBump =
+      this.scenarioName === 'blackSwan' || this.scenarioName === 'liquidationCascade'
+        ? 2.5
+        : this.scenarioName === 'bearMarket'
+          ? 1.5
+          : 0;
+    const noise = this.random.range(-0.8, 0.8);
+
+    return this.clamp(cohortBaseline + volatilityBump + shockBump + scenarioBump + noise, 3, 35);
   }
 
   private determineTrend(): 'up' | 'down' | 'neutral' {

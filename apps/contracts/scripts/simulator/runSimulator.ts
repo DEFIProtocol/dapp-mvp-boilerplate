@@ -155,13 +155,16 @@ const isMain = process.argv[1]
 
 if (isMain) {
   const args = process.argv.slice(2);
+  const hasChartsFlag = args.includes("--charts");
+  const hasNoChartsFlag = args.includes("--no-charts");
 
   const options: SimulationOptions = {
     scenario: ((args[0] as keyof typeof SCENARIOS) || "normal"),
     seed: Number.parseInt(args[1] ?? "12345", 10),
     deploy: args.includes("--deploy"),
     headless: args.includes("--headless"),
-    generateCharts: !args.includes("--no-charts"),
+    // Explicit --charts wins when both flags are present.
+    generateCharts: hasChartsFlag ? true : !hasNoChartsFlag,
   };
 
   if (args.includes("--steps")) {

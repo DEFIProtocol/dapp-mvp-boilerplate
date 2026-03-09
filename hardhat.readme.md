@@ -10,3 +10,13 @@ npm run contracts:deploy -- --network hardhatMainnet
 npm run contracts:deploy -- --network sepolia
 npm run contracts:node
 npm run contracts:deploy
+
+Run Simulator:
+npm exec -w apps/contracts -- hardhat node
+npm run contracts:deploy:local
+npm run contracts:simulate -- normal 12345 --deploy --charts
+
+npm run contracts:simulate -- normal 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- bullRun 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- bearMarket 12345 --deploy --steps 1000 --charts
+npm run contracts:simulate -- blackSwan 12345 --deploy --steps 1000 --charts

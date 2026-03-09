@@ -37,6 +37,7 @@ export class ChartGenerator {
     charts.push(await this.generateLeverageChart(metrics));
     charts.push(await this.generateVolumeChart(metrics));
     charts.push(await this.generateLongevityChart(metrics));
+    charts.push(await this.generateLiquidationEfficiencyChart(metrics));
     charts.push(await this.generateDashboard(metrics));
     
     console.log(`\nGenerated ${charts.length} charts in ${this.outputDir}`);
@@ -458,6 +459,12 @@ export class ChartGenerator {
     
     ctx.fillStyle = 'red';
     ctx.fillText(`Total Liquidations: ${metrics.reduce((sum, m) => sum + m.liquidationCount, 0)}`, 50, 280);
+
+    const totalOrders = metrics.reduce((sum, m) => sum + m.newOrders, 0);
+    const totalLiquidations = metrics.reduce((sum, m) => sum + m.liquidationCount, 0);
+    const liqPer100 = totalOrders > 0 ? (totalLiquidations / totalOrders) * 100 : 0;
+    ctx.fillStyle = 'purple';
+    ctx.fillText(`Liquidations / 100 Orders: ${liqPer100.toFixed(2)}`, 50, 360);
     
     ctx.fillStyle = 'blue';
     ctx.fillText(`Open Interest: $${(Number(latest.openInterest) / 1e6).toFixed(2)}M`, 50, 320);
@@ -547,6 +554,82 @@ export class ChartGenerator {
 
     const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
     const filename = '07_longevity_risk.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateLiquidationEfficiencyChart(metrics: ProtocolMetrics[]): Promise<string> {
+    const steps = metrics.map((_, i) => i);
+    const openOrders = metrics.map((m) => m.openOrders);
+    const liquidations = metrics.map((m) => m.liquidationCount);
+    const liqPer100Orders = metrics.map((m) => m.liquidationsPer100Orders);
+
+    const configuration = {
+      type: 'line' as any,
+      data: {
+        labels: steps,
+        datasets: [
+          {
+            label: 'Open Orders',
+            data: openOrders,
+            borderColor: 'rgb(33, 150, 243)',
+            backgroundColor: 'rgba(33, 150, 243, 0.12)',
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Liquidations per Step',
+            data: liquidations,
+            type: 'bar',
+            borderColor: 'rgb(244, 67, 54)',
+            backgroundColor: 'rgba(244, 67, 54, 0.5)',
+            yAxisID: 'y'
+          },
+          {
+            label: 'Liquidations per 100 Orders',
+            data: liqPer100Orders,
+            borderColor: 'rgb(156, 39, 176)',
+            borderWidth: 2,
+            fill: false,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Order Book Pressure vs Liquidation Efficiency'
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Order / Liquidation Count'
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Liquidations per 100 Orders'
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '08_liquidation_efficiency.png';
     fs.writeFileSync(path.join(this.outputDir, filename), image);
     return filename;
   }

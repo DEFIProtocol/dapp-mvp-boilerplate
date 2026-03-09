@@ -50,8 +50,8 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     behavior: {
       minTradeSize: '100',
       maxTradeSize: '5000',
-      minLeverage: 1,
-      maxLeverage: 10,
+      minLeverage: 15,
+      maxLeverage: 40,
       tradeFrequency: 0.1,
       maxPositions: 3
     }
@@ -64,7 +64,7 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     behavior: {
       minTradeSize: '500000',
       maxTradeSize: '2000000',
-      minLeverage: 3,
+      minLeverage: 5,
       maxLeverage: 10,
       tradeFrequency: 0.05,
       maxPositions: 2

@@ -26,6 +26,11 @@ export interface ProtocolMetrics {
   volume24h: bigint;
   tradeCount: number;
   uniqueTraders: number;
+  openOrders: number;
+  newOrders: number;
+  filledOrders: number;
+  cancelledOrders: number;
+  liquidationsPer100Orders: number;
 
   fundingRate: number;
   nextFundingTime: number;
@@ -56,6 +61,7 @@ export interface PositionDetail {
 export class MetricsCollector {
   private metricsHistory: ProtocolMetrics[] = [];
   private positionsHistory: Map<number, PositionDetail[]> = new Map();
+  private stepVolumeHistory: bigint[] = [];
 
   private readonly provider: any;
   private readonly contracts: {
@@ -93,8 +99,9 @@ export class MetricsCollector {
 
     const block = await this.provider.getBlockNumber();
 
-    const volumeWindow = this.metricsHistory.slice(Math.max(0, this.metricsHistory.length - 1440));
-    const rollingVolume = volumeWindow.reduce((sum, m) => sum + m.volume24h, 0n);
+    const currentStepVolume = BigInt(Math.floor(state.trades * 12000));
+    const volumeWindow = this.stepVolumeHistory.slice(Math.max(0, this.stepVolumeHistory.length - 1440));
+    const rollingVolume = volumeWindow.reduce((sum, v) => sum + v, 0n) + currentStepVolume;
 
     const imbalance = state.longShortRatio - 1;
     const fundingRate = this.clamp(imbalance * 0.0002, -0.002, 0.002);
@@ -124,9 +131,15 @@ export class MetricsCollector {
       insuranceCoverageRatio,
 
       protocolRevenue: state.protocolRevenue,
-      volume24h: rollingVolume + BigInt(Math.floor(state.trades * 12000)),
+      volume24h: rollingVolume,
       tradeCount: state.trades,
       uniqueTraders: state.uniqueTraders,
+      openOrders: state.openOrders,
+      newOrders: state.newOrders,
+      filledOrders: state.filledOrders,
+      cancelledOrders: state.cancelledOrders,
+      liquidationsPer100Orders:
+        state.newOrders > 0 ? (state.liquidations / state.newOrders) * 100 : 0,
 
       fundingRate,
       nextFundingTime: Date.now() + 3600000,
@@ -142,6 +155,7 @@ export class MetricsCollector {
     };
 
     this.metricsHistory.push(metrics);
+    this.stepVolumeHistory.push(currentStepVolume);
     return metrics;
   }
 
@@ -208,6 +222,10 @@ export class MetricsCollector {
 
     const totalLiquidations = this.metricsHistory.reduce((sum, m) => sum + m.liquidationCount, 0);
     const insolventSteps = this.metricsHistory.filter((m) => m.isInsolvent).length;
+    const totalOrdersPlaced = this.metricsHistory.reduce((sum, m) => sum + m.newOrders, 0);
+    const totalOrdersFilled = this.metricsHistory.reduce((sum, m) => sum + m.filledOrders, 0);
+
+    const cumulativeVolume = this.stepVolumeHistory.reduce((sum, v) => sum + v, 0n);
 
     return {
       duration: this.metricsHistory.length,
@@ -232,10 +250,15 @@ export class MetricsCollector {
         total: totalLiquidations,
         insuranceUsed: formatUnits(latest.insurancePayouts, 6),
         avgPayout: totalLiquidations > 0 ? formatUnits(latest.insurancePayouts / BigInt(totalLiquidations), 6) : '0',
+        per100Orders: totalOrdersPlaced > 0 ? ((totalLiquidations / totalOrdersPlaced) * 100).toFixed(2) : '0.00',
       },
       trading: {
-        totalVolume: formatUnits(this.metricsHistory.reduce((sum, m) => sum + m.volume24h, 0n), 6),
+        totalVolume: formatUnits(cumulativeVolume, 6),
+        volume24h: formatUnits(latest.volume24h, 6),
         avgTradeCount: (this.metricsHistory.reduce((sum, m) => sum + m.tradeCount, 0) / this.metricsHistory.length).toFixed(0),
+        ordersPlaced: totalOrdersPlaced,
+        fillRatePercent: totalOrdersPlaced > 0 ? ((totalOrdersFilled / totalOrdersPlaced) * 100).toFixed(2) : '0.00',
+        finalOpenOrders: latest.openOrders,
       },
       health: {
         avgLeverage: (this.metricsHistory.reduce((sum, m) => sum + m.averageLeverage, 0) / this.metricsHistory.length).toFixed(2),
