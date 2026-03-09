@@ -31,16 +31,11 @@ export class ChartGenerator {
     const charts: string[] = [];
     
     charts.push(await this.generatePriceChart(metrics));
-    charts.push(await this.generateOpenInterestChart(metrics));
     charts.push(await this.generateInsuranceFundChart(metrics));
-    charts.push(await this.generateLiquidationsChart(metrics));
-    charts.push(await this.generateLeverageChart(metrics));
-    charts.push(await this.generateVolumeChart(metrics));
-    charts.push(await this.generateLongevityChart(metrics));
     charts.push(await this.generateLiquidationEfficiencyChart(metrics));
-    charts.push(await this.generateFeesChart(metrics));
     charts.push(await this.generateFundingChart(metrics));
     charts.push(await this.generateLiquidatorFlowChart(metrics));
+    charts.push(await this.generateInsuranceOutflowVsMarginReturnedChart(metrics));
     charts.push(await this.generateDashboard(metrics));
     
     console.log(`\nGenerated ${charts.length} charts in ${this.outputDir}`);
@@ -471,11 +466,19 @@ export class ChartGenerator {
     
     ctx.fillStyle = 'blue';
     ctx.fillText(`Open Interest: $${(Number(latest.openInterest) / 1e6).toFixed(2)}M`, 50, 320);
+
+    ctx.fillStyle = 'teal';
+    ctx.fillText(`24h Volume: $${(Number(latest.volume24h) / 1e6).toFixed(2)}`, 50, 400);
+
+    ctx.fillStyle = 'darkorange';
+    ctx.fillText(`Average Leverage: ${latest.averageLeverage.toFixed(2)}x`, 50, 440);
     
     // Add mini sparklines for key metrics
-    this.drawSparkline(ctx, metrics.map(m => m.price), 50, 400, 400, 60, 'Price');
-    this.drawSparkline(ctx, metrics.map(m => Number(m.insuranceBalance) / 1e6), 50, 500, 400, 60, 'Insurance Fund');
-    this.drawSparkline(ctx, metrics.map(m => m.liquidationCount), 50, 600, 400, 60, 'Liquidations');
+    this.drawSparkline(ctx, metrics.map(m => m.price), 50, 470, 400, 60, 'Price');
+    this.drawSparkline(ctx, metrics.map(m => Number(m.insuranceBalance) / 1e6), 50, 560, 400, 60, 'Insurance Fund');
+    this.drawSparkline(ctx, metrics.map(m => Number(m.openInterest) / 1e6), 50, 650, 400, 60, 'Open Interest');
+    this.drawSparkline(ctx, metrics.map(m => Number(m.volume24h) / 1e6), 50, 740, 400, 60, '24h Volume');
+    this.drawSparkline(ctx, metrics.map(m => m.averageLeverage), 50, 830, 400, 60, 'Average Leverage');
     
     const buffer = canvas.toBuffer('image/png');
     const filename = '00_dashboard.png';
@@ -841,6 +844,60 @@ export class ChartGenerator {
 
     const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
     const filename = '11_liquidator_flow.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateInsuranceOutflowVsMarginReturnedChart(metrics: ProtocolMetrics[]): Promise<string> {
+    const steps = metrics.map((_, i) => i);
+    const insuranceOutflow = metrics.map((m) => Number(m.insuranceFundOutflow) / 1e6);
+    const marginReturned = metrics.map((m) => Number(m.marginReturnedFromLiquidation) / 1e6);
+
+    const configuration = {
+      type: 'line' as any,
+      data: {
+        labels: steps,
+        datasets: [
+          {
+            label: 'Insurance Fund Outflow (USD)',
+            data: insuranceOutflow,
+            borderColor: 'rgb(231, 76, 60)',
+            backgroundColor: 'rgba(231, 76, 60, 0.15)',
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Margin Returned (USD)',
+            data: marginReturned,
+            borderColor: 'rgb(46, 204, 113)',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            fill: true,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Insurance Fund Outflow vs Margin Returned'
+          }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            title: {
+              display: true,
+              text: 'USD'
+            }
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '12_insurance_outflow_vs_margin_returned.png';
     fs.writeFileSync(path.join(this.outputDir, filename), image);
     return filename;
   }
