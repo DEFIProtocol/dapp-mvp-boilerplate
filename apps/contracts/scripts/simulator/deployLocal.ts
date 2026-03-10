@@ -21,9 +21,8 @@ interface DeployedAddresses {
   };
 }
 
-export async function deployLocal(): Promise<DeployedAddresses> {
-  const connection = (await network.connect()) as unknown as { ethers: any };
-  const { ethers } = connection;
+export async function deployLocal(ethersOverride?: any): Promise<DeployedAddresses> {
+  const ethers = ethersOverride ?? ((await network.connect()) as unknown as { ethers: any }).ethers;
     
   console.log("\n🚀 Deploying local test environment...");
   
@@ -118,27 +117,35 @@ export async function deployLocal(): Promise<DeployedAddresses> {
   const liquidationEngineAddress = await liquidationEngine.getAddress();
   console.log(`LiquidationEngine: ${liquidationEngineAddress}`);
   
-  // 10. Initialize contracts (set permissions, etc.)
+  // 10. Initialize contracts (set storage params and module permissions)
   console.log("\n🔧 Initializing contracts...");
-  
-  // Grant roles/permissions (best effort; skip if ABI doesn't expose these hooks)
-  try {
-    await perpStorage.grantRole(await perpStorage.COLLATERAL_MANAGER_ROLE(), collateralManagerAddress);
-    await perpStorage.grantRole(await perpStorage.POSITION_MANAGER_ROLE(), positionManagerAddress);
-    await perpStorage.grantRole(await perpStorage.RISK_MANAGER_ROLE(), riskManagerAddress);
-    await perpStorage.grantRole(await perpStorage.LIQUIDATION_ENGINE_ROLE(), liquidationEngineAddress);
-    await perpStorage.grantRole(await perpStorage.SETTLEMENT_ENGINE_ROLE(), settlementEngineAddress);
-    await perpStorage.grantRole(await perpStorage.FUNDING_ENGINE_ROLE(), fundingEngineAddress);
-  } catch {
-    console.log("  Skipping role grants (not available in current deployment ABI)");
-  }
 
-  // Set oracle if the storage contract exposes the hook
-  try {
-    await perpStorage.setOracle(oracleAddress);
-  } catch {
-    console.log("  Skipping oracle wiring (setOracle not available in current deployment ABI)");
-  }
+  // Configure storage primitives expected by modules.
+  await perpStorage.setCollateral(usdcAddress);
+  await perpStorage.setInsuranceFund(insuranceFund.address);
+  await perpStorage.setMarkOracle(oracleAddress);
+  await perpStorage.setMarketFeedId(ethers.encodeBytes32String("SIM_MARK"));
+
+  // Use protocol defaults from PerpSettlement constructor.
+  await perpStorage.setMakerFeeBps(5);
+  await perpStorage.setTakerFeeBps(10);
+  await perpStorage.setInsuranceBps(200);
+  await perpStorage.setMaintenanceMarginBps(1000);
+  await perpStorage.setLiquidationRewardBps(500);
+  await perpStorage.setLiquidationPenaltyBps(1000);
+
+  const latest = await ethers.provider.getBlock("latest");
+  const nowTs = latest?.timestamp ?? Math.floor(Date.now() / 1000);
+  await perpStorage.setLastFundingUpdate(nowTs);
+  await perpStorage.setNextFundingTime(nowTs + 3600);
+
+  // Authorize all modules in PerpStorage.
+  await perpStorage.setAuthorizedModule(collateralManagerAddress, true);
+  await perpStorage.setAuthorizedModule(positionManagerAddress, true);
+  await perpStorage.setAuthorizedModule(riskManagerAddress, true);
+  await perpStorage.setAuthorizedModule(liquidationEngineAddress, true);
+  await perpStorage.setAuthorizedModule(settlementEngineAddress, true);
+  await perpStorage.setAuthorizedModule(fundingEngineAddress, true);
   
   // 11. Fund traders with USDC
   console.log("\n💰 Funding traders with USDC...");
@@ -162,27 +169,29 @@ export async function deployLocal(): Promise<DeployedAddresses> {
       const trader = traders[traderIndex];
       agentAddresses[type].push(trader.address);
       
-          // Simulate balance allocation metadata only. This mock token doesn't expose external mint.
+          // Allocate token balances from deployer supply.
           let amount: bigint;
           switch (type) {
             case 'whale':
-              amount = ethers.parseUnits("5000000", 6); // 5M USDC
+              amount = ethers.parseUnits("50000", 6); // 50k USDC
               break;
             case 'marketMaker':
-              amount = ethers.parseUnits("500000", 6); // 500k USDC
+              amount = ethers.parseUnits("25000", 6); // 25k USDC
               break;
             case 'momentum':
-              amount = ethers.parseUnits("100000", 6); // 100k USDC
+              amount = ethers.parseUnits("15000", 6); // 15k USDC
               break;
             case 'liquidator':
-              amount = ethers.parseUnits("200000", 6); // 200k USDC
+              amount = ethers.parseUnits("12000", 6); // 12k USDC
               break;
             case 'arbitrageur':
-              amount = ethers.parseUnits("500000", 6); // 500k USDC
+              amount = ethers.parseUnits("20000", 6); // 20k USDC
               break;
             default:
-              amount = ethers.parseUnits("10000", 6); // 10k USDC for retail
+              amount = ethers.parseUnits("5000", 6); // 5k USDC for retail
           }
+
+            await usdc.transfer(trader.address, amount);
       
       console.log(`  Assigned ${ethers.formatUnits(amount, 6)} USDC notional for ${type} ${i}: ${trader.address}`);
       

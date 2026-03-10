@@ -36,6 +36,7 @@ export class ChartGenerator {
     charts.push(await this.generateFundingChart(metrics));
     charts.push(await this.generateLiquidatorFlowChart(metrics));
     charts.push(await this.generateInsuranceOutflowVsMarginReturnedChart(metrics));
+    charts.push(await this.generateLiquidationDistributionPie(metrics));
     charts.push(await this.generateDashboard(metrics));
     
     console.log(`\nGenerated ${charts.length} charts in ${this.outputDir}`);
@@ -898,6 +899,55 @@ export class ChartGenerator {
 
     const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
     const filename = '12_insurance_outflow_vs_margin_returned.png';
+    fs.writeFileSync(path.join(this.outputDir, filename), image);
+    return filename;
+  }
+
+  private async generateLiquidationDistributionPie(metrics: ProtocolMetrics[]): Promise<string> {
+    const latest = metrics[metrics.length - 1];
+
+    const rewards = Number(latest.liquidatorRewardsPaid) / 1e6;
+    const penalties = Number(latest.liquidationPenaltyCollected) / 1e6;
+    const insuranceUsed = Number(latest.insuranceFundOutflow) / 1e6;
+    const marginReturned = Number(latest.marginReturnedFromLiquidation) / 1e6;
+    const badDebt = Number(latest.badDebt) / 1e6;
+
+    const slices = [
+      { label: 'Liquidator Reward', value: rewards, color: 'rgba(52, 152, 219, 0.9)' },
+      { label: 'Liquidation Penalty', value: penalties, color: 'rgba(241, 196, 15, 0.9)' },
+      { label: 'Insurance Used', value: insuranceUsed, color: 'rgba(231, 76, 60, 0.9)' },
+      { label: 'Margin Returned', value: marginReturned, color: 'rgba(46, 204, 113, 0.9)' },
+      { label: 'Residual Bad Debt', value: badDebt, color: 'rgba(127, 140, 141, 0.9)' },
+    ].filter((s) => s.value > 0);
+
+    const configuration = {
+      type: 'pie' as any,
+      data: {
+        labels: slices.map((s) => `${s.label} ($${s.value.toFixed(2)})`),
+        datasets: [
+          {
+            data: slices.map((s) => s.value),
+            backgroundColor: slices.map((s) => s.color),
+            borderColor: 'white',
+            borderWidth: 2,
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Liquidation Distribution (Cumulative USD)'
+          },
+          legend: {
+            position: 'right'
+          }
+        }
+      }
+    };
+
+    const image = await this.chartJSNodeCanvas.renderToBuffer(configuration as any);
+    const filename = '13_liquidation_distribution_pie.png';
     fs.writeFileSync(path.join(this.outputDir, filename), image);
     return filename;
   }
