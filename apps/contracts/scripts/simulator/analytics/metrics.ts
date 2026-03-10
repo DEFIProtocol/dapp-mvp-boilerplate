@@ -1,6 +1,40 @@
 import { formatUnits, parseUnits } from 'ethers';
 
-import type { SimulationState } from '../scenarios/scenarioController.ts';
+export interface SimulatorStepState {
+  price: number;
+  openInterest: bigint;
+  longOpenInterest: bigint;
+  shortOpenInterest: bigint;
+  longShortRatio: number;
+  tvl: bigint;
+  averageLeverage: number;
+  liquidations: number;
+  positionsAtRisk: number;
+  insuranceFundBalance: bigint;
+  insurancePayouts: bigint;
+  badDebt: bigint;
+  protocolRevenue: bigint;
+  makerFeesCollected: bigint;
+  takerFeesCollected: bigint;
+  fundingFeesTransferred: bigint;
+  insuranceFundInflow: bigint;
+  insuranceFundOutflow: bigint;
+  liquidatorOrders: number;
+  liquidatorRewardsPaid: bigint;
+  liquidationPenaltyCollected: bigint;
+  marginReturnedFromLiquidation: bigint;
+  stepVolume: bigint;
+  trades: number;
+  uniqueTraders: number;
+  openOrders: number;
+  newOrders: number;
+  filledOrders: number;
+  cancelledOrders: number;
+  spreadBps: number;
+  slippageBps: number;
+  priceImpactBps: number;
+  nextFundingTime: number;
+}
 
 export interface ProtocolMetrics {
   timestamp: number;
@@ -102,13 +136,13 @@ export class MetricsCollector {
     this.startBlock = startBlock;
   }
 
-  async collectMetrics(step: number, state: SimulationState): Promise<ProtocolMetrics> {
+  async collectMetrics(step: number, state: SimulatorStepState): Promise<ProtocolMetrics> {
     void this.contracts;
     void this.startBlock;
 
     const block = await this.provider.getBlockNumber();
 
-    const currentStepVolume = BigInt(Math.floor(state.trades * 12000));
+    const currentStepVolume = state.stepVolume;
     const volumeWindow = this.stepVolumeHistory.slice(Math.max(0, this.stepVolumeHistory.length - 1440));
     const rollingVolume = volumeWindow.reduce((sum, v) => sum + v, 0n) + currentStepVolume;
 
@@ -160,7 +194,7 @@ export class MetricsCollector {
         state.newOrders > 0 ? (state.liquidations / state.newOrders) * 100 : 0,
 
       fundingRate,
-      nextFundingTime: Date.now() + 3600000,
+      nextFundingTime: state.nextFundingTime,
 
       spreadBps: state.spreadBps,
       slippageBps: state.slippageBps,
@@ -178,33 +212,8 @@ export class MetricsCollector {
   }
 
   async collectPositions(step: number): Promise<PositionDetail[]> {
+    void step;
     const positions: PositionDetail[] = [];
-    const numPositions = 20 + (step % 40);
-
-    for (let i = 0; i < numPositions; i++) {
-      const size = parseUnits((1000 + ((i * 7919 + step * 73) % 100000)).toString(), 6);
-      const collateral = parseUnits((500 + ((i * 1877 + step * 53) % 40000)).toString(), 6);
-      const entryPrice = 1800 + ((i * 37 + step * 11) % 600);
-      const markPrice = entryPrice * (1 + (((i * 17 + step * 5) % 120) - 60) / 1000);
-
-      const pnl = (markPrice - entryPrice) * Number(size) / Math.max(entryPrice, 1);
-      const pnlPercent = (markPrice - entryPrice) / Math.max(entryPrice, 1) * 100;
-      const health = Number(collateral) / Math.max(1, Number(size) * 3.5);
-
-      positions.push({
-        trader: `0x${(i + 1).toString(16).padStart(40, '0')}`,
-        size,
-        collateral,
-        leverage: Number(size) / Math.max(1, Number(collateral)),
-        entryPrice,
-        markPrice,
-        pnl: parseUnits(pnl.toFixed(0), 6),
-        pnlPercent,
-        health,
-        isLiquidatable: health < 1.0,
-      });
-    }
-
     this.positionsHistory.set(step, positions);
     return positions;
   }

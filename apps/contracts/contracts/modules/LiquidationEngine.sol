@@ -109,16 +109,9 @@ contract LiquidationEngine {
             perpStorage.liquidationPenaltyBps()
         );
         
-        // Calculate bad debt
-        uint256 badDebt = LiquidationLib.calculateBadDebt(
-            pnl,
-            funding,
-            position.margin
-        );
-        
         // Deactivate position through PositionManager
-        // We need to add a function to PositionManager for this
-        _forceClosePosition(positionId, totalDelta);
+        // CollateralManager.applyAccountDelta() is the canonical source of bad debt.
+        uint256 badDebt = _forceClosePosition(positionId, totalDelta);
         
         // Apply liquidation distributions
         _distributeLiquidationProceeds(
@@ -146,7 +139,7 @@ contract LiquidationEngine {
     /**
      * @notice Force close a position during liquidation
      */
-    function _forceClosePosition(uint256 positionId, int256 totalDelta) internal {
+    function _forceClosePosition(uint256 positionId, int256 totalDelta) internal returns (uint256 badDebt) {
         PerpStorage.Position memory position = perpStorage.getPosition(positionId);
         
         // Mark inactive
@@ -167,8 +160,10 @@ contract LiquidationEngine {
         // Release reserved margin
         collateralManager.removeReservedMargin(position.trader, position.margin);
         
-        // Apply PnL (will create bad debt if negative)
-        collateralManager.applyAccountDelta(position.trader, totalDelta);
+        // Apply PnL (returns bad debt created by this liquidation if any)
+        badDebt = collateralManager.applyAccountDelta(position.trader, totalDelta);
+
+        return badDebt;
     }
 
     /**
@@ -215,10 +210,7 @@ contract LiquidationEngine {
         }
         
         if (badDebt > 0) {
-            // Record bad debt
-            perpStorage.setTotalBadDebt(perpStorage.totalBadDebt() + badDebt);
-            
-            // Use insurance fund to cover if available
+            // Use insurance fund to cover newly created bad debt if available.
             _coverBadDebtWithInsurance(badDebt);
         }
     }
@@ -228,12 +220,16 @@ contract LiquidationEngine {
      */
     function _coverBadDebtWithInsurance(uint256 badDebt) internal {
         uint256 insuranceBalance = perpStorage.insuranceFundBalance();
+        uint256 totalBadDebt = perpStorage.totalBadDebt();
         
-        if (insuranceBalance > 0 && badDebt > 0) {
+        if (insuranceBalance > 0 && badDebt > 0 && totalBadDebt > 0) {
             uint256 coverAmount = badDebt > insuranceBalance ? insuranceBalance : badDebt;
+            if (coverAmount > totalBadDebt) {
+                coverAmount = totalBadDebt;
+            }
             
             perpStorage.setInsuranceFundBalance(insuranceBalance - coverAmount);
-            perpStorage.setTotalBadDebt(perpStorage.totalBadDebt() - coverAmount);
+            perpStorage.setTotalBadDebt(totalBadDebt - coverAmount);
             
             emit InsuranceFundUsed(coverAmount, insuranceBalance - coverAmount);
         }

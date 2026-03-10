@@ -20,6 +20,9 @@ contract SettlementEngine is EIP712 {
     PositionManager public positionManager;
     RiskManager public riskManager;
 
+    // Settlement policy: leverage used when opening matched positions.
+    uint256 public executionLeverage = 10;
+
     // Events
     event MatchSettled(
         bytes32 indexed matchId,
@@ -38,6 +41,8 @@ contract SettlementEngine is EIP712 {
         uint256 remainingAmount
     );
 
+    event ExecutionLeverageUpdated(uint256 oldLeverage, uint256 newLeverage);
+
     constructor(
         address _perpStorage,
         address _collateralManager,
@@ -52,6 +57,11 @@ contract SettlementEngine is EIP712 {
 
     modifier notPaused() {
         require(!perpStorage.emergencyPause(), "Contract paused");
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == perpStorage.owner(), "Only owner");
         _;
     }
 
@@ -263,7 +273,22 @@ contract SettlementEngine is EIP712 {
      * @notice Calculate required margin based on order exposure and leverage
      */
     function _calculateRequiredMargin(uint256 matchSize) internal view returns (uint256) {
-        return OrderLib.calculateRequiredMargin(matchSize, perpStorage.MAX_LEVERAGE());
+        return OrderLib.calculateRequiredMargin(matchSize, executionLeverage);
+    }
+
+    /**
+     * @notice Set execution leverage policy for matched positions
+     */
+    function setExecutionLeverage(uint256 leverage) external onlyOwner {
+        require(
+            leverage >= perpStorage.MIN_LEVERAGE() && leverage <= perpStorage.MAX_LEVERAGE(),
+            "Invalid leverage"
+        );
+
+        uint256 oldLeverage = executionLeverage;
+        executionLeverage = leverage;
+
+        emit ExecutionLeverageUpdated(oldLeverage, leverage);
     }
 
     /**
