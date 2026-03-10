@@ -26,9 +26,8 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     
   console.log("\n🚀 Deploying local test environment...");
   
-  const [deployer, insuranceFund, ...traders] = await ethers.getSigners();
+  const [deployer, ...traders] = await ethers.getSigners();
   console.log(`Deployer: ${deployer.address}`);
-  console.log(`Insurance Fund: ${insuranceFund.address}`);
   console.log(`Traders available: ${traders.length}`);
   
   // 1. Deploy Mock USDC
@@ -42,6 +41,14 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await usdc.waitForDeployment();
   const usdcAddress = await usdc.getAddress();
   console.log(`USDC deployed: ${usdcAddress}`);
+
+  // 1.5 Deploy Insurance Treasury
+  console.log("\n📝 Deploying Insurance Treasury...");
+  const InsuranceTreasury = await ethers.getContractFactory("InsuranceTreasury");
+  const insuranceTreasury = await InsuranceTreasury.deploy(usdcAddress, deployer.address);
+  await insuranceTreasury.waitForDeployment();
+  const insuranceFundAddress = await insuranceTreasury.getAddress();
+  console.log(`Insurance Treasury deployed: ${insuranceFundAddress}`);
   
   // 2. Deploy Mock Oracle
   console.log("\n📝 Deploying Mock Oracle...");
@@ -122,7 +129,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
 
   // Configure storage primitives expected by modules.
   await perpStorage.setCollateral(usdcAddress);
-  await perpStorage.setInsuranceFund(insuranceFund.address);
+  await perpStorage.setInsuranceFund(insuranceFundAddress);
   await perpStorage.setMarkOracle(oracleAddress);
   await perpStorage.setMarketFeedId(ethers.encodeBytes32String("SIM_MARK"));
 
@@ -131,8 +138,8 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setTakerFeeBps(10);
   await perpStorage.setInsuranceBps(200);
   await perpStorage.setMaintenanceMarginBps(1000);
-  await perpStorage.setLiquidationRewardBps(500);
-  await perpStorage.setLiquidationPenaltyBps(1000);
+  await perpStorage.setLiquidationRewardBps(80);
+  await perpStorage.setLiquidationPenaltyBps(150);
 
   const latest = await ethers.provider.getBlock("latest");
   const nowTs = latest?.timestamp ?? Math.floor(Date.now() / 1000);
@@ -146,6 +153,10 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setAuthorizedModule(liquidationEngineAddress, true);
   await perpStorage.setAuthorizedModule(settlementEngineAddress, true);
   await perpStorage.setAuthorizedModule(fundingEngineAddress, true);
+
+  // Authorize modules that move funds in/out of treasury.
+  await insuranceTreasury.setAuthorizedModule(collateralManagerAddress, true);
+  await insuranceTreasury.setAuthorizedModule(liquidationEngineAddress, true);
   
   // 11. Fund traders with USDC
   console.log("\n💰 Funding traders with USDC...");
@@ -213,7 +224,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     liquidationEngine: liquidationEngineAddress,
     settlementEngine: settlementEngineAddress,
     fundingEngine: fundingEngineAddress,
-    insuranceFund: insuranceFund.address,
+    insuranceFund: insuranceFundAddress,
     agents: agentAddresses
   };
   

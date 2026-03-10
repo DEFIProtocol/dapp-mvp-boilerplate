@@ -88,6 +88,35 @@ function loadConfig(networkName: string): DeployConfig {
   };
 }
 
+async function resolveInsuranceFundAddress(
+  networkName: string,
+  ethersLike: any,
+  deployerAddress: string,
+  collateralToken: string,
+  configuredInsuranceFund: string,
+): Promise<string> {
+  const code = await ethersLike.provider.getCode(configuredInsuranceFund);
+  if (code !== "0x") {
+    return configuredInsuranceFund;
+  }
+
+  // Local/fork helper: auto-bootstrap treasury if INSURANCE_FUND is an EOA.
+  if (networkName.startsWith("hardhat") || networkName.startsWith("localhost")) {
+    console.log("\nINSURANCE_FUND has no bytecode. Deploying InsuranceTreasury for this run...");
+    const InsuranceTreasuryFactory = await ethersLike.getContractFactory("InsuranceTreasury");
+    const treasury = await InsuranceTreasuryFactory.deploy(collateralToken, deployerAddress);
+    await treasury.waitForDeployment();
+    const treasuryAddress = await treasury.getAddress();
+    console.log(`InsuranceTreasury: ${treasuryAddress}`);
+    return treasuryAddress;
+  }
+
+  throw new Error(
+    `INSURANCE_FUND is not a contract on ${networkName}: ${configuredInsuranceFund}. ` +
+    "Deploy InsuranceTreasury first and set INSURANCE_FUND to that contract address.",
+  );
+}
+
 async function getModuleAddresses(perpEngine: PerpEngineContract): Promise<ModuleAddresses> {
   return {
     perpStorage: await perpEngine.perpStorage(),
@@ -236,10 +265,18 @@ async function main(): Promise<void> {
   console.log(`Deployer: ${deployer.address}`);
   console.log(`Balance:  ${ethers.formatEther(balance)} ETH`);
 
+  const resolvedInsuranceFund = await resolveInsuranceFundAddress(
+    networkName,
+    ethers,
+    deployer.address,
+    config.collateralToken,
+    config.insuranceFund,
+  );
+
   const PerpEngineFactory = await ethers.getContractFactory("PerpEngine");
   const perpEngine = (await PerpEngineFactory.deploy(
     config.collateralToken,
-    config.insuranceFund,
+    resolvedInsuranceFund,
     config.oracle,
     config.feedId,
   )) as PerpEngineContract;
@@ -279,12 +316,15 @@ async function main(): Promise<void> {
     perpEngineAddress,
     deployTx.hash,
     Number(receipt.blockNumber),
-    config,
+    { ...config, insuranceFund: resolvedInsuranceFund },
     modules,
   );
 
   if (config.verify) {
-    await verifyContracts(perpEngineAddress, modules, config);
+    await verifyContracts(perpEngineAddress, modules, {
+      ...config,
+      insuranceFund: resolvedInsuranceFund,
+    });
   }
 
   console.log("\nDeployment complete.");

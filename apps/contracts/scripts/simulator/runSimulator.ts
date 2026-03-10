@@ -29,6 +29,7 @@ interface CumulativeFlows {
   takerFees: bigint;
   insuranceInflow: bigint;
   insuranceOutflow: bigint;
+  liquidationInsuranceInflow: bigint;
   liquidatorRewards: bigint;
   liquidationPenalty: bigint;
   marginReturned: bigint;
@@ -122,6 +123,7 @@ export async function runSimulation(options: SimulationOptions) {
     takerFees: 0n,
     insuranceInflow: 0n,
     insuranceOutflow: 0n,
+    liquidationInsuranceInflow: 0n,
     liquidatorRewards: 0n,
     liquidationPenalty: 0n,
     marginReturned: 0n,
@@ -161,14 +163,12 @@ export async function runSimulation(options: SimulationOptions) {
 
     await advanceTime(ethers.provider, 300);
 
-    const [makerBpsRaw, takerBpsRaw, insuranceBpsRaw] = await Promise.all([
+    const [makerBpsRaw, takerBpsRaw] = await Promise.all([
       perpStorage.makerFeeBps(),
       perpStorage.takerFeeBps(),
-      perpStorage.insuranceBps(),
     ]);
     const makerBps = BigInt(makerBpsRaw);
     const takerBps = BigInt(takerBpsRaw);
-    const insuranceBps = BigInt(insuranceBpsRaw);
 
     const tradesTarget = Math.max(1, Math.floor(traderSigners.length * scenario.traderActivity.baseFrequency));
     let stepTradeCount = 0;
@@ -255,11 +255,8 @@ export async function runSimulation(options: SimulationOptions) {
 
       const makerFee = (size * makerBps) / 10000n;
       const takerFee = (size * takerBps) / 10000n;
-      const insuranceCut = (size * insuranceBps) / 10000n;
-
       cumulative.makerFees += makerFee;
       cumulative.takerFees += takerFee;
-      cumulative.insuranceInflow += insuranceCut;
     }
 
     const nextFundingTime = await perpStorage.nextFundingTime();
@@ -280,45 +277,27 @@ export async function runSimulation(options: SimulationOptions) {
       stepLiquidatorOrders++;
       const liquidator = random.pick(liquidatorSigners);
 
-      const insuranceBefore = await perpStorage.insuranceFundBalance();
-      const feePoolBefore = await perpStorage.feePool();
-      const traderCollateralBefore = await perpStorage.accountCollateral(pos.trader);
-
       const result = await tryLiquidate(liquidationEngine, liquidator, pos.positionId);
       if (!result.ok) {
         continue;
       }
 
-      const insuranceAfter = await perpStorage.insuranceFundBalance();
-      const feePoolAfter = await perpStorage.feePool();
-      const traderCollateralAfter = await perpStorage.accountCollateral(pos.trader);
-
       stepLiquidations++;
       logger.logLiquidation(pos.trader, pos.exposure, result.coverAmount);
 
       cumulative.liquidatorRewards += result.reward;
-
-      const feePoolAfterBn = BigInt(feePoolAfter);
-      const feePoolBeforeBn = BigInt(feePoolBefore);
-      const insuranceAfterBn = BigInt(insuranceAfter);
-      const insuranceBeforeBn = BigInt(insuranceBefore);
-      const traderCollateralAfterBn = BigInt(traderCollateralAfter);
-      const traderCollateralBeforeBn = BigInt(traderCollateralBefore);
-
-      const penaltyDelta = feePoolAfterBn > feePoolBeforeBn ? feePoolAfterBn - feePoolBeforeBn : 0n;
-      cumulative.liquidationPenalty += penaltyDelta;
+      cumulative.liquidationPenalty += result.penaltyCollected;
 
       if (result.coverAmount > 0n) {
         cumulative.insuranceOutflow += result.coverAmount;
       }
 
-      if (insuranceAfterBn > insuranceBeforeBn) {
-        cumulative.insuranceInflow += insuranceAfterBn - insuranceBeforeBn;
+      if (result.insuranceInflow > 0n) {
+        cumulative.insuranceInflow += result.insuranceInflow;
+        cumulative.liquidationInsuranceInflow += result.insuranceInflow;
       }
 
-      if (traderCollateralAfterBn > traderCollateralBeforeBn) {
-        cumulative.marginReturned += traderCollateralAfterBn - traderCollateralBeforeBn;
-      }
+      cumulative.marginReturned += result.marginReturned;
     }
 
     const [insuranceBalance, feePool, badDebt, nextFunding, longOiRaw, shortOiRaw] = await Promise.all([
@@ -359,6 +338,7 @@ export async function runSimulation(options: SimulationOptions) {
       fundingFeesTransferred: cumulative.fundingTransferred,
       insuranceFundInflow: cumulative.insuranceInflow,
       insuranceFundOutflow: cumulative.insuranceOutflow,
+      liquidationInsuranceInflow: cumulative.liquidationInsuranceInflow,
       liquidatorOrders: stepLiquidatorOrders,
       liquidatorRewardsPaid: cumulative.liquidatorRewards,
       liquidationPenaltyCollected: cumulative.liquidationPenalty,
@@ -571,18 +551,24 @@ async function tryLiquidate(
   liquidationEngine: Contract,
   liquidator: Signer,
   positionId: bigint
-): Promise<{ ok: boolean; reward: bigint; coverAmount: bigint }> {
+): Promise<{ ok: boolean; reward: bigint; coverAmount: bigint; insuranceInflow: bigint; penaltyCollected: bigint; marginReturned: bigint }> {
   try {
     const tx = await liquidationEngine.connect(liquidator).liquidate(positionId);
     const receipt = await tx.wait();
     let reward = 0n;
     let coverAmount = 0n;
+    let insuranceInflow = 0n;
+    let penaltyCollected = 0n;
+    let marginReturned = 0n;
 
     for (const log of receipt.logs) {
       try {
         const parsed = liquidationEngine.interface.parseLog(log);
         if (parsed.name === "PositionLiquidated") {
           reward = BigInt(parsed.args.reward);
+          insuranceInflow = BigInt(parsed.args.insuranceUsed);
+          penaltyCollected = BigInt(parsed.args.penaltyCollected ?? 0n);
+          marginReturned = BigInt(parsed.args.marginReturned ?? 0n);
         }
         if (parsed.name === "InsuranceFundUsed") {
           coverAmount = BigInt(parsed.args.amount);
@@ -592,9 +578,9 @@ async function tryLiquidate(
       }
     }
 
-    return { ok: true, reward, coverAmount };
+    return { ok: true, reward, coverAmount, insuranceInflow, penaltyCollected, marginReturned };
   } catch {
-    return { ok: false, reward: 0n, coverAmount: 0n };
+    return { ok: false, reward: 0n, coverAmount: 0n, insuranceInflow: 0n, penaltyCollected: 0n, marginReturned: 0n };
   }
 }
 
