@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "../storage/PerpStorage.sol";
 import "../library/LiquidationLib.sol";
+import "../interfaces/IInsuranceTreasury.sol";
 import "./CollateralManager.sol";
 import "./PositionManager.sol";
 import "./RiskManager.sol";
@@ -28,7 +29,9 @@ contract LiquidationEngine {
         address indexed liquidator,
         uint256 reward,
         uint256 badDebt,
-        uint256 insuranceUsed
+        uint256 insuranceUsed,
+        uint256 penaltyCollected,
+        uint256 marginReturned
     );
     
     event BadDebtRecorded(uint256 amount, address indexed trader);
@@ -99,23 +102,24 @@ contract LiquidationEngine {
         (int256 pnl, int256 funding) = riskManager.getPositionPnlAndFunding(position, markPrice);
         int256 totalDelta = pnl - funding;
         
-        // Calculate liquidation payouts using LiquidationLib
+        // Deactivate position through PositionManager
+        // CollateralManager.applyAccountDelta() is the canonical source of bad debt.
+        uint256 badDebt = _forceClosePosition(positionId, totalDelta);
+
+        // Liquidation payout is based on position exposure and post-close available collateral.
         uint256 availableCollateral = collateralManager.getAvailableCollateral(position.trader);
-        
-        (uint256 reward, uint256 penalty, uint256 toInsurance) = LiquidationLib.calculateLiquidationPayouts(
-            position.margin,
+
+        (uint256 reward, uint256 penalty, uint256 toInsurance, ) = LiquidationLib.calculateLiquidationPayouts(
+            position.exposure,
             availableCollateral,
             perpStorage.liquidationRewardBps(),
             perpStorage.liquidationPenaltyBps()
         );
         
-        // Deactivate position through PositionManager
-        // CollateralManager.applyAccountDelta() is the canonical source of bad debt.
-        uint256 badDebt = _forceClosePosition(positionId, totalDelta);
-        
         // Apply liquidation distributions
-        _distributeLiquidationProceeds(
+        (uint256 rewardPaid, uint256 insuranceContribution, uint256 penaltyCollected, uint256 marginReturned) = _distributeLiquidationProceeds(
             position.trader,
+            liquidator,
             reward,
             penalty,
             toInsurance,
@@ -126,9 +130,11 @@ contract LiquidationEngine {
             positionId,
             position.trader,
             liquidator,
-            reward,
+            rewardPaid,
             badDebt,
-            toInsurance
+            insuranceContribution,
+            penaltyCollected,
+            marginReturned
         );
         
         if (badDebt > 0) {
@@ -171,43 +177,39 @@ contract LiquidationEngine {
      */
     function _distributeLiquidationProceeds(
         address trader,
+        address liquidator,
         uint256 reward,
         uint256 penalty,
         uint256 toInsurance,
         uint256 badDebt
-    ) internal {
+    ) internal returns (uint256 rewardPaid, uint256 insuranceContribution, uint256 penaltyCollected, uint256 marginReturned) {
         uint256 remainingCollateral = perpStorage.accountCollateral(trader);
 
-        // Deduct from trader's collateral
-        if (reward > 0 && remainingCollateral > 0) {
-            uint256 rewardPaid = reward > remainingCollateral ? remainingCollateral : reward;
-            // Transfer reward to liquidator
-            remainingCollateral -= rewardPaid;
-            perpStorage.setAccountCollateral(trader, remainingCollateral);
-            
-            // In a real implementation, you'd transfer the actual tokens
-            // IERC20(perpStorage.collateral()).transfer(liquidator, reward);
-        }
-        
-        if (penalty > 0 && remainingCollateral > 0) {
-            uint256 penaltyCollected = penalty > remainingCollateral ? remainingCollateral : penalty;
-            // Penalty goes to fee pool
+        // Penalty is the maximum amount to deduct from collateral for liquidation distribution.
+        penaltyCollected = penalty > remainingCollateral ? remainingCollateral : penalty;
+
+        if (penaltyCollected > 0) {
+            // Insurance receives the full collected penalty.
+            insuranceContribution = toInsurance > penaltyCollected ? penaltyCollected : toInsurance;
             remainingCollateral -= penaltyCollected;
-            perpStorage.setAccountCollateral(trader, remainingCollateral);
-            perpStorage.setFeePool(perpStorage.feePool() + penaltyCollected);
+
+            if (insuranceContribution > 0) {
+                perpStorage.depositToInsurance(insuranceContribution);
+                collateralManager.transferToInsurance(insuranceContribution);
+            }
         }
-        
-        if (toInsurance > 0 && remainingCollateral > 0) {
-            uint256 insuranceContribution = toInsurance > remainingCollateral ? remainingCollateral : toInsurance;
-            // Send to insurance fund
-            remainingCollateral -= insuranceContribution;
-            perpStorage.setAccountCollateral(trader, remainingCollateral);
-            perpStorage.depositToInsurance(insuranceContribution);
-            
-            // Transfer tokens to insurance fund
-            IERC20 collateral = perpStorage.collateral();
-            collateral.forceApprove(perpStorage.insuranceFund(), insuranceContribution);
+
+        // Reward is paid separately from post-penalty remaining collateral.
+        if (reward > 0 && remainingCollateral > 0) {
+            rewardPaid = reward > remainingCollateral ? remainingCollateral : reward;
+            remainingCollateral -= rewardPaid;
+            collateralManager.transferOut(liquidator, rewardPaid);
         }
+
+        perpStorage.setAccountCollateral(trader, remainingCollateral);
+
+        // Residual collateral remains with trader after liquidation settlement.
+        marginReturned = remainingCollateral;
         
         if (badDebt > 0) {
             // Use insurance fund to cover newly created bad debt if available.
@@ -221,12 +223,23 @@ contract LiquidationEngine {
     function _coverBadDebtWithInsurance(uint256 badDebt) internal {
         uint256 insuranceBalance = perpStorage.insuranceFundBalance();
         uint256 totalBadDebt = perpStorage.totalBadDebt();
+        uint256 treasuryBalance = IInsuranceTreasury(perpStorage.insuranceFund()).balance();
         
-        if (insuranceBalance > 0 && badDebt > 0 && totalBadDebt > 0) {
+        if (insuranceBalance > 0 && treasuryBalance > 0 && badDebt > 0 && totalBadDebt > 0) {
             uint256 coverAmount = badDebt > insuranceBalance ? insuranceBalance : badDebt;
+            if (coverAmount > treasuryBalance) {
+                coverAmount = treasuryBalance;
+            }
             if (coverAmount > totalBadDebt) {
                 coverAmount = totalBadDebt;
             }
+
+            if (coverAmount == 0) {
+                return;
+            }
+
+            // Move funds back to CollateralManager where trader collateral accounting lives.
+            IInsuranceTreasury(perpStorage.insuranceFund()).withdrawTo(address(collateralManager), coverAmount);
             
             perpStorage.setInsuranceFundBalance(insuranceBalance - coverAmount);
             perpStorage.setTotalBadDebt(totalBadDebt - coverAmount);
@@ -261,9 +274,9 @@ contract LiquidationEngine {
         if (!pos.active) return 0;
         
         uint256 available = collateralManager.getAvailableCollateral(pos.trader);
-        
-        (uint256 reward, , ) = LiquidationLib.calculateLiquidationPayouts(
-            pos.margin,
+
+        (uint256 reward, , , ) = LiquidationLib.calculateLiquidationPayouts(
+            pos.exposure,
             available,
             perpStorage.liquidationRewardBps(),
             perpStorage.liquidationPenaltyBps()

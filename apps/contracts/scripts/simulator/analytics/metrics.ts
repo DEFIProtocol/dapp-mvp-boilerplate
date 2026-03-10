@@ -19,6 +19,7 @@ export interface SimulatorStepState {
   fundingFeesTransferred: bigint;
   insuranceFundInflow: bigint;
   insuranceFundOutflow: bigint;
+  liquidationInsuranceInflow: bigint;
   liquidatorOrders: number;
   liquidatorRewardsPaid: bigint;
   liquidationPenaltyCollected: bigint;
@@ -62,6 +63,7 @@ export interface ProtocolMetrics {
   fundingFeesTransferred: bigint;
   insuranceFundInflow: bigint;
   insuranceFundOutflow: bigint;
+  liquidationInsuranceInflow: bigint;
   liquidatorOrders: number;
   liquidatorRewardsPaid: bigint;
   liquidationPenaltyCollected: bigint;
@@ -179,6 +181,7 @@ export class MetricsCollector {
       fundingFeesTransferred: state.fundingFeesTransferred,
       insuranceFundInflow: state.insuranceFundInflow,
       insuranceFundOutflow: state.insuranceFundOutflow,
+      liquidationInsuranceInflow: state.liquidationInsuranceInflow,
       liquidatorOrders: state.liquidatorOrders,
       liquidatorRewardsPaid: state.liquidatorRewardsPaid,
       liquidationPenaltyCollected: state.liquidationPenaltyCollected,

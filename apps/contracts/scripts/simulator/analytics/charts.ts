@@ -851,14 +851,25 @@ export class ChartGenerator {
 
   private async generateInsuranceOutflowVsMarginReturnedChart(metrics: ProtocolMetrics[]): Promise<string> {
     const steps = metrics.map((_, i) => i);
+    const insuranceInflow = metrics.map((m) => Number(m.insuranceFundInflow) / 1e6);
     const insuranceOutflow = metrics.map((m) => Number(m.insuranceFundOutflow) / 1e6);
-    const marginReturned = metrics.map((m) => Number(m.marginReturnedFromLiquidation) / 1e6);
+    const netInsuranceFlow = metrics.map(
+      (m) => (Number(m.insuranceFundInflow) - Number(m.insuranceFundOutflow)) / 1e6
+    );
 
     const configuration = {
       type: 'line' as any,
       data: {
         labels: steps,
         datasets: [
+          {
+            label: 'Insurance Fund Inflow (USD)',
+            data: insuranceInflow,
+            borderColor: 'rgb(46, 204, 113)',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            fill: true,
+            yAxisID: 'y'
+          },
           {
             label: 'Insurance Fund Outflow (USD)',
             data: insuranceOutflow,
@@ -868,11 +879,12 @@ export class ChartGenerator {
             yAxisID: 'y'
           },
           {
-            label: 'Margin Returned (USD)',
-            data: marginReturned,
-            borderColor: 'rgb(46, 204, 113)',
-            backgroundColor: 'rgba(46, 204, 113, 0.1)',
-            fill: true,
+            label: 'Net Insurance Flow (USD)',
+            data: netInsuranceFlow,
+            borderColor: 'rgb(52, 152, 219)',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: false,
+            borderDash: [6, 4],
             yAxisID: 'y'
           }
         ]
@@ -881,7 +893,7 @@ export class ChartGenerator {
         plugins: {
           title: {
             display: true,
-            text: 'Insurance Fund Outflow vs Margin Returned'
+            text: 'Insurance Fund Flows (Inflow, Outflow, Net)'
           }
         },
         scales: {
@@ -906,19 +918,23 @@ export class ChartGenerator {
   private async generateLiquidationDistributionPie(metrics: ProtocolMetrics[]): Promise<string> {
     const latest = metrics[metrics.length - 1];
 
-    const rewards = Number(latest.liquidatorRewardsPaid) / 1e6;
-    const penalties = Number(latest.liquidationPenaltyCollected) / 1e6;
-    const insuranceUsed = Number(latest.insuranceFundOutflow) / 1e6;
+    // Liquidation distribution should use liquidation-only flows from contract-driven liquidation paths.
+    const liquidationInsuranceInflow = Number(latest.liquidationInsuranceInflow) / 1e6;
+    const insuranceOutflow = Number(latest.insuranceFundOutflow) / 1e6;
+    const liquidationPenalty = Number(latest.liquidationPenaltyCollected) / 1e6;
+    const liquidationReward = Number(latest.liquidatorRewardsPaid) / 1e6;
     const marginReturned = Number(latest.marginReturnedFromLiquidation) / 1e6;
-    const badDebt = Number(latest.badDebt) / 1e6;
 
     const slices = [
-      { label: 'Liquidator Reward', value: rewards, color: 'rgba(52, 152, 219, 0.9)' },
-      { label: 'Liquidation Penalty', value: penalties, color: 'rgba(241, 196, 15, 0.9)' },
-      { label: 'Insurance Used', value: insuranceUsed, color: 'rgba(231, 76, 60, 0.9)' },
-      { label: 'Margin Returned', value: marginReturned, color: 'rgba(46, 204, 113, 0.9)' },
-      { label: 'Residual Bad Debt', value: badDebt, color: 'rgba(127, 140, 141, 0.9)' },
-    ].filter((s) => s.value > 0);
+      { label: 'Insurance Inflow (Liquidations)', value: liquidationInsuranceInflow, color: 'rgba(46, 204, 113, 0.9)' },
+      { label: 'Insurance Outflow (Coverage)', value: insuranceOutflow, color: 'rgba(231, 76, 60, 0.9)' },
+      { label: 'Liquidation Penalty', value: liquidationPenalty, color: 'rgba(241, 196, 15, 0.9)' },
+      { label: 'Liquidator Reward', value: liquidationReward, color: 'rgba(52, 152, 219, 0.9)' },
+      { label: 'Margin Returned', value: marginReturned, color: 'rgba(149, 165, 166, 0.9)' },
+    ];
+
+    const chartValues = slices.map((s) => s.value);
+    const hasAnyValue = chartValues.some((v) => v > 0);
 
     const configuration = {
       type: 'pie' as any,
@@ -926,7 +942,7 @@ export class ChartGenerator {
         labels: slices.map((s) => `${s.label} ($${s.value.toFixed(2)})`),
         datasets: [
           {
-            data: slices.map((s) => s.value),
+            data: hasAnyValue ? chartValues : [1, 0, 0, 0, 0],
             backgroundColor: slices.map((s) => s.color),
             borderColor: 'white',
             borderWidth: 2,
@@ -937,10 +953,19 @@ export class ChartGenerator {
         plugins: {
           title: {
             display: true,
-            text: 'Liquidation Distribution (Cumulative USD)'
+            text: 'Liquidation Funds Distribution (Cumulative USD)'
           },
           legend: {
             position: 'right'
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => {
+                const label = context.label ?? '';
+                const value = slices[context.dataIndex]?.value ?? 0;
+                return `${label}: $${value.toFixed(2)}`;
+              }
+            }
           }
         }
       }

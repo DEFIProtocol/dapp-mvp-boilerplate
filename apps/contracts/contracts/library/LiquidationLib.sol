@@ -16,28 +16,25 @@ library LiquidationLib {
 
     // Calculate liquidation rewards and penalties
     function calculateLiquidationPayouts(
-        uint256 margin,
+        uint256 exposure,
         uint256 availableCollateral,
         uint256 rewardBps,
         uint256 penaltyBps
-    ) internal pure returns (uint256 reward, uint256 penalty, uint256 toInsurance) {
-        reward = (margin * rewardBps) / BPS_DENOMINATOR;
-        penalty = (margin * penaltyBps) / BPS_DENOMINATOR;
-        
-        // Cap reward to available collateral
-        if (reward > availableCollateral) {
-            reward = availableCollateral;
-        }
-        
-        uint256 remaining = availableCollateral - reward;
-        
-        // Cap penalty to remaining
-        if (penalty > remaining) {
-            penalty = remaining;
-        }
-        
-        // Rest goes to insurance (or stays with protocol)
-        toInsurance = remaining - penalty;
+    ) internal pure returns (uint256 reward, uint256 penaltyCollected, uint256 toInsurance, uint256 marginReturned) {
+        uint256 targetPenalty = (exposure * penaltyBps) / BPS_DENOMINATOR;
+        uint256 targetReward = (exposure * rewardBps) / BPS_DENOMINATOR;
+
+        penaltyCollected = targetPenalty > availableCollateral ? availableCollateral : targetPenalty;
+        uint256 remainingAfterPenalty = availableCollateral - penaltyCollected;
+
+        // Reward is paid separately from remaining collateral after penalty deduction.
+        reward = targetReward > remainingAfterPenalty ? remainingAfterPenalty : targetReward;
+
+        // Insurance receives the full collected liquidation penalty.
+        toInsurance = penaltyCollected;
+
+        // Unused collateral remains with the trader after penalty + reward.
+        marginReturned = remainingAfterPenalty - reward;
     }
 
     // Calculate bad debt after liquidation

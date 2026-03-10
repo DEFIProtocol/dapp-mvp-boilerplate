@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "../storage/PerpStorage.sol";
 import "../library/FeeLib.sol";
+import "../interfaces/IInsuranceTreasury.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
@@ -114,7 +115,7 @@ contract CollateralManager {
     }
 
     /**
-     * @notice Apply trading charges (fees + insurance)
+     * @notice Apply trading charges (fees only under current insurance policy)
      * @param trader The trader being charged
      * @param size Trade size
      * @param isMaker Whether trader is maker or taker
@@ -126,18 +127,16 @@ contract CollateralManager {
     ) external onlyModule returns (uint256 totalCharge) {
         uint256 makerFeeBps = perpStorage.makerFeeBps();
         uint256 takerFeeBps = perpStorage.takerFeeBps();
-        uint256 insuranceBps = perpStorage.insuranceBps();
-
-        (uint256 makerFee, uint256 takerFee, uint256 insuranceCutRaw) = FeeLib.calculateTradingFees(
+        (uint256 makerFee, uint256 takerFee, ) = FeeLib.calculateTradingFees(
             size,
             makerFeeBps,
             takerFeeBps,
-            insuranceBps
+            perpStorage.insuranceBps()
         );
 
         uint256 fee = isMaker ? makerFee : takerFee;
-        // Insurance cut is charged once on taker side for each match.
-        uint256 insuranceCut = isMaker ? 0 : insuranceCutRaw;
+        // Policy: insurance is funded only from liquidation penalty distributions.
+        uint256 insuranceCut = 0;
         
         totalCharge = fee + insuranceCut;
         
@@ -147,19 +146,34 @@ contract CollateralManager {
         
         perpStorage.setAccountCollateral(trader, currentCollateral - totalCharge);
         
-        // Update fee pool and insurance
+        // Update fee pool
         perpStorage.setFeePool(perpStorage.feePool() + fee);
-        
-        if (insuranceCut > 0) {
-            perpStorage.depositToInsurance(insuranceCut);
-            
-            // Transfer tokens to insurance fund
-            IERC20 collateral = perpStorage.collateral();
-            collateral.forceApprove(perpStorage.insuranceFund(), insuranceCut);
-            // Note: Actual transfer happens in a separate tx or via insurance fund pull
-        }
 
         emit FeeCharged(trader, fee, insuranceCut);
+    }
+
+    /**
+     * @notice Move collateral held by this manager into insurance treasury.
+     */
+    function transferToInsurance(uint256 amount) external onlyModule {
+        _transferToInsurance(amount);
+    }
+
+    /**
+     * @notice Transfer collateral out to an external recipient (module-controlled)
+     */
+    function transferOut(address to, uint256 amount) external onlyModule {
+        if (amount == 0) return;
+        IERC20 collateral = perpStorage.collateral();
+        collateral.safeTransfer(to, amount);
+    }
+
+    function _transferToInsurance(uint256 amount) internal {
+        if (amount == 0) return;
+
+        IERC20 collateral = perpStorage.collateral();
+        collateral.forceApprove(perpStorage.insuranceFund(), amount);
+        IInsuranceTreasury(perpStorage.insuranceFund()).deposit(amount);
     }
 
     /**

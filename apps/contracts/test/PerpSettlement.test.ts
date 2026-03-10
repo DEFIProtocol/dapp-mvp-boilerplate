@@ -17,7 +17,7 @@ describe("PerpSettlement Module Integration", function () {
 
   let mockToken: Contract;
   let mockOracle: Contract;
-  let mockInsurance: Contract;
+    let insuranceTreasury: Contract;
 
   let perpStorage: Contract;
   let collateralManager: Contract;
@@ -46,9 +46,9 @@ describe("PerpSettlement Module Integration", function () {
     await mockOracle.waitForDeployment();
     await mockOracle.setPrice(INITIAL_PRICE);
 
-    const MockInsuranceFund = await ethers.getContractFactory("MockInsuranceFund");
-    mockInsurance = await MockInsuranceFund.deploy();
-    await mockInsurance.waitForDeployment();
+      const InsuranceTreasury = await ethers.getContractFactory("InsuranceTreasury");
+      insuranceTreasury = await InsuranceTreasury.deploy(await mockToken.getAddress(), owner.address);
+      await insuranceTreasury.waitForDeployment();
 
     const PerpStorage = await ethers.getContractFactory("PerpStorage");
     perpStorage = await PerpStorage.deploy();
@@ -100,16 +100,16 @@ describe("PerpSettlement Module Integration", function () {
     }
 
     await perpStorage.setCollateral(await mockToken.getAddress());
-    await perpStorage.setInsuranceFund(await mockInsurance.getAddress());
+      await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
     await perpStorage.setMarkOracle(await mockOracle.getAddress());
     await perpStorage.setMarketFeedId(ethers.encodeBytes32String("ETH/USD"));
 
     await perpStorage.setMakerFeeBps(5);
     await perpStorage.setTakerFeeBps(10);
     await perpStorage.setInsuranceBps(200);
-    await perpStorage.setMaintenanceMarginBps(1000);
-    await perpStorage.setLiquidationRewardBps(500);
-    await perpStorage.setLiquidationPenaltyBps(1000);
+    await perpStorage.setMaintenanceMarginBps(750);
+    await perpStorage.setLiquidationRewardBps(80);
+    await perpStorage.setLiquidationPenaltyBps(150);
     await perpStorage.setLastFundingUpdate(latest.timestamp);
     await perpStorage.setNextFundingTime(latest.timestamp + 3600);
 
@@ -120,6 +120,8 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setAuthorizedModule(await fundingEngine.getAddress(), true);
     await perpStorage.setAuthorizedModule(await liquidationEngine.getAddress(), true);
 
+      await insuranceTreasury.setAuthorizedModule(await collateralManager.getAddress(), true);
+      await insuranceTreasury.setAuthorizedModule(await liquidationEngine.getAddress(), true);
     await seedCollateral(longTrader.address, ethers.parseEther("10000"));
     await seedCollateral(shortTrader.address, ethers.parseEther("10000"));
     await seedCollateral(liquidator.address, ethers.parseEther("10000"));
@@ -197,7 +199,7 @@ describe("PerpSettlement Module Integration", function () {
       // Expected calculations
       const expectedMakerFee = exposure * BigInt(makerFeeBps) / BPS_DENOMINATOR;
       const expectedTakerFee = exposure * BigInt(takerFeeBps) / BPS_DENOMINATOR;
-      const expectedInsurance = exposure * BigInt(insuranceBps) / BPS_DENOMINATOR;
+      const expectedInsurance = 0n;
       
       // Get balances before
       const beforeLongBalance = await perpStorage.accountCollateral(longTrader.address);
@@ -219,7 +221,7 @@ describe("PerpSettlement Module Integration", function () {
       const afterFeePool = await perpStorage.feePool();
       const afterInsurance = await perpStorage.insuranceFundBalance();
       
-      // Long pays taker fee + insurance
+      // Long pays taker fee only (insurance now funded by liquidation penalties)
       expect(beforeLongBalance - afterLongBalance).to.equal(expectedTakerFee + expectedInsurance);
       
       // Short pays maker fee
@@ -228,7 +230,7 @@ describe("PerpSettlement Module Integration", function () {
       // Fee pool increases by both fees
       expect(afterFeePool - beforeFeePool).to.equal(expectedMakerFee + expectedTakerFee);
       
-      // Insurance increases by insurance cut
+      // Trading does not fund insurance under current liquidation-only policy.
       expect(afterInsurance - beforeInsurance).to.equal(expectedInsurance);
     });
 
@@ -322,8 +324,10 @@ describe("PerpSettlement Module Integration", function () {
         await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure);
       }
       
-      // Get contract balance
-      const contractBalance = await mockToken.balanceOf(await collateralManager.getAddress());
+      // System assets are split across CollateralManager and InsuranceTreasury.
+      const collateralManagerBalance = await mockToken.balanceOf(await collateralManager.getAddress());
+      const treasuryBalance = await mockToken.balanceOf(await insuranceTreasury.getAddress());
+      const contractBalance = collateralManagerBalance + treasuryBalance;
       
       // Sum all user collateral
       let totalUserCollateral = 0n;
@@ -502,17 +506,19 @@ describe("PerpSettlement Module Integration", function () {
       const beforeTraderBalance = await perpStorage.accountCollateral(longTrader.address);
       const beforeLiquidatorBalance = await mockToken.balanceOf(liquidator.address);
       const beforeFeePool = await perpStorage.feePool();
+      const beforeInsurance = await perpStorage.insuranceFundBalance();
       
       // Get position details
       const position = await perpStorage.positions(longPosId);
+      const positionExposure = position.exposure;
       const margin = position.margin;
       
       // Calculate expected reward and penalty
       const rewardBps = await perpStorage.liquidationRewardBps();
       const penaltyBps = await perpStorage.liquidationPenaltyBps();
       
-      const expectedReward = margin * BigInt(rewardBps) / BPS_DENOMINATOR;
-      const expectedPenalty = margin * BigInt(penaltyBps) / BPS_DENOMINATOR;
+      const expectedReward = positionExposure * BigInt(rewardBps) / BPS_DENOMINATOR;
+      const expectedPenalty = positionExposure * BigInt(penaltyBps) / BPS_DENOMINATOR;
       
       // Liquidate
       await liquidationEngine.connect(liquidator).liquidate(longPosId);
@@ -521,6 +527,7 @@ describe("PerpSettlement Module Integration", function () {
       const afterTraderBalance = await perpStorage.accountCollateral(longTrader.address);
       const afterLiquidatorBalance = await mockToken.balanceOf(liquidator.address);
       const afterFeePool = await perpStorage.feePool();
+      const afterInsurance = await perpStorage.insuranceFundBalance();
       
       // Verify position is closed
       const closedPosition = await perpStorage.positions(longPosId);
@@ -530,11 +537,17 @@ describe("PerpSettlement Module Integration", function () {
       const liquidatorGain = afterLiquidatorBalance - beforeLiquidatorBalance;
       expect(liquidatorGain).to.be.at.most(expectedReward);
       
-      // Verify fee pool increased by penalty
-      expect(afterFeePool - beforeFeePool).to.be.at.most(expectedPenalty);
+      // Liquidation penalty now routes to reward + insurance, not fee pool.
+      expect(afterFeePool - beforeFeePool).to.equal(0n);
+
+      // Insurance receives the full liquidation penalty (capped by available collateral).
+      const expectedInsuranceInflow = expectedPenalty > beforeTraderBalance
+        ? beforeTraderBalance
+        : expectedPenalty;
+      expect(afterInsurance - beforeInsurance).to.be.at.most(expectedInsuranceInflow);
       
       // Verify trader lost margin
-      expect(beforeTraderBalance - afterTraderBalance).to.be.at.least(margin - expectedReward - expectedPenalty);
+      expect(beforeTraderBalance - afterTraderBalance).to.be.at.least(margin);
     });
   });
 

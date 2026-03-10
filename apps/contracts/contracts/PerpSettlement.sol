@@ -35,6 +35,8 @@ contract PerpEngine is Ownable {
     event ModuleInitialized(string name, address moduleAddress);
     event EnginePaused(bool paused);
     event OracleUpdated(address oldOracle, address newOracle, bytes32 feedId);
+    event InsuranceFundUpdated(address oldInsuranceFund, address newInsuranceFund);
+    event ExecutionLeverageUpdated(uint256 oldLeverage, uint256 newLeverage);
 
     constructor(
         address _collateral,
@@ -42,6 +44,8 @@ contract PerpEngine is Ownable {
         address _oracle,
         bytes32 _feedId
     ) Ownable(msg.sender) {
+        require(_insurance.code.length > 0, "Insurance must be contract");
+
         // Deploy storage first
         perpStorage = new PerpStorage();
         
@@ -55,9 +59,9 @@ contract PerpEngine is Ownable {
         perpStorage.setMakerFeeBps(5);
         perpStorage.setTakerFeeBps(10);
         perpStorage.setInsuranceBps(200);
-        perpStorage.setMaintenanceMarginBps(1000);  // 10%
-        perpStorage.setLiquidationRewardBps(500);   // 5%
-        perpStorage.setLiquidationPenaltyBps(1000); // 10%
+        perpStorage.setMaintenanceMarginBps(75);  // 10%
+        perpStorage.setLiquidationRewardBps(80);    // 0.8%
+        perpStorage.setLiquidationPenaltyBps(150);  // 1.5%
         
         // Set initial funding time
         perpStorage.setLastFundingUpdate(block.timestamp);
@@ -393,6 +397,28 @@ contract PerpEngine is Ownable {
         perpStorage.setMakerFeeBps(_makerFeeBps);
         perpStorage.setTakerFeeBps(_takerFeeBps);
         perpStorage.setInsuranceBps(_insuranceBps);
+    }
+
+    /**
+     * @notice Update insurance fund/treasury address
+     */
+    function setInsuranceFund(address _insuranceFund) external onlyOwner {
+        require(_insuranceFund != address(0), "Invalid insurance fund");
+        require(_insuranceFund.code.length > 0, "Insurance must be contract");
+
+        address oldInsuranceFund = perpStorage.insuranceFund();
+        perpStorage.setInsuranceFund(_insuranceFund);
+
+        emit InsuranceFundUpdated(oldInsuranceFund, _insuranceFund);
+    }
+
+    /**
+     * @notice Update settlement execution leverage used to derive required margin
+     */
+    function setExecutionLeverage(uint256 leverage) external onlyOwner {
+        uint256 oldLeverage = settlementEngine.executionLeverage();
+        settlementEngine.setExecutionLeverage(leverage);
+        emit ExecutionLeverageUpdated(oldLeverage, leverage);
     }
 
     /**
