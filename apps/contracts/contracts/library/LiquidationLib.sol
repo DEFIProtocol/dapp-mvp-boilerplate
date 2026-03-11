@@ -24,17 +24,17 @@ library LiquidationLib {
         uint256 targetPenalty = (exposure * penaltyBps) / BPS_DENOMINATOR;
         uint256 targetReward = (exposure * rewardBps) / BPS_DENOMINATOR;
 
+        // Total deducted from trader is the penalty; reward is carved from within it
         penaltyCollected = targetPenalty > availableCollateral ? availableCollateral : targetPenalty;
-        uint256 remainingAfterPenalty = availableCollateral - penaltyCollected;
 
-        // Reward is paid separately from remaining collateral after penalty deduction.
-        reward = targetReward > remainingAfterPenalty ? remainingAfterPenalty : targetReward;
+        // Reward is carved from within the penalty (80 bps of the 150 bps penalty pool)
+        reward = targetReward > penaltyCollected ? penaltyCollected : targetReward;
 
-        // Insurance receives the full collected liquidation penalty.
-        toInsurance = penaltyCollected;
+        // Insurance receives the remainder: penalty - reward (70 bps)
+        toInsurance = penaltyCollected - reward;
 
-        // Unused collateral remains with the trader after penalty + reward.
-        marginReturned = remainingAfterPenalty - reward;
+        // Trader retains collateral above the penalty amount
+        marginReturned = availableCollateral - penaltyCollected;
     }
 
     // Calculate bad debt after liquidation

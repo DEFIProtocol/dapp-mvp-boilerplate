@@ -91,10 +91,11 @@ contract PerpEngine is Ownable {
         fundingEngine = new FundingEngine(address(perpStorage), address(collateralManager));
         emit ModuleInitialized("FundingEngine", address(fundingEngine));
         
-        // Deploy PositionManager (depends on CollateralManager)
+        // Deploy PositionManager (depends on CollateralManager and FundingEngine)
         positionManager = new PositionManager(
             address(perpStorage),
-            address(collateralManager)
+            address(collateralManager),
+            address(fundingEngine)
         );
         emit ModuleInitialized("PositionManager", address(positionManager));
         

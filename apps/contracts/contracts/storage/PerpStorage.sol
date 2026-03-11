@@ -34,6 +34,7 @@ contract PerpStorage is Ownable {
     // Token addresses
     IERC20 public collateral;
     address public insuranceFund;
+    address public protocolTreasury;
 
     // Oracle
     address public markOracle;
@@ -121,6 +122,10 @@ contract PerpStorage is Ownable {
 
     function setInsuranceFund(address fund) external onlyOwner {
         insuranceFund = fund;
+    }
+
+    function setProtocolTreasury(address _treasury) external onlyOwner {
+        protocolTreasury = _treasury;
     }
 
     function setMarkOracle(address oracle) external onlyOwner {

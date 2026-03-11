@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "../storage/PerpStorage.sol";
 import "../library/FeeLib.sol";
 import "../interfaces/IInsuranceTreasury.sol";
+import "../interfaces/IProtocolTreasury.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
@@ -143,10 +144,17 @@ contract CollateralManager {
         // Deduct from collateral
         uint256 currentCollateral = perpStorage.accountCollateral(trader);
         require(currentCollateral >= totalCharge, "Insufficient collateral for fees");
-        
         perpStorage.setAccountCollateral(trader, currentCollateral - totalCharge);
-        
-        // Update fee pool
+
+        // Route fee tokens to ProtocolTreasury
+        address pt = perpStorage.protocolTreasury();
+        if (pt != address(0) && fee > 0) {
+            IERC20 collateralToken = perpStorage.collateral();
+            collateralToken.forceApprove(pt, fee);
+            IProtocolTreasury(pt).deposit(fee);
+        }
+
+        // Update fee pool accounting
         perpStorage.setFeePool(perpStorage.feePool() + fee);
 
         emit FeeCharged(trader, fee, insuranceCut);

@@ -62,10 +62,18 @@ describe("PerpSettlement Module Integration", function () {
     riskManager = await RiskManager.deploy(await perpStorage.getAddress());
     await riskManager.waitForDeployment();
 
+    const FundingEngine = await ethers.getContractFactory("FundingEngine");
+    fundingEngine = await FundingEngine.deploy(
+      await perpStorage.getAddress(),
+      await collateralManager.getAddress()
+    );
+    await fundingEngine.waitForDeployment();
+
     const PositionManager = await ethers.getContractFactory("PositionManager");
     positionManager = await PositionManager.deploy(
       await perpStorage.getAddress(),
-      await collateralManager.getAddress()
+      await collateralManager.getAddress(),
+      await fundingEngine.getAddress()
     );
     await positionManager.waitForDeployment();
 
@@ -77,13 +85,6 @@ describe("PerpSettlement Module Integration", function () {
       await riskManager.getAddress()
     );
     await settlementEngine.waitForDeployment();
-
-    const FundingEngine = await ethers.getContractFactory("FundingEngine");
-    fundingEngine = await FundingEngine.deploy(
-      await perpStorage.getAddress(),
-      await collateralManager.getAddress()
-    );
-    await fundingEngine.waitForDeployment();
 
     const LiquidationEngine = await ethers.getContractFactory("LiquidationEngine");
     liquidationEngine = await LiquidationEngine.deploy(

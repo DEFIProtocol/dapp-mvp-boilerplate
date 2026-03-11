@@ -185,34 +185,36 @@ contract LiquidationEngine {
     ) internal returns (uint256 rewardPaid, uint256 insuranceContribution, uint256 penaltyCollected, uint256 marginReturned) {
         uint256 remainingCollateral = perpStorage.accountCollateral(trader);
 
-        // Penalty is the maximum amount to deduct from collateral for liquidation distribution.
+        // penalty = reward + toInsurance, both carved from within the same penalty pool.
+        // Cap to available collateral and pro-rate the split if needed.
         penaltyCollected = penalty > remainingCollateral ? remainingCollateral : penalty;
 
-        if (penaltyCollected > 0) {
-            // Insurance receives the full collected penalty.
-            insuranceContribution = toInsurance > penaltyCollected ? penaltyCollected : toInsurance;
-            remainingCollateral -= penaltyCollected;
-
-            if (insuranceContribution > 0) {
-                perpStorage.depositToInsurance(insuranceContribution);
-                collateralManager.transferToInsurance(insuranceContribution);
-            }
+        if (penaltyCollected < penalty && penalty > 0) {
+            // Pro-rate reward and insurance when penalty is capped
+            rewardPaid = (reward * penaltyCollected) / penalty;
+            insuranceContribution = penaltyCollected - rewardPaid;
+        } else {
+            rewardPaid = reward;
+            insuranceContribution = toInsurance;
         }
 
-        // Reward is paid separately from post-penalty remaining collateral.
-        if (reward > 0 && remainingCollateral > 0) {
-            rewardPaid = reward > remainingCollateral ? remainingCollateral : reward;
-            remainingCollateral -= rewardPaid;
+        // Liquidator reward exits CollateralManager ERC20 vault
+        if (rewardPaid > 0) {
             collateralManager.transferOut(liquidator, rewardPaid);
         }
 
-        perpStorage.setAccountCollateral(trader, remainingCollateral);
+        // Insurance portion goes to InsuranceTreasury and updates on-chain balance
+        if (insuranceContribution > 0) {
+            perpStorage.depositToInsurance(insuranceContribution);
+            collateralManager.transferToInsurance(insuranceContribution);
+        }
 
-        // Residual collateral remains with trader after liquidation settlement.
-        marginReturned = remainingCollateral;
-        
+        // Deduct full penalty from trader's collateral accounting
+        uint256 newCollateral = remainingCollateral > penaltyCollected ? remainingCollateral - penaltyCollected : 0;
+        perpStorage.setAccountCollateral(trader, newCollateral);
+        marginReturned = newCollateral;
+
         if (badDebt > 0) {
-            // Use insurance fund to cover newly created bad debt if available.
             _coverBadDebtWithInsurance(badDebt);
         }
     }

@@ -14,6 +14,7 @@ import "./CollateralManager.sol";
 contract PositionManager {
     PerpStorage public perpStorage;
     CollateralManager public collateralManager;
+    address public fundingEngine;
 
     // Events
     event PositionOpened(
@@ -41,9 +42,10 @@ contract PositionManager {
         int256 pnlRealized
     );
 
-    constructor(address _perpStorage, address _collateralManager) {
+    constructor(address _perpStorage, address _collateralManager, address _fundingEngine) {
         perpStorage = PerpStorage(_perpStorage);
         collateralManager = CollateralManager(_collateralManager);
+        fundingEngine = _fundingEngine;
     }
 
     modifier onlyModule() {
