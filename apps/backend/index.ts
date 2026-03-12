@@ -15,7 +15,8 @@ import klineRoutes from "./routes/klineRoutes";
 import oracleRouter from "./routes/oracle";
 import pythRouter from "./routes/pyth"; // Import Pyth router
 import perpsRouter from "./routes/perps"; // Your routes
-import smartContractsRouter from "./routes/smartContracts";
+//import smartContractsRouter from "./routes/smartContracts";
+import contractSimulationRouter from "./routes/contractSim/simulation";
 import * as perpsHelpers from "./postgres/perps"; // Import your helpers (adjust path if needed)
 import { bigintSerializer } from './middleware/bigintSerializer';
 
@@ -77,7 +78,8 @@ app.use("/api", pricesRouter);
 app.use('/api/klines', klineRoutes);
 app.use("/api/oracle", oracleRouter);
 app.use("/api/pyth", pythRouter); // Add Pyth routes
-app.use("/api/smart-contracts", smartContractsRouter(pool));
+//app.use("/api/smart-contracts", smartContractsRouter(pool));
+app.use("/api/contract-sim", contractSimulationRouter());
 
 // Health check
 app.get("/health", (_req, res) => {

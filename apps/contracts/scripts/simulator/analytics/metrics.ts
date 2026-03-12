@@ -7,12 +7,20 @@ export interface SimulatorStepState {
   shortOpenInterest: bigint;
   longShortRatio: number;
   tvl: bigint;
+  marginVaultBalance: bigint;
   averageLeverage: number;
   liquidations: number;
   positionsAtRisk: number;
   insuranceFundBalance: bigint;
+  protocolTreasuryBalance: bigint;
   insurancePayouts: bigint;
   badDebt: bigint;
+  sumAccountCollateral: bigint;
+  sumReservedMargin: bigint;
+  sumAvailableCollateral: bigint;
+  sumTraderFundingOwed: bigint;
+  totalBooked: bigint;
+  totalContractBalance: bigint;
   protocolRevenue: bigint;
   makerFeesCollected: bigint;
   takerFeesCollected: bigint;
@@ -47,17 +55,24 @@ export interface ProtocolMetrics {
   shortOpenInterest: bigint;
   longShortRatio: number;
   tvl: bigint;
+  marginVaultBalance: bigint;
+  marginVaultDelta: bigint;
 
   averageLeverage: number;
   liquidationCount: number;
   positionsAtRisk: number;
 
   insuranceBalance: bigint;
+  insuranceBalanceDelta: bigint;
   insurancePayouts: bigint;
   badDebt: bigint;
+  badDebtDelta: bigint;
   insuranceCoverageRatio: number;
 
+  protocolTreasuryBalance: bigint;
+  protocolTreasuryDelta: bigint;
   protocolRevenue: bigint;
+  protocolRevenueDelta: bigint;
   makerFeesCollected: bigint;
   takerFeesCollected: bigint;
   fundingFeesTransferred: bigint;
@@ -76,6 +91,18 @@ export interface ProtocolMetrics {
   filledOrders: number;
   cancelledOrders: number;
   liquidationsPer100Orders: number;
+
+  sumAccountCollateral: bigint;
+  accountCollateralDelta: bigint;
+  sumReservedMargin: bigint;
+  reservedMarginDelta: bigint;
+  sumAvailableCollateral: bigint;
+  availableCollateralDelta: bigint;
+  sumTraderFundingOwed: bigint;
+  traderFundingOwedDelta: bigint;
+  totalBooked: bigint;
+  totalContractBalance: bigint;
+  solvencyBuffer: bigint;
 
   fundingRate: number;
   nextFundingTime: number;
@@ -155,6 +182,21 @@ export class MetricsCollector {
       ? Number(state.insuranceFundBalance) / Math.max(1, Number(state.openInterest) * 0.05)
       : 0;
 
+    const previous = this.metricsHistory.length > 0
+      ? this.metricsHistory[this.metricsHistory.length - 1]
+      : null;
+
+    const marginVaultDelta = previous ? state.marginVaultBalance - previous.marginVaultBalance : 0n;
+    const insuranceBalanceDelta = previous ? state.insuranceFundBalance - previous.insuranceBalance : 0n;
+    const protocolTreasuryDelta = previous ? state.protocolTreasuryBalance - previous.protocolTreasuryBalance : 0n;
+    const protocolRevenueDelta = previous ? state.protocolRevenue - previous.protocolRevenue : 0n;
+    const badDebtDelta = previous ? state.badDebt - previous.badDebt : 0n;
+    const accountCollateralDelta = previous ? state.sumAccountCollateral - previous.sumAccountCollateral : 0n;
+    const reservedMarginDelta = previous ? state.sumReservedMargin - previous.sumReservedMargin : 0n;
+    const availableCollateralDelta = previous ? state.sumAvailableCollateral - previous.sumAvailableCollateral : 0n;
+    const traderFundingOwedDelta = previous ? state.sumTraderFundingOwed - previous.sumTraderFundingOwed : 0n;
+    const solvencyBuffer = state.totalContractBalance - state.totalBooked;
+
     const metrics: ProtocolMetrics = {
       timestamp: Date.now(),
       blockNumber: block,
@@ -165,17 +207,24 @@ export class MetricsCollector {
       shortOpenInterest: state.shortOpenInterest,
       longShortRatio: state.longShortRatio,
       tvl: state.tvl,
+      marginVaultBalance: state.marginVaultBalance,
+      marginVaultDelta,
 
       averageLeverage: state.averageLeverage,
       liquidationCount: state.liquidations,
       positionsAtRisk: state.positionsAtRisk,
 
       insuranceBalance: state.insuranceFundBalance,
+      insuranceBalanceDelta,
       insurancePayouts: state.insurancePayouts,
       badDebt: state.badDebt,
+      badDebtDelta,
       insuranceCoverageRatio,
 
+      protocolTreasuryBalance: state.protocolTreasuryBalance,
+      protocolTreasuryDelta,
       protocolRevenue: state.protocolRevenue,
+      protocolRevenueDelta,
       makerFeesCollected: state.makerFeesCollected,
       takerFeesCollected: state.takerFeesCollected,
       fundingFeesTransferred: state.fundingFeesTransferred,
@@ -195,6 +244,18 @@ export class MetricsCollector {
       cancelledOrders: state.cancelledOrders,
       liquidationsPer100Orders:
         state.newOrders > 0 ? (state.liquidations / state.newOrders) * 100 : 0,
+
+      sumAccountCollateral: state.sumAccountCollateral,
+      accountCollateralDelta,
+      sumReservedMargin: state.sumReservedMargin,
+      reservedMarginDelta,
+      sumAvailableCollateral: state.sumAvailableCollateral,
+      availableCollateralDelta,
+      sumTraderFundingOwed: state.sumTraderFundingOwed,
+      traderFundingOwedDelta,
+      totalBooked: state.totalBooked,
+      totalContractBalance: state.totalContractBalance,
+      solvencyBuffer,
 
       fundingRate,
       nextFundingTime: state.nextFundingTime,

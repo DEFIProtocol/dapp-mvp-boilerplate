@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { formatUnits } from 'ethers';
 
+import type { ConsistencySnapshot } from './consistency.ts';
 import type { PositionDetail, ProtocolMetrics } from './metrics.ts';
 
 export interface SimulationLog {
@@ -12,8 +13,15 @@ export interface SimulationLog {
     startTime: string;
     agentCount: number;
   };
+  provenance: {
+    inputs: string[];
+    onChain: string[];
+    derived: string[];
+    assertions: string[];
+  };
   metrics: ProtocolMetrics[];
   positions: Record<number, PositionDetail[]>;
+  snapshots: Record<number, ConsistencySnapshot>;
   liquidations: any[];
   summary: any;
 }
@@ -37,8 +45,79 @@ export class SimulationLogger {
         startTime: new Date().toISOString(),
         agentCount: 0,
       },
+      provenance: {
+        inputs: [
+          'price',
+          'newOrders',
+          'filledOrders',
+          'cancelledOrders',
+          'tradeCount',
+          'spreadBps',
+          'slippageBps',
+          'priceImpactBps',
+        ],
+        onChain: [
+          'openInterest',
+          'longOpenInterest',
+          'shortOpenInterest',
+          'tvl',
+          'marginVaultBalance',
+          'marginVaultDelta',
+          'insuranceBalance',
+          'insuranceBalanceDelta',
+          'protocolTreasuryBalance',
+          'protocolTreasuryDelta',
+          'protocolRevenue',
+          'protocolRevenueDelta',
+          'badDebt',
+          'badDebtDelta',
+          'sumAccountCollateral',
+          'accountCollateralDelta',
+          'sumReservedMargin',
+          'reservedMarginDelta',
+          'sumAvailableCollateral',
+          'availableCollateralDelta',
+          'sumTraderFundingOwed',
+          'traderFundingOwedDelta',
+          'totalBooked',
+          'totalContractBalance',
+          'solvencyBuffer',
+          'liquidationCount',
+          'liquidatorRewardsPaid',
+          'liquidationPenaltyCollected',
+          'marginReturnedFromLiquidation',
+          'insuranceFundInflow',
+          'insuranceFundOutflow',
+          'liquidationInsuranceInflow',
+          'nextFundingTime',
+        ],
+        derived: [
+          'longShortRatio',
+          'averageLeverage',
+          'positionsAtRisk',
+          'insuranceCoverageRatio',
+          'liquidationsPer100Orders',
+          'fundingRate',
+          'longPositions',
+          'shortPositions',
+          'largePositions',
+          'isInsolvent',
+          'volume24h',
+          'uniqueTraders',
+          'openOrders',
+        ],
+        assertions: [
+          'solvency-bound',
+          'insurance-balance-sync',
+          'protocol-fee-sync',
+          'long-exposure-sync',
+          'short-exposure-sync',
+          'available-collateral-*',
+        ],
+      },
       metrics: [],
       positions: {},
+      snapshots: {},
       liquidations: [],
       summary: {},
     };
@@ -69,6 +148,22 @@ export class SimulationLogger {
     }
   }
 
+  logSnapshot(step: number, snapshot: ConsistencySnapshot): void {
+    this.logs.snapshots[step] = snapshot;
+
+    if (step % 100 === 0 || snapshot.assertions.some((assertion) => !assertion.ok)) {
+      const snapshotPath = path.join(this.logDir, `snapshot_step_${step}.json`);
+      fs.writeFileSync(
+        snapshotPath,
+        JSON.stringify(
+          snapshot,
+          (_key, value) => (typeof value === 'bigint' ? value.toString() : value),
+          2
+        )
+      );
+    }
+  }
+
   logLiquidation(trader: string, size: bigint, insuranceUsed: bigint): void {
     this.logs.liquidations.push({
       step: this.logs.metrics.length,
@@ -92,9 +187,24 @@ export class SimulationLogger {
       metrics.price.toFixed(2),
       formatUnits(metrics.openInterest, 6),
       formatUnits(metrics.tvl, 6),
+      formatUnits(metrics.marginVaultDelta, 6),
       formatUnits(metrics.insuranceBalance, 6),
+      formatUnits(metrics.insuranceBalanceDelta, 6),
+      formatUnits(metrics.protocolTreasuryBalance, 6),
+      formatUnits(metrics.protocolTreasuryDelta, 6),
       formatUnits(metrics.badDebt, 6),
+      formatUnits(metrics.badDebtDelta, 6),
       formatUnits(metrics.protocolRevenue, 6),
+      formatUnits(metrics.protocolRevenueDelta, 6),
+      formatUnits(metrics.sumAccountCollateral, 6),
+      formatUnits(metrics.accountCollateralDelta, 6),
+      formatUnits(metrics.sumReservedMargin, 6),
+      formatUnits(metrics.reservedMarginDelta, 6),
+      formatUnits(metrics.sumAvailableCollateral, 6),
+      formatUnits(metrics.availableCollateralDelta, 6),
+      formatUnits(metrics.sumTraderFundingOwed, 6),
+      formatUnits(metrics.traderFundingOwedDelta, 6),
+      formatUnits(metrics.solvencyBuffer, 6),
       formatUnits(metrics.makerFeesCollected, 6),
       formatUnits(metrics.takerFeesCollected, 6),
       formatUnits(metrics.fundingFeesTransferred, 6),
@@ -128,9 +238,24 @@ export class SimulationLogger {
         'price',
         'openInterest',
         'tvl',
+        'marginVaultDelta',
         'insuranceBalance',
+        'insuranceBalanceDelta',
+        'protocolTreasuryBalance',
+        'protocolTreasuryDelta',
         'badDebt',
+        'badDebtDelta',
         'protocolRevenue',
+        'protocolRevenueDelta',
+        'sumAccountCollateral',
+        'accountCollateralDelta',
+        'sumReservedMargin',
+        'reservedMarginDelta',
+        'sumAvailableCollateral',
+        'availableCollateralDelta',
+        'sumTraderFundingOwed',
+        'traderFundingOwedDelta',
+        'solvencyBuffer',
         'makerFeesCollected',
         'takerFeesCollected',
         'fundingFeesTransferred',
@@ -187,17 +312,18 @@ export class SimulationLogger {
     this.logs.summary = summary;
 
     const logPath = path.join(this.logDir, 'simulation_complete.json');
-    fs.writeFileSync(
-      logPath,
-      JSON.stringify(
-        this.logs,
-        (_key, value) => {
-          if (typeof value === 'bigint') return value.toString();
-          return value;
-        },
-        2
-      )
+    const serialized = JSON.stringify(
+      this.logs,
+      (_key, value) => {
+        if (typeof value === 'bigint') return value.toString();
+        return value;
+      },
+      2
     );
+    fs.writeFileSync(logPath, serialized);
+
+    const latestPath = path.join(this.baseDir, 'latest.json');
+    fs.writeFileSync(latestPath, serialized);
 
     const summaryPath = path.join(this.logDir, 'summary.txt');
     fs.writeFileSync(summaryPath, this.formatSummaryText(summary));
