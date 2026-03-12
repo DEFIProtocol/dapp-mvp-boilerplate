@@ -4,6 +4,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 
 import { deployLocal } from "./deployLocal.ts";
+import { collectConsistencySnapshot } from "./analytics/consistency.ts";
 import { MetricsCollector } from "./analytics/metrics.ts";
 import { SimulationLogger } from "./analytics/logger.ts";
 import { ChartGenerator } from "./analytics/charts.ts";
@@ -102,6 +103,8 @@ export async function runSimulation(options: SimulationOptions) {
   const liquidationEngine = await ethers.getContractAt("LiquidationEngine", addresses.liquidationEngine);
   const settlementEngine = await ethers.getContractAt("SettlementEngine", addresses.settlementEngine);
   const fundingEngine = await ethers.getContractAt("FundingEngine", addresses.fundingEngine);
+  const insuranceTreasury = await ethers.getContractAt("InsuranceTreasury", addresses.insuranceFund);
+  const protocolTreasury = await ethers.getContractAt("ProtocolTreasury", addresses.protocolTreasury);
 
   const signers = await ethers.getSigners();
   const traderSigners: Signer[] = signers.slice(2);
@@ -152,14 +155,14 @@ export async function runSimulation(options: SimulationOptions) {
   });
 
   const initialPrice = scenario.priceModel.initialPrice;
-  await oracle.setPrice(ethers.parseUnits(initialPrice.toFixed(8), 8));
+  await oracle.setPrice(toOraclePrice(ethers, initialPrice));
 
   console.log("\nRunning simulation...\n");
 
   for (let step = 0; step < steps; step++) {
     const previousPrice = priceEngine.getCurrentPrice();
     const nextPrice = priceEngine.updatePrice();
-    await oracle.setPrice(ethers.parseUnits(nextPrice.toFixed(8), 8));
+    await oracle.setPrice(toOraclePrice(ethers, nextPrice));
 
     await advanceTime(ethers.provider, 300);
 
@@ -319,6 +322,17 @@ export async function runSimulation(options: SimulationOptions) {
     const priceMoveBps = previousPrice > 0 ? Math.abs(((nextPrice - previousPrice) / previousPrice) * 10000) : 0;
     const averageIntentLeverage = computeIntentAverageLeverage(traderIntentLeverage, stepIntentLeverageWeighted, stepIntentLeverageNotional);
 
+    const snapshot = await collectConsistencySnapshot(step, nextPrice, traderSigners, {
+      provider: ethers.provider,
+      usdc,
+      perpStorage,
+      collateralManager,
+      riskManager,
+      fundingEngine,
+      insuranceTreasury,
+      protocolTreasury,
+    });
+
     const metrics = await metricsCollector.collectMetrics(step, {
       price: nextPrice,
       openInterest,
@@ -326,13 +340,21 @@ export async function runSimulation(options: SimulationOptions) {
       shortOpenInterest: shortOi,
       longShortRatio,
       tvl,
+      marginVaultBalance: snapshot.onChain.collateralManagerBalance,
       averageLeverage: averageIntentLeverage,
       liquidations: stepLiquidations,
       positionsAtRisk: positionStats.positionsAtRisk,
-      insuranceFundBalance: insuranceBalance,
+      insuranceFundBalance: snapshot.onChain.insuranceFundBalance,
+      protocolTreasuryBalance: snapshot.onChain.protocolTreasuryBalance,
       insurancePayouts: cumulative.insuranceOutflow,
-      badDebt,
-      protocolRevenue: feePool,
+      badDebt: snapshot.onChain.totalBadDebt,
+      sumAccountCollateral: snapshot.onChain.sumAccountCollateral,
+      sumReservedMargin: snapshot.onChain.sumReservedMargin,
+      sumAvailableCollateral: snapshot.onChain.sumAvailableCollateral,
+      sumTraderFundingOwed: snapshot.onChain.sumTraderFundingOwed,
+      totalBooked: snapshot.onChain.totalBooked,
+      totalContractBalance: snapshot.onChain.totalContractBalance,
+      protocolRevenue: snapshot.onChain.feePool,
       makerFeesCollected: cumulative.makerFees,
       takerFeesCollected: cumulative.takerFees,
       fundingFeesTransferred: cumulative.fundingTransferred,
@@ -357,6 +379,16 @@ export async function runSimulation(options: SimulationOptions) {
     });
 
     logger.logMetrics(step, metrics);
+    logger.logSnapshot(step, snapshot);
+
+    const failedAssertions = snapshot.assertions.filter((assertion) => !assertion.ok);
+    if (failedAssertions.length > 0) {
+      const details = failedAssertions
+        .slice(0, 5)
+        .map((assertion) => `${assertion.name}: expected ${assertion.expected ?? "?"}, actual ${assertion.actual ?? "?"}`)
+        .join(" | ");
+      throw new Error(`Consistency check failed at step ${step}: ${details}`);
+    }
 
     if (step % 100 === 0) {
       logger.logPositions(step, positionStats.details);
@@ -600,7 +632,7 @@ async function collectPositionStats(
   let shortPositions = 0;
   const tradersWithPositions = new Set<string>();
 
-  const markPriceOnChain = ethers.parseUnits(markPrice.toFixed(8), 8);
+  const markPriceOnChain = toOraclePrice(ethers, markPrice);
 
   for (const trader of traderSigners) {
     const ids: bigint[] = await perpStorage.getTraderPositions(trader.address);
@@ -630,7 +662,7 @@ async function collectPositionStats(
         size: position.exposure,
         collateral: position.margin,
         leverage,
-        entryPrice: Number(position.entryPrice) / 1e8,
+        entryPrice: Number(position.entryPrice) / 1e18,
         markPrice,
         pnl,
         pnlPercent,
@@ -653,6 +685,10 @@ async function collectPositionStats(
 async function advanceTime(provider: any, seconds: number): Promise<void> {
   await provider.send("evm_increaseTime", [seconds]);
   await provider.send("evm_mine", []);
+}
+
+function toOraclePrice(ethers: any, price: number): bigint {
+  return ethers.parseUnits(price.toFixed(8), 18);
 }
 
 const isMain = process.argv[1]

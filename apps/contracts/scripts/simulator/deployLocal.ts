@@ -16,6 +16,7 @@ interface DeployedAddresses {
   settlementEngine: string;
   fundingEngine: string;
   insuranceFund: string;
+  protocolTreasury: string;
   agents: {
     [key: string]: string[]; // trader addresses
   };
@@ -49,6 +50,13 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await insuranceTreasury.waitForDeployment();
   const insuranceFundAddress = await insuranceTreasury.getAddress();
   console.log(`Insurance Treasury deployed: ${insuranceFundAddress}`);
+
+  console.log("\n📝 Deploying Protocol Treasury...");
+  const ProtocolTreasury = await ethers.getContractFactory("ProtocolTreasury");
+  const protocolTreasury = await ProtocolTreasury.deploy(usdcAddress, deployer.address);
+  await protocolTreasury.waitForDeployment();
+  const protocolTreasuryAddress = await protocolTreasury.getAddress();
+  console.log(`Protocol Treasury deployed: ${protocolTreasuryAddress}`);
   
   // 2. Deploy Mock Oracle
   console.log("\n📝 Deploying Mock Oracle...");
@@ -93,7 +101,11 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   // 7. Deploy PositionManager
   console.log("\n📝 Deploying PositionManager...");
   const PositionManager = await ethers.getContractFactory("PositionManager");
-  const positionManager = await PositionManager.deploy(perpStorageAddress, collateralManagerAddress);
+  const positionManager = await PositionManager.deploy(
+    perpStorageAddress,
+    collateralManagerAddress,
+    fundingEngineAddress
+  );
   await positionManager.waitForDeployment();
   const positionManagerAddress = await positionManager.getAddress();
   console.log(`PositionManager: ${positionManagerAddress}`);
@@ -130,6 +142,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   // Configure storage primitives expected by modules.
   await perpStorage.setCollateral(usdcAddress);
   await perpStorage.setInsuranceFund(insuranceFundAddress);
+  await perpStorage.setProtocolTreasury(protocolTreasuryAddress);
   await perpStorage.setMarkOracle(oracleAddress);
   await perpStorage.setMarketFeedId(ethers.encodeBytes32String("SIM_MARK"));
 
@@ -157,6 +170,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   // Authorize modules that move funds in/out of treasury.
   await insuranceTreasury.setAuthorizedModule(collateralManagerAddress, true);
   await insuranceTreasury.setAuthorizedModule(liquidationEngineAddress, true);
+  await protocolTreasury.setAuthorizedModule(collateralManagerAddress, true);
   
   // 11. Fund traders with USDC
   console.log("\n💰 Funding traders with USDC...");
@@ -225,6 +239,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     settlementEngine: settlementEngineAddress,
     fundingEngine: fundingEngineAddress,
     insuranceFund: insuranceFundAddress,
+    protocolTreasury: protocolTreasuryAddress,
     agents: agentAddresses
   };
   
