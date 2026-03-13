@@ -188,6 +188,25 @@ describe("PerpSettlement Module Integration", function () {
 
       expect(nextFundingAfter > nextFundingBefore).to.equal(true);
     });
+
+    it("blocks withdrawals when unrealized losses consume account equity", async function () {
+      const exposure = ethers.parseEther("90000");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 23n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 24n);
+
+      const longSig = await signOrder(longTrader, longOrder);
+      const shortSig = await signOrder(shortTrader, shortOrder);
+
+      await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure);
+
+      await mockOracle.setPrice(INITIAL_PRICE / 10n);
+
+      expect(await collateralManager.getAvailableCollateral(longTrader.address)).to.equal(0n);
+
+      await expect(
+        collateralManager.connect(longTrader).withdrawCollateral(1n)
+      ).to.be.revertedWith("Insufficient available collateral");
+    });
   });
 
   // ==================== VERIFICATION TESTS ====================

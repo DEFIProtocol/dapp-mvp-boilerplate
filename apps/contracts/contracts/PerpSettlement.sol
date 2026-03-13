@@ -660,7 +660,7 @@ contract PerpEngine is Ownable {
         require(amount <= feePool, "Insufficient fees");
         
         perpStorage.setFeePool(feePool - amount);
-        perpStorage.collateral().safeTransfer(to, amount);
+        collateralManager.transferOut(to, amount);
     }
 
     /**

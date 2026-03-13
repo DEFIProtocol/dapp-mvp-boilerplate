@@ -1,6 +1,0 @@
-step,liquidatorOrders,liquidations,liquidatorRewardsPaid,liquidationPenaltyCollected,marginReturnedFromLiquidation,insuranceFundOutflow
-0,0,0,0.0,0.0,0.0,0.0
-1,2,2,29.432,55.185,9929.568428,0.0
-2,2,2,86.856,162.855,19812.278573,0.0
-3,5,5,190.952,358.035,44598.720921,0.0
-4,3,3,574.64,1077.45,58839.607849,0.0

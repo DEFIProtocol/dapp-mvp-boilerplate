@@ -3,9 +3,15 @@ pragma solidity ^0.8.24;
 
 import "../storage/PerpStorage.sol";
 import "../library/FeeLib.sol";
+import "../library/PnlLib.sol";
+import "../library/FundingLib.sol";
 import "../interfaces/IInsuranceTreasury.sol";
 import "../interfaces/IProtocolTreasury.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+interface ICollateralMarkOracle {
+    function getMarkPrice(bytes32 feedId) external view returns (uint256);
+}
 
 /**
  * @title CollateralManager
@@ -75,8 +81,13 @@ contract CollateralManager {
      * @notice Get available collateral (total - reserved)
      */
     function getAvailableCollateral(address trader) public view returns (uint256) {
-        uint256 balance = perpStorage.accountCollateral(trader);
+        int256 equity = _getAccountEquity(trader);
+        if (equity <= 0) {
+            return 0;
+        }
+
         uint256 reserved = perpStorage.reservedMargin(trader);
+        uint256 balance = uint256(equity);
         return balance > reserved ? balance - reserved : 0;
     }
 
@@ -159,15 +170,7 @@ contract CollateralManager {
         require(currentCollateral >= totalCharge, "Insufficient collateral for fees");
         perpStorage.setAccountCollateral(trader, currentCollateral - totalCharge);
 
-        // Route fee tokens to ProtocolTreasury
-        address pt = perpStorage.protocolTreasury();
-        if (pt != address(0) && fee > 0) {
-            IERC20 collateralToken = perpStorage.collateral();
-            collateralToken.forceApprove(pt, fee);
-            IProtocolTreasury(pt).deposit(fee);
-        }
-
-        // Update fee pool accounting
+        // Keep trading fees inside the collateral vault until an explicit fee withdrawal.
         perpStorage.setFeePool(perpStorage.feePool() + fee);
 
         emit FeeCharged(trader, fee, insuranceCut);
@@ -190,7 +193,7 @@ contract CollateralManager {
     /**
      * @notice Transfer collateral out to an external recipient (module-controlled)
      */
-    function transferOut(address to, uint256 amount) external onlyModule {
+    function transferOut(address to, uint256 amount) external onlyModuleOrOwner {
         if (amount == 0) return;
         IERC20 collateral = perpStorage.collateral();
         collateral.safeTransfer(to, amount);
@@ -264,11 +267,51 @@ contract CollateralManager {
         require(getAvailableCollateral(trader) >= required, "Insufficient available collateral");
     }
 
+    function _getAccountEquity(address trader) internal view returns (int256 equity) {
+        equity = int256(perpStorage.accountCollateral(trader));
+
+        uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
+        for (uint256 i = 0; i < positionIds.length; i++) {
+            PerpStorage.Position memory position = perpStorage.getPosition(positionIds[i]);
+            if (!position.active) continue;
+
+            bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+            PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(marketId);
+            require(market.exists, "Unknown market");
+
+            uint256 markPrice = ICollateralMarkOracle(perpStorage.markOracle()).getMarkPrice(market.feedId);
+            require(markPrice > 0, "Invalid mark price");
+
+            PnlLib.Position memory pnlPosition = PnlLib.Position({
+                exposure: position.exposure,
+                entryPrice: position.entryPrice,
+                side: position.side == PerpStorage.Side.Long ? PnlLib.Side.Long : PnlLib.Side.Short
+            });
+
+            int256 pnl = PnlLib.calculateUnrealizedPnl(pnlPosition, markPrice);
+            int256 currentFunding = position.side == PerpStorage.Side.Long
+                ? market.cumulativeFundingLong
+                : market.cumulativeFundingShort;
+            int256 funding = FundingLib.calculateFundingPayment(
+                position.exposure,
+                position.entryFunding,
+                currentFunding
+            );
+
+            equity += pnl - funding;
+        }
+    }
+
     /**
      * @notice Module access modifier
      */
     modifier onlyModule() {
         require(perpStorage.authorizedModules(msg.sender), "Only modules can call");
+        _;
+    }
+
+    modifier onlyModuleOrOwner() {
+        require(perpStorage.authorizedModules(msg.sender) || msg.sender == perpStorage.owner(), "Only modules can call");
         _;
     }
 }

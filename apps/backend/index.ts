@@ -14,6 +14,7 @@ import pricesRouter from "./routes/prices";
 import klineRoutes from "./routes/klineRoutes";
 import oracleRouter from "./routes/oracle";
 import pythRouter from "./routes/pyth"; // Import Pyth router
+import priceAggregatorRouter from "./routes/priceAggregator";
 import perpsRouter from "./routes/perps"; // Your routes
 //import smartContractsRouter from "./routes/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
@@ -78,6 +79,7 @@ app.use("/api", pricesRouter);
 app.use('/api/klines', klineRoutes);
 app.use("/api/oracle", oracleRouter);
 app.use("/api/pyth", pythRouter); // Add Pyth routes
+app.use("/api/aggregator", priceAggregatorRouter); // Validated index+mark prices
 //app.use("/api/smart-contracts", smartContractsRouter(pool));
 app.use("/api/contract-sim", contractSimulationRouter());
 

@@ -42,12 +42,18 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
   let traders: Trader[] = [];
   let liquidator: any;
   let ethers: any;
+  let primaryMarketId: string;
+  let secondaryMarketId: string;
 
   // Monotonically increasing counter so every nonce is unique across the test run
   let nonceCounter = 0;
+  let rngState = 0x12345678n;
 
   beforeEach(async function () {
     ({ ethers } = await network.connect());
+    nonceCounter = 0;
+    rngState = 0x12345678n;
+
     const signers = await ethers.getSigners();
     owner = signers[0];
     const rest = signers.slice(1);
@@ -133,8 +139,9 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
     await perpStorage.setProtocolTreasury(await protocolTreasury.getAddress());
     await perpStorage.setMarkOracle(await mockOracle.getAddress());
-    const marketId = ethers.encodeBytes32String("ETH/USD");
-    await perpStorage.setMarketFeedId(marketId);
+    primaryMarketId = ethers.encodeBytes32String("ETH/USD");
+    secondaryMarketId = ethers.encodeBytes32String("BTC/USD");
+    await perpStorage.setMarketFeedId(primaryMarketId);
 
     await perpStorage.setMakerFeeBps(3);
     await perpStorage.setTakerFeeBps(5);
@@ -142,7 +149,8 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     await perpStorage.setMaintenanceMarginBps(75);
     await perpStorage.setLiquidationRewardBps(80);
     await perpStorage.setLiquidationPenaltyBps(150);
-    await perpStorage.addMarket(marketId, marketId, 3, 5, 75, 80, 150);
+    await perpStorage.addMarket(primaryMarketId, primaryMarketId, 3, 5, 75, 80, 150);
+    await perpStorage.addMarket(secondaryMarketId, secondaryMarketId, 3, 5, 75, 80, 150);
     await perpStorage.setLastFundingUpdate(latest.timestamp);
     await perpStorage.setNextFundingTime(latest.timestamp + 3600);
 
@@ -436,6 +444,65 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
       expect(totalLong).to.equal(sumLong);
       expect(totalShort).to.equal(sumShort);
       expect(totalLong + totalShort).to.be.gt(0n); // Some open interest
+    });
+  });
+
+  describe("Cross Margin Integration", function () {
+    it("nets repeated same-market additions into one cross-margin bucket", async function () {
+      const trader = traders[0];
+      const counterpartyA = traders[1];
+      const counterpartyB = traders[2];
+
+      await perpStorage.setIsCrossMargin(trader.address, true);
+
+      await openPosition(trader, 0, ethers.parseEther("10000"), ethers.parseEther("1000"), {
+        counterparty: counterpartyA,
+        marketId: primaryMarketId,
+      });
+      await openPosition(trader, 0, ethers.parseEther("5000"), ethers.parseEther("500"), {
+        counterparty: counterpartyB,
+        marketId: primaryMarketId,
+      });
+
+      const positions = await positionManager.getTraderPositions(trader.address);
+      expect(positions.length).to.equal(1);
+
+      const pos = await perpStorage.positions(positions[0]);
+      expect(pos.active).to.be.true;
+      expect(pos.marginMode).to.equal(1n);
+      expect(pos.marketId).to.equal(primaryMarketId);
+      expect(pos.exposure).to.equal(ethers.parseEther("15000"));
+      expect(pos.margin).to.equal(ethers.parseEther("1500"));
+    });
+
+    it("uses pooled cross-margin equity across market buckets", async function () {
+      const trader = traders[0];
+      const ethCounterparty = traders[1];
+      const btcCounterparty = traders[2];
+
+      await perpStorage.setIsCrossMargin(trader.address, true);
+
+      await openPosition(trader, 0, ethers.parseEther("10000"), ethers.parseEther("1000"), {
+        counterparty: ethCounterparty,
+        marketId: primaryMarketId,
+      });
+      await openPosition(trader, 1, ethers.parseEther("10000"), ethers.parseEther("1000"), {
+        counterparty: btcCounterparty,
+        marketId: secondaryMarketId,
+      });
+
+      const positions = await positionManager.getTraderPositions(trader.address);
+      expect(positions.length).to.equal(2);
+
+      await mockOracle.setPrice(INITIAL_PRICE * 130n / 100n);
+
+      for (const posId of positions) {
+        const pos = await perpStorage.positions(posId);
+        expect(pos.marginMode).to.equal(1n);
+        expect(await riskManager.isPositionLiquidatable(posId)).to.be.false;
+      }
+
+      await assertAccountingInvariant();
     });
   });
 
@@ -791,6 +858,7 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     totalUserCollateral += await perpStorage.accountCollateral(liquidator.address);
 
     const insuranceBalance = await perpStorage.insuranceFundBalance();
+    const feePool = await perpStorage.feePool();
     const protocolRevenue  = await mockToken.balanceOf(await protocolTreasury.getAddress());
 
     // The CollateralManager holds unrealized profits for counterparties that haven't
@@ -799,7 +867,7 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     // Full equality: totalContractBalance == totalBooked + unrealizedBuffer
     // We assert the weaker but critical property: no booked liabilities exceed
     // tracked tokens across vaults + participating external wallets.
-    const totalBooked = totalUserCollateral + insuranceBalance + protocolRevenue;
+    const totalBooked = totalUserCollateral + insuranceBalance + feePool;
     const externalWalletBalances = await getExternalWalletBalances();
     expect(totalContractBalance + externalWalletBalances).to.be.gte(totalBooked);
   }
@@ -845,10 +913,12 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     side: 0 | 1,
     exposure: bigint,
     limitPrice: bigint,
-    nonce: bigint
+    nonce: bigint,
+    marketId?: string
   ): Promise<TestOrder> {
     const latest = await ethers.provider.getBlock("latest");
     if (!latest) throw new Error("Latest block unavailable");
+    const resolvedMarketId = marketId ?? await perpStorage.marketFeedId();
     
     return {
       trader,
@@ -857,8 +927,21 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
       limitPrice,
       expiry: BigInt(latest.timestamp + 3600),
       nonce,
-      marketId: await perpStorage.marketFeedId(),
+      marketId: resolvedMarketId,
     };
+  }
+
+  function nextRandomUnit(): number {
+    rngState = (1664525n * rngState + 1013904223n) % 4294967296n;
+    return Number(rngState) / 4294967296;
+  }
+
+  function nextRandomIndex(length: number): number {
+    return Math.floor(nextRandomUnit() * length);
+  }
+
+  function nextRandomInt(minInclusive: number, maxInclusive: number): number {
+    return minInclusive + Math.floor(nextRandomUnit() * (maxInclusive - minInclusive + 1));
   }
 
   async function signOrder(signer: any, order: TestOrder): Promise<string> {
@@ -888,24 +971,21 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
 
   async function executeRandomTrade() {
     // Pick two random traders with opposite sides
-    const longIndex = Math.floor(Math.random() * traders.length);
+    const longIndex = nextRandomIndex(traders.length);
     let shortIndex;
     do {
-      shortIndex = Math.floor(Math.random() * traders.length);
+      shortIndex = nextRandomIndex(traders.length);
     } while (shortIndex === longIndex);
     
     const longTrader = traders[longIndex];
     const shortTrader = traders[shortIndex];
     
     // Random exposure between 100 and 5000
-    const exposure = ethers.parseEther((100 + Math.random() * 4900).toFixed(0));
-    
-    // Random limit price (0 = market)
-    const limitPrice = Math.random() > 0.3 ? 0n : INITIAL_PRICE * BigInt(95 + Math.floor(Math.random() * 10)) / 100n;
+    const exposure = ethers.parseEther(nextRandomInt(100, 5000).toString());
     
     try {
-      const nonce1 = BigInt(Date.now() + longIndex);
-      const nonce2 = BigInt(Date.now() + shortIndex + 1000);
+      const nonce1 = BigInt(++nonceCounter);
+      const nonce2 = BigInt(++nonceCounter);
       
       const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, nonce1);
       const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, nonce2);
@@ -922,7 +1002,7 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
   }
 
   async function executeRandomPriceMove() {
-    const change = 70 + Math.floor(Math.random() * 81); // 70-150%
+    const change = nextRandomInt(70, 150);
     const newPrice = INITIAL_PRICE * BigInt(change) / 100n;
     await mockOracle.setPrice(newPrice);
   }
@@ -944,7 +1024,7 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
   }
 
   async function executeRandomWithdrawal() {
-    const trader = traders[Math.floor(Math.random() * traders.length)];
+    const trader = traders[nextRandomIndex(traders.length)];
     const collateral = await perpStorage.accountCollateral(trader.address);
     if (collateral > 0n) {
       const amount = collateral / 2n; // Withdraw half
@@ -956,11 +1036,17 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     }
   }
 
-  async function openPosition(trader: Trader, side: 0 | 1, exposure: bigint, _margin: bigint) {
+  async function openPosition(
+    trader: Trader,
+    side: 0 | 1,
+    exposure: bigint,
+    _margin: bigint,
+    options?: { counterparty?: Trader; marketId?: string }
+  ) {
     // Need a counterparty — always call long-first to match SettlementEngine requirement
     const otherTraders = traders.filter(t => t.address !== trader.address);
-    const counterparty = otherTraders[Math.floor(Math.random() * otherTraders.length)];
-    const otherSide: 0 | 1 = side === 0 ? 1 : 0;
+    const counterparty = options?.counterparty ?? otherTraders[nextRandomIndex(otherTraders.length)];
+    const marketId = options?.marketId ?? await perpStorage.marketFeedId();
 
     // long order must be first argument to settleMatch
     const longTrader  = side === 0 ? trader : counterparty;
@@ -969,13 +1055,13 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
     const nonce1 = BigInt(++nonceCounter);
     const nonce2 = BigInt(++nonceCounter);
     
-    const longOrder  = await buildOrder(longTrader.address,  0, exposure, 0n, nonce1);
-    const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, nonce2);
+    const longOrder  = await buildOrder(longTrader.address,  0, exposure, 0n, nonce1, marketId);
+    const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, nonce2, marketId);
     
     const longSig  = await signOrder(longTrader.signer,  longOrder);
     const shortSig = await signOrder(shortTrader.signer, shortOrder);
     
-    await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure);
+    await settlementEngine.settleMatchForMarket(marketId, longOrder, longSig, shortOrder, shortSig, exposure);
   }
 
   async function createRiskyPosition(trader: Trader, leverageMultiplier: bigint) {
