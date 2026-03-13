@@ -126,8 +126,21 @@ contract CollateralManager {
         uint256 size,
         bool isMaker
     ) external onlyModule returns (uint256 totalCharge) {
-        uint256 makerFeeBps = perpStorage.makerFeeBps();
-        uint256 takerFeeBps = perpStorage.takerFeeBps();
+        return chargeTradingFeesForMarket(trader, size, isMaker, perpStorage.marketFeedId());
+    }
+
+    function chargeTradingFeesForMarket(
+        address trader,
+        uint256 size,
+        bool isMaker,
+        bytes32 marketId
+    ) public onlyModule returns (uint256 totalCharge) {
+        bytes32 resolvedMarketId = marketId == bytes32(0) ? perpStorage.marketFeedId() : marketId;
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(resolvedMarketId);
+        require(market.exists, "Unknown market");
+
+        uint256 makerFeeBps = market.makerFeeBps;
+        uint256 takerFeeBps = market.takerFeeBps;
         (uint256 makerFee, uint256 takerFee, ) = FeeLib.calculateTradingFees(
             size,
             makerFeeBps,
@@ -168,6 +181,13 @@ contract CollateralManager {
     }
 
     /**
+     * @notice Move collateral held by this manager into protocol treasury.
+     */
+    function transferToTreasury(uint256 amount) external onlyModule {
+        _transferToTreasury(amount);
+    }
+
+    /**
      * @notice Transfer collateral out to an external recipient (module-controlled)
      */
     function transferOut(address to, uint256 amount) external onlyModule {
@@ -182,6 +202,19 @@ contract CollateralManager {
         IERC20 collateral = perpStorage.collateral();
         collateral.forceApprove(perpStorage.insuranceFund(), amount);
         IInsuranceTreasury(perpStorage.insuranceFund()).deposit(amount);
+    }
+
+    function _transferToTreasury(uint256 amount) internal {
+        if (amount == 0) return;
+
+        address pt = perpStorage.protocolTreasury();
+        if (pt == address(0)) return;
+
+        IERC20 collateral = perpStorage.collateral();
+        collateral.forceApprove(pt, amount);
+        IProtocolTreasury(pt).deposit(amount);
+
+        perpStorage.addProtocolTreasuryNonTradingInflow(amount);
     }
 
     /**

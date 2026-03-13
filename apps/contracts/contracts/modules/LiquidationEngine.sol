@@ -64,7 +64,9 @@ contract LiquidationEngine {
      * @param positionId Position to liquidate
      */
     function liquidate(uint256 positionId) external notPaused {
-        _liquidate(positionId, msg.sender, riskManager.getMarkPrice());
+        PerpStorage.Position memory position = perpStorage.getPosition(positionId);
+        bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+        _liquidate(positionId, msg.sender, riskManager.getMarkPriceForMarket(marketId));
     }
 
     /**
@@ -78,10 +80,10 @@ contract LiquidationEngine {
      * @notice Batch liquidate multiple positions
      */
     function batchLiquidate(uint256[] calldata positionIds) external notPaused {
-        uint256 markPrice = riskManager.getMarkPrice();
-        
         for (uint256 i = 0; i < positionIds.length; i++) {
-            _liquidate(positionIds[i], msg.sender, markPrice);
+            PerpStorage.Position memory position = perpStorage.getPosition(positionIds[i]);
+            bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+            _liquidate(positionIds[i], msg.sender, riskManager.getMarkPriceForMarket(marketId));
         }
     }
 
@@ -109,11 +111,19 @@ contract LiquidationEngine {
         // Liquidation payout is based on position exposure and post-close available collateral.
         uint256 availableCollateral = collateralManager.getAvailableCollateral(position.trader);
 
+        uint256 liquidationRewardBps = perpStorage.liquidationRewardBps();
+        uint256 liquidationPenaltyBps = perpStorage.liquidationPenaltyBps();
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(position.marketId);
+        if (market.exists) {
+            liquidationRewardBps = market.liquidationRewardBps;
+            liquidationPenaltyBps = market.liquidationPenaltyBps;
+        }
+
         (uint256 reward, uint256 penalty, uint256 toInsurance, ) = LiquidationLib.calculateLiquidationPayouts(
             position.exposure,
             availableCollateral,
-            perpStorage.liquidationRewardBps(),
-            perpStorage.liquidationPenaltyBps()
+            liquidationRewardBps,
+            liquidationPenaltyBps
         );
         
         // Apply liquidation distributions
@@ -159,8 +169,10 @@ contract LiquidationEngine {
         // Update global exposure
         if (position.side == PerpStorage.Side.Long) {
             perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() - position.exposure);
+            perpStorage.setMarketLongExposure(position.marketId, perpStorage.marketLongExposure(position.marketId) - position.exposure);
         } else {
             perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() - position.exposure);
+            perpStorage.setMarketShortExposure(position.marketId, perpStorage.marketShortExposure(position.marketId) - position.exposure);
         }
         
         // Release reserved margin
@@ -277,11 +289,19 @@ contract LiquidationEngine {
         
         uint256 available = collateralManager.getAvailableCollateral(pos.trader);
 
+        uint256 liquidationRewardBps = perpStorage.liquidationRewardBps();
+        uint256 liquidationPenaltyBps = perpStorage.liquidationPenaltyBps();
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(pos.marketId);
+        if (market.exists) {
+            liquidationRewardBps = market.liquidationRewardBps;
+            liquidationPenaltyBps = market.liquidationPenaltyBps;
+        }
+
         (uint256 reward, , , ) = LiquidationLib.calculateLiquidationPayouts(
             pos.exposure,
             available,
-            perpStorage.liquidationRewardBps(),
-            perpStorage.liquidationPenaltyBps()
+            liquidationRewardBps,
+            liquidationPenaltyBps
         );
         
         return reward;

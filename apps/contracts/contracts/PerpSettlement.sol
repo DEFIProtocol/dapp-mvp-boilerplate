@@ -8,6 +8,7 @@ import "./modules/RiskManager.sol";
 import "./modules/LiquidationEngine.sol";
 import "./modules/SettlementEngine.sol";
 import "./modules/FundingEngine.sol";
+import "./modules/CrossMargin.sol";
 import "./library/OrderLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -30,6 +31,7 @@ contract PerpEngine is Ownable {
     LiquidationEngine public liquidationEngine;
     SettlementEngine public settlementEngine;
     FundingEngine public fundingEngine;
+    CrossMargin public crossMargin;
 
     // Events
     event ModuleInitialized(string name, address moduleAddress);
@@ -62,6 +64,17 @@ contract PerpEngine is Ownable {
         perpStorage.setMaintenanceMarginBps(75);  // 10%
         perpStorage.setLiquidationRewardBps(80);    // 0.8%
         perpStorage.setLiquidationPenaltyBps(150);  // 1.5%
+
+        // Register initial market using provided feed id as default market id.
+        perpStorage.addMarket(
+            _feedId,
+            _feedId,
+            5,
+            10,
+            75,
+            80,
+            150
+        );
         
         // Set initial funding time
         perpStorage.setLastFundingUpdate(block.timestamp);
@@ -90,6 +103,9 @@ contract PerpEngine is Ownable {
         
         fundingEngine = new FundingEngine(address(perpStorage), address(collateralManager));
         emit ModuleInitialized("FundingEngine", address(fundingEngine));
+
+        crossMargin = new CrossMargin(address(perpStorage));
+        emit ModuleInitialized("CrossMargin", address(crossMargin));
         
         // Deploy PositionManager (depends on CollateralManager and FundingEngine)
         positionManager = new PositionManager(
@@ -122,13 +138,14 @@ contract PerpEngine is Ownable {
      * @notice Authorize all modules in storage
      */
     function _authorizeModules() internal {
-        address[] memory modules = new address[](6);
+        address[] memory modules = new address[](7);
         modules[0] = address(collateralManager);
         modules[1] = address(positionManager);
         modules[2] = address(riskManager);
         modules[3] = address(liquidationEngine);
         modules[4] = address(settlementEngine);
         modules[5] = address(fundingEngine);
+        modules[6] = address(crossMargin);
         
         for (uint256 i = 0; i < modules.length; i++) {
             perpStorage.setAuthorizedModule(modules[i], true);
@@ -152,6 +169,89 @@ contract PerpEngine is Ownable {
     }
 
     /**
+     * @notice Set caller margin mode.
+     * @param enabled True for cross-margin, false for isolated.
+     */
+    function setMyCrossMarginMode(bool enabled) external {
+        crossMargin.setMyCrossMarginMode(enabled);
+    }
+
+    /**
+     * @notice Set margin mode for a trader (owner/admin).
+     */
+    function setCrossMarginForTrader(address trader, bool enabled) external onlyOwner {
+        crossMargin.setCrossMarginForTrader(trader, enabled);
+    }
+
+    /**
+     * @notice Read cross-margin mode.
+     */
+    function isCrossMarginEnabled(address trader) external view returns (bool) {
+        return crossMargin.isCrossMarginEnabled(trader);
+    }
+
+    /**
+     * @notice Add a new market (owner/governance only).
+     */
+    function addMarket(
+        bytes32 marketId,
+        bytes32 feedId,
+        uint256 makerFeeBps,
+        uint256 takerFeeBps,
+        uint256 maintenanceMarginBps,
+        uint256 liquidationRewardBps,
+        uint256 liquidationPenaltyBps
+    ) external onlyOwner {
+        perpStorage.addMarket(
+            marketId,
+            feedId,
+            makerFeeBps,
+            takerFeeBps,
+            maintenanceMarginBps,
+            liquidationRewardBps,
+            liquidationPenaltyBps
+        );
+    }
+
+    function setMarketEnabled(bytes32 marketId, bool enabled) external onlyOwner {
+        perpStorage.setMarketEnabled(marketId, enabled);
+    }
+
+    function setMarketPaused(bytes32 marketId, bool paused) external onlyOwner {
+        perpStorage.setMarketPaused(marketId, paused);
+    }
+
+    function setMarketFeed(bytes32 marketId, bytes32 feedId) external onlyOwner {
+        perpStorage.setMarketFeed(marketId, feedId);
+    }
+
+    function setMarketFeeParams(bytes32 marketId, uint256 makerFeeBps, uint256 takerFeeBps) external onlyOwner {
+        perpStorage.setMarketFeeParams(marketId, makerFeeBps, takerFeeBps);
+    }
+
+    function setMarketRiskParams(
+        bytes32 marketId,
+        uint256 maintenanceMarginBps,
+        uint256 liquidationRewardBps,
+        uint256 liquidationPenaltyBps
+    ) external onlyOwner {
+        perpStorage.setMarketRiskParams(
+            marketId,
+            maintenanceMarginBps,
+            liquidationRewardBps,
+            liquidationPenaltyBps
+        );
+    }
+
+    function getMarketConfig(bytes32 marketId) external view returns (PerpStorage.MarketConfig memory) {
+        return perpStorage.getMarketConfig(marketId);
+    }
+
+    function getMarketIds() external view returns (bytes32[] memory) {
+        return perpStorage.getMarketIds();
+    }
+
+    /**
      * @notice Settle a single match between orders
      */
     function settleMatch(
@@ -162,6 +262,58 @@ contract PerpEngine is Ownable {
         uint256 matchSize
     ) external returns (bytes32 matchId) {
         return settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, matchSize);
+    }
+
+    function settleMatchForMarket(
+        bytes32 marketId,
+        OrderLib.Order calldata longOrder,
+        bytes calldata longSig,
+        OrderLib.Order calldata shortOrder,
+        bytes calldata shortSig,
+        uint256 matchSize
+    ) external returns (bytes32 matchId) {
+        return settlementEngine.settleMatchForMarket(marketId, longOrder, longSig, shortOrder, shortSig, matchSize);
+    }
+
+    /**
+     * @notice Settle a single match with explicit taker role.
+     */
+    function settleMatchWithRoles(
+        OrderLib.Order calldata longOrder,
+        bytes calldata longSig,
+        OrderLib.Order calldata shortOrder,
+        bytes calldata shortSig,
+        uint256 matchSize,
+        bool longIsTaker
+    ) external returns (bytes32 matchId) {
+        return settlementEngine.settleMatchWithRoles(
+            longOrder,
+            longSig,
+            shortOrder,
+            shortSig,
+            matchSize,
+            longIsTaker
+        );
+    }
+
+    function settleMatchWithRolesForMarket(
+        bytes32 marketId,
+        OrderLib.Order calldata longOrder,
+        bytes calldata longSig,
+        OrderLib.Order calldata shortOrder,
+        bytes calldata shortSig,
+        uint256 matchSize,
+        bool longIsTaker
+    ) external returns (bytes32 matchId) {
+        return settlementEngine.settleMatchWithRolesForMarket(
+            marketId,
+            longOrder,
+            longSig,
+            shortOrder,
+            shortSig,
+            matchSize,
+            longIsTaker
+        );
     }
 
     /**
@@ -181,9 +333,23 @@ contract PerpEngine is Ownable {
      * @notice Close a position
      */
     function closePosition(uint256 positionId) external {
-        // Need price at closing
-        uint256 closePrice = riskManager.getMarkPrice();
+        PerpStorage.Position memory position = perpStorage.getPosition(positionId);
+        bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+        uint256 closePrice = riskManager.getMarkPriceForMarket(marketId);
         positionManager.closePosition(positionId, closePrice);
+    }
+
+    /**
+     * @notice Close or partially close a position through matched execution.
+     * @dev Caller is treated as taker. Counterparty order is maker.
+     */
+    function closePositionViaMatch(
+        uint256 positionId,
+        OrderLib.Order calldata counterOrder,
+        bytes calldata counterSig,
+        uint256 matchSize
+    ) external returns (bytes32 matchId) {
+        return settlementEngine.closePositionViaMatch(positionId, counterOrder, counterSig, matchSize);
     }
 
     /**
@@ -191,6 +357,13 @@ contract PerpEngine is Ownable {
      */
     function liquidate(uint256 positionId) external {
         liquidationEngine.liquidate(positionId);
+    }
+
+    /**
+     * @notice Liquidate through matched execution where caller is taker.
+     */
+    function liquidateViaMatch(uint256 positionId, uint256 matchSize) external returns (bytes32 matchId) {
+        return settlementEngine.liquidatePositionViaMatch(positionId, matchSize);
     }
 
     /**
@@ -281,7 +454,9 @@ contract PerpEngine is Ownable {
         int256 unrealizedFunding,
         int256 equity
     ) {
-        return positionManager.getPositionWithPnL(positionId, riskManager.getMarkPrice());
+        position = perpStorage.getPosition(positionId);
+        bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+        return positionManager.getPositionWithPnL(positionId, riskManager.getMarkPriceForMarket(marketId));
     }
 
     /**
@@ -324,6 +499,10 @@ contract PerpEngine is Ownable {
      */
     function getCurrentFundingRate() external view returns (int256 longRate, int256 shortRate) {
         return fundingEngine.getCurrentFundingRate();
+    }
+
+    function getCurrentFundingRateForMarket(bytes32 marketId) external view returns (int256 longRate, int256 shortRate) {
+        return fundingEngine.getCurrentFundingRateForMarket(marketId);
     }
 
     /**
@@ -452,6 +631,10 @@ contract PerpEngine is Ownable {
      */
     function updateFunding() external returns (int256 longRate, int256 shortRate) {
         return fundingEngine.updateFunding();
+    }
+
+    function updateFundingForMarket(bytes32 marketId) external returns (int256 longRate, int256 shortRate) {
+        return fundingEngine.updateFundingForMarket(marketId);
     }
 
     /**

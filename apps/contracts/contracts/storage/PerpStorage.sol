@@ -6,6 +6,21 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PerpStorage is Ownable {
     enum Side { Long, Short }
+    enum MarginMode { Isolated, Cross }
+
+    struct MarketConfig {
+        bool exists;
+        bool enabled;
+        bool paused;
+        bytes32 feedId;
+        uint256 makerFeeBps;
+        uint256 takerFeeBps;
+        uint256 maintenanceMarginBps;
+        uint256 liquidationRewardBps;
+        uint256 liquidationPenaltyBps;
+        int256 cumulativeFundingLong;
+        int256 cumulativeFundingShort;
+    }
 
     struct Position {
         address trader;
@@ -14,6 +29,8 @@ contract PerpStorage is Ownable {
         uint256 margin;
         uint256 entryPrice;
         int256 entryFunding;
+        MarginMode marginMode;
+        bytes32 marketId;
         bool active;
     }
 
@@ -24,6 +41,7 @@ contract PerpStorage is Ownable {
         uint256 limitPrice;
         uint256 expiry;
         uint256 nonce;
+        bytes32 marketId;
     }
 
     // Constants
@@ -50,12 +68,15 @@ contract PerpStorage is Ownable {
 
     // Global state
     uint256 public feePool;
+    uint256 public protocolTreasuryNonTradingInflow;
     uint256 public insuranceFundBalance;
     uint256 public totalBadDebt;
     int256 public cumulativeFundingLong;
     int256 public cumulativeFundingShort;
     uint256 public totalLongExposure;
     uint256 public totalShortExposure;
+    mapping(bytes32 => uint256) public marketLongExposure;
+    mapping(bytes32 => uint256) public marketShortExposure;
     uint256 public nextPositionId;
     uint256 public lastFundingUpdate;
     uint256 public fundingInterval = 1 hours;
@@ -67,6 +88,7 @@ contract PerpStorage is Ownable {
     mapping(address => uint256[]) public traderPositions;
     mapping(address => uint256) public positionCount;
     mapping(address => int256) public realizedPnl;
+    mapping(address => bool) public isCrossMargin;
 
     // Position tracking
     mapping(uint256 => Position) public positions;
@@ -82,6 +104,10 @@ contract PerpStorage is Ownable {
     mapping(address => bool) public authorizedModules;
     bool public emergencyPause;
     mapping(address => bool) public frozenAccounts;
+
+    // Market registry
+    mapping(bytes32 => MarketConfig) public markets;
+    bytes32[] public marketIds;
 
     // NO EVENTS HERE - they go in modules
     
@@ -136,6 +162,84 @@ contract PerpStorage is Ownable {
         marketFeedId = feedId;
     }
 
+    function addMarket(
+        bytes32 marketId,
+        bytes32 feedId,
+        uint256 _makerFeeBps,
+        uint256 _takerFeeBps,
+        uint256 _maintenanceMarginBps,
+        uint256 _liquidationRewardBps,
+        uint256 _liquidationPenaltyBps
+    ) external onlyOwner {
+        require(marketId != bytes32(0), "Invalid market");
+        require(feedId != bytes32(0), "Invalid feed");
+        require(!markets[marketId].exists, "Market exists");
+
+        markets[marketId] = MarketConfig({
+            exists: true,
+            enabled: true,
+            paused: false,
+            feedId: feedId,
+            makerFeeBps: _makerFeeBps,
+            takerFeeBps: _takerFeeBps,
+            maintenanceMarginBps: _maintenanceMarginBps,
+            liquidationRewardBps: _liquidationRewardBps,
+            liquidationPenaltyBps: _liquidationPenaltyBps,
+            cumulativeFundingLong: 0,
+            cumulativeFundingShort: 0
+        });
+
+        marketIds.push(marketId);
+    }
+
+    function setMarketEnabled(bytes32 marketId, bool enabled) external onlyOwner {
+        require(markets[marketId].exists, "Unknown market");
+        markets[marketId].enabled = enabled;
+    }
+
+    function setMarketPaused(bytes32 marketId, bool paused) external onlyOwnerOrModule {
+        require(markets[marketId].exists, "Unknown market");
+        markets[marketId].paused = paused;
+    }
+
+    function setMarketFeed(bytes32 marketId, bytes32 feedId) external onlyOwner {
+        require(markets[marketId].exists, "Unknown market");
+        require(feedId != bytes32(0), "Invalid feed");
+        markets[marketId].feedId = feedId;
+    }
+
+    function setMarketFeeParams(bytes32 marketId, uint256 _makerFeeBps, uint256 _takerFeeBps) external onlyOwner {
+        require(markets[marketId].exists, "Unknown market");
+        markets[marketId].makerFeeBps = _makerFeeBps;
+        markets[marketId].takerFeeBps = _takerFeeBps;
+    }
+
+    function setMarketRiskParams(
+        bytes32 marketId,
+        uint256 _maintenanceMarginBps,
+        uint256 _liquidationRewardBps,
+        uint256 _liquidationPenaltyBps
+    ) external onlyOwner {
+        require(markets[marketId].exists, "Unknown market");
+        markets[marketId].maintenanceMarginBps = _maintenanceMarginBps;
+        markets[marketId].liquidationRewardBps = _liquidationRewardBps;
+        markets[marketId].liquidationPenaltyBps = _liquidationPenaltyBps;
+    }
+
+    function setMarketFundingIndices(bytes32 marketId, int256 longIndex, int256 shortIndex) external onlyModule {
+        require(markets[marketId].exists, "Unknown market");
+        markets[marketId].cumulativeFundingLong = longIndex;
+        markets[marketId].cumulativeFundingShort = shortIndex;
+    }
+
+    function getMarketConfig(bytes32 marketId) external view returns (MarketConfig memory) {
+        return markets[marketId];
+    }
+
+    function getMarketIds() external view returns (bytes32[] memory) {
+        return marketIds;
+    }
+
     function setMakerFeeBps(uint256 bps) external onlyOwner {
         makerFeeBps = bps;
     }
@@ -164,6 +268,10 @@ contract PerpStorage is Ownable {
         feePool = amount;
     }
 
+    function addProtocolTreasuryNonTradingInflow(uint256 amount) external onlyModule {
+        protocolTreasuryNonTradingInflow += amount;
+    }
+
     function setInsuranceFundBalance(uint256 amount) external onlyModule {
         insuranceFundBalance = amount;
     }
@@ -186,6 +294,14 @@ contract PerpStorage is Ownable {
 
     function setTotalShortExposure(uint256 value) external onlyModule {
         totalShortExposure = value;
+    }
+
+    function setMarketLongExposure(bytes32 marketId, uint256 value) external onlyModule {
+        marketLongExposure[marketId] = value;
+    }
+
+    function setMarketShortExposure(bytes32 marketId, uint256 value) external onlyModule {
+        marketShortExposure[marketId] = value;
     }
 
     function setNextPositionId(uint256 value) external onlyModule {
@@ -216,6 +332,10 @@ contract PerpStorage is Ownable {
         realizedPnl[trader] = pnl;
     }
 
+    function setIsCrossMargin(address trader, bool enabled) external onlyOwnerOrModule {
+        isCrossMargin[trader] = enabled;
+    }
+
     function setMinValidNonce(address trader, uint256 nonce) external onlyModule {
         minValidNonce[trader] = nonce;
     }
@@ -242,6 +362,22 @@ contract PerpStorage is Ownable {
 
     function setPositionMargin(uint256 positionId, uint256 margin) external onlyModule {
         positions[positionId].margin = margin;
+    }
+
+    function setPositionExposure(uint256 positionId, uint256 exposure) external onlyModule {
+        positions[positionId].exposure = exposure;
+    }
+
+    function setPositionEntryPrice(uint256 positionId, uint256 entryPrice) external onlyModule {
+        positions[positionId].entryPrice = entryPrice;
+    }
+
+    function setPositionMarginMode(uint256 positionId, MarginMode marginMode) external onlyModule {
+        positions[positionId].marginMode = marginMode;
+    }
+
+    function setPositionMarketId(uint256 positionId, bytes32 marketId) external onlyModule {
+        positions[positionId].marketId = marketId;
     }
 
     function setHasPosition(address trader, uint256 positionId, bool has) external onlyModule {

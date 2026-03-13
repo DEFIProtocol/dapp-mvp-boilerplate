@@ -54,10 +54,18 @@ contract FundingEngine {
      * @dev Should be called at regular intervals
      */
     function updateFunding() external returns (int256 longRate, int256 shortRate) {
+        return updateFundingForMarket(perpStorage.marketFeedId());
+    }
+
+    /**
+     * @notice Update funding rates for a specific market.
+     */
+    function updateFundingForMarket(bytes32 marketId) public returns (int256 longRate, int256 shortRate) {
         require(block.timestamp >= perpStorage.nextFundingTime(), "Too early for update");
-        
-        uint256 longExposure = perpStorage.totalLongExposure();
-        uint256 shortExposure = perpStorage.totalShortExposure();
+
+        bytes32 resolvedMarketId = _resolveMarketId(marketId);
+        uint256 longExposure = perpStorage.marketLongExposure(resolvedMarketId);
+        uint256 shortExposure = perpStorage.marketShortExposure(resolvedMarketId);
         
         // Calculate funding rates using FundingLib
         (longRate, shortRate) = FundingLib.calculateFundingRate(
@@ -74,10 +82,14 @@ contract FundingEngine {
         
         int256 longAccrued = FundingLib.calculateTimeWeightedFunding(longRate, timeElapsed, interval);
         int256 shortAccrued = FundingLib.calculateTimeWeightedFunding(shortRate, timeElapsed, interval);
-        
-        // Update global indices
-        perpStorage.setCumulativeFundingLong(perpStorage.cumulativeFundingLong() + longAccrued);
-        perpStorage.setCumulativeFundingShort(perpStorage.cumulativeFundingShort() + shortAccrued);
+
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(resolvedMarketId);
+        require(market.exists, "Unknown market");
+        perpStorage.setMarketFundingIndices(
+            resolvedMarketId,
+            market.cumulativeFundingLong + longAccrued,
+            market.cumulativeFundingShort + shortAccrued
+        );
         
         // Update timestamps
         perpStorage.setLastFundingUpdate(block.timestamp);
@@ -112,9 +124,7 @@ contract FundingEngine {
             if (!position.active) continue;
             
             // Get current cumulative funding
-            int256 currentFunding = (position.side == PerpStorage.Side.Long) 
-                ? perpStorage.cumulativeFundingLong() 
-                : perpStorage.cumulativeFundingShort();
+            int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
             
             // Calculate funding owed
             int256 fundingPayment = FundingLib.calculateFundingPayment(
@@ -142,15 +152,15 @@ contract FundingEngine {
      * @notice Get current funding rate without updating
      */
     function getCurrentFundingRate() external view returns (int256 longRate, int256 shortRate) {
-        uint256 longExposure = perpStorage.totalLongExposure();
-        uint256 shortExposure = perpStorage.totalShortExposure();
-        
-        return FundingLib.calculateFundingRate(
-            longExposure,
-            shortExposure,
-            maxFundingRate,
-            fundingClampBps
-        );
+        return getCurrentFundingRateForMarket(perpStorage.marketFeedId());
+    }
+
+    function getCurrentFundingRateForMarket(bytes32 marketId) public view returns (int256 longRate, int256 shortRate) {
+        bytes32 resolvedMarketId = _resolveMarketId(marketId);
+        uint256 longExposure = perpStorage.marketLongExposure(resolvedMarketId);
+        uint256 shortExposure = perpStorage.marketShortExposure(resolvedMarketId);
+
+        return FundingLib.calculateFundingRate(longExposure, shortExposure, maxFundingRate, fundingClampBps);
     }
 
     /**
@@ -160,9 +170,7 @@ contract FundingEngine {
         PerpStorage.Position memory position = perpStorage.getPosition(positionId);
         require(position.active, "Position not active");
         
-        int256 currentFunding = (position.side == PerpStorage.Side.Long) 
-            ? perpStorage.cumulativeFundingLong() 
-            : perpStorage.cumulativeFundingShort();
+        int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
         
         return FundingLib.calculateFundingPayment(
             position.exposure,
@@ -183,9 +191,7 @@ contract FundingEngine {
             
             if (!position.active) continue;
             
-            int256 currentFunding = (position.side == PerpStorage.Side.Long) 
-                ? perpStorage.cumulativeFundingLong() 
-                : perpStorage.cumulativeFundingShort();
+            int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
             
             totalFunding += FundingLib.calculateFundingPayment(
                 position.exposure,
@@ -224,5 +230,16 @@ contract FundingEngine {
      */
     function setNextFundingTime(uint256 timestamp) external onlyModule {
         perpStorage.setNextFundingTime(timestamp);
+    }
+
+    function _resolveMarketId(bytes32 marketId) internal view returns (bytes32) {
+        return marketId == bytes32(0) ? perpStorage.marketFeedId() : marketId;
+    }
+
+    function _getCurrentFunding(PerpStorage.Side side, bytes32 marketId) internal view returns (int256) {
+        bytes32 resolvedMarketId = _resolveMarketId(marketId);
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(resolvedMarketId);
+        require(market.exists, "Unknown market");
+        return side == PerpStorage.Side.Long ? market.cumulativeFundingLong : market.cumulativeFundingShort;
     }
 }

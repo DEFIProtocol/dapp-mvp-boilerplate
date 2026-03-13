@@ -35,9 +35,27 @@ contract RiskManager {
      * @notice Get current mark price from oracle
      */
     function getMarkPrice() public view returns (uint256) {
-        uint256 mark = IMarkOracle(perpStorage.markOracle()).getMarkPrice(perpStorage.marketFeedId());
+        uint256 mark = getMarkPriceForMarket(perpStorage.marketFeedId());
         require(mark > 0, "Invalid mark price");
         return mark;
+    }
+
+    function getMarkPriceForMarket(bytes32 marketId) public view returns (uint256) {
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(marketId);
+        require(market.exists, "Unknown market");
+        bytes32 feedId = market.feedId;
+        require(feedId != bytes32(0), "Invalid market feed");
+        uint256 mark = IMarkOracle(perpStorage.markOracle()).getMarkPrice(feedId);
+        require(mark > 0, "Invalid mark price");
+        return mark;
+    }
+
+    function _getMaintenanceBpsForMarket(bytes32 marketId) internal view returns (uint256) {
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(marketId);
+        if (market.exists && market.maintenanceMarginBps > 0) {
+            return market.maintenanceMarginBps;
+        }
+        return perpStorage.maintenanceMarginBps();
     }
 
     /**
@@ -48,13 +66,13 @@ contract RiskManager {
         equity = int256(perpStorage.accountCollateral(trader));
         
         uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
-        uint256 markPrice = getMarkPrice();
         
         for (uint256 i = 0; i < positionIds.length; i++) {
             uint256 positionId = positionIds[i];
             PerpStorage.Position memory pos = perpStorage.getPosition(positionId);
             
             if (!pos.active) continue;
+            uint256 markPrice = getMarkPriceForMarket(pos.marketId);
             
             (int256 pnl, int256 funding) = getPositionPnlAndFunding(pos, markPrice);
             equity += pnl - funding;
@@ -78,9 +96,7 @@ contract RiskManager {
         pnl = PnlLib.calculateUnrealizedPnl(pnlPos, currentPrice);
         
         // Get current cumulative funding
-        int256 currentCumulativeFunding = (position.side == PerpStorage.Side.Long) 
-            ? perpStorage.cumulativeFundingLong() 
-            : perpStorage.cumulativeFundingShort();
+        int256 currentCumulativeFunding = _getCurrentFunding(position.side, position.marketId);
         
         funding = FundingLib.calculateFundingPayment(
             position.exposure,
@@ -96,7 +112,7 @@ contract RiskManager {
         PerpStorage.Position memory pos = perpStorage.getPosition(positionId);
         require(pos.active, "Position not active");
         
-        return (pos.exposure * perpStorage.maintenanceMarginBps()) / perpStorage.BPS_DENOMINATOR();
+        return (pos.exposure * _getMaintenanceBpsForMarket(pos.marketId)) / perpStorage.BPS_DENOMINATOR();
     }
 
     /**
@@ -111,7 +127,7 @@ contract RiskManager {
             
             if (!pos.active) continue;
             
-            totalReq += (pos.exposure * perpStorage.maintenanceMarginBps()) / perpStorage.BPS_DENOMINATOR();
+            totalReq += (pos.exposure * _getMaintenanceBpsForMarket(pos.marketId)) / perpStorage.BPS_DENOMINATOR();
         }
     }
 
@@ -122,14 +138,69 @@ contract RiskManager {
         PerpStorage.Position memory pos = perpStorage.getPosition(positionId);
         require(pos.active, "Position not active");
 
-        (int256 pnl, int256 funding) = getPositionPnlAndFunding(pos, getMarkPrice());
-        int256 equity = int256(pos.margin) + pnl - funding;
+        uint256 markPrice = getMarkPriceForMarket(pos.marketId);
+        uint256 maintenanceBps = _getMaintenanceBpsForMarket(pos.marketId);
+
+        if (pos.marginMode == PerpStorage.MarginMode.Isolated) {
+            int256 isolatedEquity = _getPositionEquity(pos, markPrice);
+            return LiquidationLib.isLiquidatable(
+                isolatedEquity,
+                pos.exposure,
+                maintenanceBps
+            );
+        }
+
+        int256 crossEquity = _getCrossAccountEquity(pos.trader);
+        uint256 crossMaintenanceReq = _getCrossMaintenanceRequirement(pos.trader);
+        if (crossMaintenanceReq == 0) return false;
+        if (crossEquity >= int256(crossMaintenanceReq)) return false;
 
         return LiquidationLib.isLiquidatable(
-            equity,
+            crossEquity,
             pos.exposure,
-            perpStorage.maintenanceMarginBps()
+            maintenanceBps
         );
+    }
+
+    function _getPositionEquity(
+        PerpStorage.Position memory pos,
+        uint256 markPrice
+    ) internal view returns (int256 equity) {
+        (int256 pnl, int256 funding) = getPositionPnlAndFunding(pos, markPrice);
+        equity = int256(pos.margin) + pnl - funding;
+    }
+
+    function _getCrossAccountEquity(address trader) internal view returns (int256 equity) {
+        equity = int256(perpStorage.accountCollateral(trader));
+
+        uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
+        for (uint256 i = 0; i < positionIds.length; i++) {
+            PerpStorage.Position memory pos = perpStorage.getPosition(positionIds[i]);
+            if (!pos.active) continue;
+            if (pos.marginMode != PerpStorage.MarginMode.Cross) continue;
+
+            uint256 markPrice = pos.marketId == bytes32(0) ? getMarkPrice() : getMarkPriceForMarket(pos.marketId);
+            (int256 pnl, int256 funding) = getPositionPnlAndFunding(pos, markPrice);
+            equity += pnl - funding;
+        }
+    }
+
+    function _getCrossMaintenanceRequirement(address trader) internal view returns (uint256 totalReq) {
+        uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
+        for (uint256 i = 0; i < positionIds.length; i++) {
+            PerpStorage.Position memory pos = perpStorage.getPosition(positionIds[i]);
+            if (!pos.active) continue;
+            if (pos.marginMode != PerpStorage.MarginMode.Cross) continue;
+
+            totalReq += (pos.exposure * _getMaintenanceBpsForMarket(pos.marketId)) / perpStorage.BPS_DENOMINATOR();
+        }
+    }
+
+    function _getCurrentFunding(PerpStorage.Side side, bytes32 marketId) internal view returns (int256) {
+        bytes32 resolvedMarketId = marketId == bytes32(0) ? perpStorage.marketFeedId() : marketId;
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(resolvedMarketId);
+        require(market.exists, "Unknown market");
+        return side == PerpStorage.Side.Long ? market.cumulativeFundingLong : market.cumulativeFundingShort;
     }
 
     /**
@@ -139,23 +210,38 @@ contract RiskManager {
         uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
         uint256[] memory liquidatable = new uint256[](positionIds.length);
         uint256 count = 0;
+        uint256 defaultMarkPrice = getMarkPrice();
+
+        int256 crossEquity = _getCrossAccountEquity(trader);
+        uint256 crossMaintenanceReq = _getCrossMaintenanceRequirement(trader);
+        bool crossAccountAtRisk = crossMaintenanceReq > 0 && crossEquity < int256(crossMaintenanceReq);
         
-        int256 equity = getAccountEquity(trader);
-        uint256 totalMaintenanceReq = getAccountMaintenanceRequirement(trader);
-        
-        // If total equity is above total requirement, no positions are liquidatable
-        if (equity >= int256(totalMaintenanceReq)) {
-            return new uint256[](0);
-        }
-        
-        // Otherwise, check each position
         for (uint256 i = 0; i < positionIds.length; i++) {
             uint256 positionId = positionIds[i];
             PerpStorage.Position memory pos = perpStorage.getPosition(positionId);
             
             if (!pos.active) continue;
-            
-            if (LiquidationLib.isLiquidatable(equity, pos.exposure, perpStorage.maintenanceMarginBps())) {
+
+            bool isLiquidatable;
+            if (pos.marginMode == PerpStorage.MarginMode.Isolated) {
+                uint256 isolatedMark = pos.marketId == bytes32(0) ? defaultMarkPrice : getMarkPriceForMarket(pos.marketId);
+                int256 isolatedEquity = _getPositionEquity(pos, isolatedMark);
+                uint256 isolatedMaintenanceBps = _getMaintenanceBpsForMarket(pos.marketId);
+                isLiquidatable = LiquidationLib.isLiquidatable(
+                    isolatedEquity,
+                    pos.exposure,
+                    isolatedMaintenanceBps
+                );
+            } else {
+                uint256 crossMaintenanceBps = _getMaintenanceBpsForMarket(pos.marketId);
+                isLiquidatable = crossAccountAtRisk && LiquidationLib.isLiquidatable(
+                    crossEquity,
+                    pos.exposure,
+                    crossMaintenanceBps
+                );
+            }
+
+            if (isLiquidatable) {
                 liquidatable[count] = positionId;
                 count++;
             }
@@ -180,7 +266,7 @@ contract RiskManager {
             pos.exposure,
             pos.entryPrice,
             pos.margin,
-            perpStorage.maintenanceMarginBps(),
+            _getMaintenanceBpsForMarket(pos.marketId),
             pos.side == PerpStorage.Side.Long
         );
     }

@@ -12,7 +12,7 @@ library OrderLib {
     using ECDSA for bytes32;
 
     bytes32 public constant ORDER_TYPEHASH =
-        keccak256("Order(address trader,uint8 side,uint256 exposure,uint256 limitPrice,uint256 expiry,uint256 nonce)");
+        keccak256("Order(address trader,uint8 side,uint256 exposure,uint256 limitPrice,uint256 expiry,uint256 nonce,bytes32 marketId)");
 
     enum Side { Long, Short }
 
@@ -23,6 +23,7 @@ library OrderLib {
         uint256 limitPrice;
         uint256 expiry;
         uint256 nonce;
+        bytes32 marketId;
     }
 
     // Validate order parameters
@@ -90,7 +91,8 @@ library OrderLib {
                 order.exposure,
                 order.limitPrice,
                 order.expiry,
-                order.nonce
+                order.nonce,
+                order.marketId
             )
         );
 

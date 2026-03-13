@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "../storage/PerpStorage.sol";
 import "../library/PnlLib.sol";
 import "../library/FundingLib.sol";
+import "./PositionNetting.sol";
 import "./CollateralManager.sol";
 
 /**
@@ -73,64 +74,95 @@ contract PositionManager {
         uint256 leverage,
         uint256 entryPrice
     ) external onlyAuthorizedModule returns (uint256 positionId) {
-        require(!perpStorage.frozenAccounts(trader), "Account frozen");
-        require(leverage >= perpStorage.MIN_LEVERAGE() && leverage <= perpStorage.MAX_LEVERAGE(), "Invalid leverage");
-        
-        // Calculate required margin
-        uint256 requiredMargin = (exposure * 1e18) / leverage / 1e18; // exposure / leverage
-        
-        // Reserve margin
-        collateralManager.addReservedMargin(trader, requiredMargin);
-        
-        // Get position ID
-        positionId = perpStorage.nextPositionId();
-        
-        // Determine current funding snapshot
-        int256 entryFunding = (side == PerpStorage.Side.Long) 
-            ? perpStorage.cumulativeFundingLong() 
-            : perpStorage.cumulativeFundingShort();
-        
-        // Create position
-        PerpStorage.Position memory newPosition = PerpStorage.Position({
-            trader: trader,
-            side: side,
-            exposure: exposure,
-            margin: requiredMargin,
-            entryPrice: entryPrice,
-            entryFunding: entryFunding,
-            active: true
-        });
-        
-        // Store position
-        perpStorage.setPosition(positionId, newPosition);
-        
-        // Update position tracking
-        perpStorage.setTraderPositionIndex(positionId, perpStorage.positionCount(trader) + 1);
-        perpStorage.pushTraderPosition(trader, positionId);
-        perpStorage.setHasPosition(trader, positionId, true);
-        perpStorage.incrementPositionCount(trader);
-        
-        // Update global exposure
-        if (side == PerpStorage.Side.Long) {
-            perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() + exposure);
-        } else {
-            perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() + exposure);
-        }
-        
-        // Increment position ID for next
-        perpStorage.setNextPositionId(positionId + 1);
-        
-        emit PositionOpened(
-            positionId,
+        PerpStorage.MarginMode marginMode = perpStorage.isCrossMargin(trader)
+            ? PerpStorage.MarginMode.Cross
+            : PerpStorage.MarginMode.Isolated;
+
+        return _openPosition(
             trader,
             side,
             exposure,
-            requiredMargin,
+            leverage,
             entryPrice,
-            entryFunding
+            perpStorage.marketFeedId(),
+            marginMode
         );
+    }
+
+    /**
+     * @notice Open a new position with explicit market and margin mode.
+     */
+    function openPositionWithMarket(
+        address trader,
+        PerpStorage.Side side,
+        uint256 exposure,
+        uint256 leverage,
+        uint256 entryPrice,
+        bytes32 marketId,
+        PerpStorage.MarginMode marginMode
+    ) external onlyAuthorizedModule returns (uint256 positionId) {
+        return _openPosition(trader, side, exposure, leverage, entryPrice, marketId, marginMode);
+    }
+
+    function _openPosition(
+        address trader,
+        PerpStorage.Side side,
+        uint256 exposure,
+        uint256 leverage,
+        uint256 entryPrice,
+        bytes32 marketId,
+        PerpStorage.MarginMode marginMode
+    ) internal returns (uint256 positionId) {
+        require(!perpStorage.frozenAccounts(trader), "Account frozen");
+        require(leverage >= perpStorage.MIN_LEVERAGE() && leverage <= perpStorage.MAX_LEVERAGE(), "Invalid leverage");
+        require(exposure > 0, "Invalid exposure");
+        require(entryPrice > 0, "Invalid entry price");
+        require(marketId != bytes32(0), "Invalid market");
         
-        return positionId;
+        // Calculate required margin
+        uint256 requiredMargin = (exposure * 1e18) / leverage / 1e18; // exposure / leverage
+        require(requiredMargin > 0, "Invalid margin");
+
+        (bool hasActive, uint256 activePositionId, PerpStorage.Position memory activePosition, uint256 activeCount) =
+            _getSingleActivePositionForMarket(trader, marketId);
+        require(activeCount <= 1, "Multiple active positions unsupported");
+
+        if (!hasActive) {
+            collateralManager.addReservedMargin(trader, requiredMargin);
+            return _createPosition(trader, side, exposure, requiredMargin, entryPrice, marketId, marginMode);
+        }
+
+        require(activePosition.marginMode == marginMode, "Margin mode mismatch");
+
+        if (activePosition.side == side) {
+            collateralManager.addReservedMargin(trader, requiredMargin);
+
+            uint256 mergedExposure = activePosition.exposure + exposure;
+            uint256 mergedMargin = activePosition.margin + requiredMargin;
+            uint256 mergedEntryPrice = PositionNetting.calculateWeightedEntryPrice(
+                activePosition.exposure,
+                activePosition.entryPrice,
+                exposure,
+                entryPrice
+            );
+
+            perpStorage.setPositionExposure(activePositionId, mergedExposure);
+            perpStorage.setPositionMargin(activePositionId, mergedMargin);
+            perpStorage.setPositionEntryPrice(activePositionId, mergedEntryPrice);
+
+            if (side == PerpStorage.Side.Long) {
+                perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() + exposure);
+                perpStorage.setMarketLongExposure(marketId, perpStorage.marketLongExposure(marketId) + exposure);
+            } else {
+                perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() + exposure);
+                perpStorage.setMarketShortExposure(marketId, perpStorage.marketShortExposure(marketId) + exposure);
+            }
+
+            emit PositionModified(activePositionId, mergedExposure, mergedMargin, 0);
+            return activePositionId;
+        }
+
+        return _offsetOrFlipPosition(trader, activePositionId, activePosition, side, exposure, leverage, entryPrice);
     }
 
     /**
@@ -154,9 +186,7 @@ contract PositionManager {
         pnl = PnlLib.calculateUnrealizedPnl(pnlPosition, closePrice);
         
         // Calculate funding using FundingLib
-        int256 currentFunding = (position.side == PerpStorage.Side.Long) 
-            ? perpStorage.cumulativeFundingLong() 
-            : perpStorage.cumulativeFundingShort();
+        int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
             
         funding = FundingLib.calculateFundingPayment(
             position.exposure,
@@ -175,8 +205,10 @@ contract PositionManager {
         // Update global exposure
         if (position.side == PerpStorage.Side.Long) {
             perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() - position.exposure);
+            perpStorage.setMarketLongExposure(position.marketId, perpStorage.marketLongExposure(position.marketId) - position.exposure);
         } else {
             perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() - position.exposure);
+            perpStorage.setMarketShortExposure(position.marketId, perpStorage.marketShortExposure(position.marketId) - position.exposure);
         }
         
         // Release reserved margin
@@ -271,9 +303,7 @@ contract PositionManager {
         
         unrealizedPnl = PnlLib.calculateUnrealizedPnl(pnlPosition, currentPrice);
         
-        int256 currentFunding = (position.side == PerpStorage.Side.Long) 
-            ? perpStorage.cumulativeFundingLong() 
-            : perpStorage.cumulativeFundingShort();
+        int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
             
         unrealizedFunding = FundingLib.calculateFundingPayment(
             position.exposure,
@@ -289,6 +319,179 @@ contract PositionManager {
      */
     function _removeTraderPosition(address trader, uint256 positionId) internal {
         perpStorage.removeTraderPosition(trader, positionId);
+    }
+
+    function _createPosition(
+        address trader,
+        PerpStorage.Side side,
+        uint256 exposure,
+        uint256 margin,
+        uint256 entryPrice,
+        bytes32 marketId,
+        PerpStorage.MarginMode marginMode
+    ) internal returns (uint256 positionId) {
+        positionId = perpStorage.nextPositionId();
+        int256 entryFunding = _getCurrentFunding(side, marketId);
+
+        PerpStorage.Position memory newPosition = PerpStorage.Position({
+            trader: trader,
+            side: side,
+            exposure: exposure,
+            margin: margin,
+            entryPrice: entryPrice,
+            entryFunding: entryFunding,
+            marginMode: marginMode,
+            marketId: marketId,
+            active: true
+        });
+
+        perpStorage.setPosition(positionId, newPosition);
+        perpStorage.setTraderPositionIndex(positionId, perpStorage.positionCount(trader) + 1);
+        perpStorage.pushTraderPosition(trader, positionId);
+        perpStorage.setHasPosition(trader, positionId, true);
+        perpStorage.incrementPositionCount(trader);
+
+        if (side == PerpStorage.Side.Long) {
+            perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() + exposure);
+            perpStorage.setMarketLongExposure(marketId, perpStorage.marketLongExposure(marketId) + exposure);
+        } else {
+            perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() + exposure);
+            perpStorage.setMarketShortExposure(marketId, perpStorage.marketShortExposure(marketId) + exposure);
+        }
+
+        perpStorage.setNextPositionId(positionId + 1);
+
+        emit PositionOpened(positionId, trader, side, exposure, margin, entryPrice, entryFunding);
+        return positionId;
+    }
+
+    function _offsetOrFlipPosition(
+        address trader,
+        uint256 activePositionId,
+        PerpStorage.Position memory activePosition,
+        PerpStorage.Side incomingSide,
+        uint256 incomingExposure,
+        uint256 leverage,
+        uint256 entryPrice
+    ) internal returns (uint256 resultingPositionId) {
+        uint256 reductionExposure = incomingExposure <= activePosition.exposure
+            ? incomingExposure
+            : activePosition.exposure;
+
+        int256 currentFunding = _getCurrentFunding(activePosition.side, activePosition.marketId);
+        (, , int256 reductionDelta) = PositionNetting.calculateReductionDelta(
+            activePosition.side,
+            reductionExposure,
+            activePosition.entryPrice,
+            entryPrice,
+            activePosition.entryFunding,
+            currentFunding
+        );
+
+        if (reductionDelta != 0) {
+            collateralManager.applyAccountDelta(trader, reductionDelta);
+        }
+
+        uint256 releasedMargin = PositionNetting.calculateProportionalMarginRelease(
+            activePosition.margin,
+            activePosition.exposure,
+            reductionExposure
+        );
+        if (releasedMargin > 0) {
+            collateralManager.removeReservedMargin(trader, releasedMargin);
+        }
+
+        if (activePosition.side == PerpStorage.Side.Long) {
+            perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() - reductionExposure);
+            perpStorage.setMarketLongExposure(activePosition.marketId, perpStorage.marketLongExposure(activePosition.marketId) - reductionExposure);
+        } else {
+            perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() - reductionExposure);
+            perpStorage.setMarketShortExposure(activePosition.marketId, perpStorage.marketShortExposure(activePosition.marketId) - reductionExposure);
+        }
+
+        uint256 remainingActiveExposure = activePosition.exposure - reductionExposure;
+        uint256 remainingIncomingExposure = incomingExposure - reductionExposure;
+
+        if (remainingActiveExposure == 0) {
+            perpStorage.setPositionActive(activePositionId, false);
+            _removeTraderPosition(trader, activePositionId);
+            perpStorage.setHasPosition(trader, activePositionId, false);
+            perpStorage.decrementPositionCount(trader);
+        } else {
+            uint256 remainingMargin = activePosition.margin - releasedMargin;
+            perpStorage.setPositionExposure(activePositionId, remainingActiveExposure);
+            perpStorage.setPositionMargin(activePositionId, remainingMargin);
+            emit PositionModified(activePositionId, remainingActiveExposure, remainingMargin, reductionDelta);
+        }
+
+        if (remainingIncomingExposure == 0) {
+            return activePositionId;
+        }
+
+        return _openResidualPosition(
+            trader,
+            incomingSide,
+            remainingIncomingExposure,
+            leverage,
+            entryPrice,
+            activePosition.marketId,
+            activePosition.marginMode
+        );
+    }
+
+    function _openResidualPosition(
+        address trader,
+        PerpStorage.Side incomingSide,
+        uint256 incomingExposure,
+        uint256 leverage,
+        uint256 entryPrice,
+        bytes32 marketId,
+        PerpStorage.MarginMode marginMode
+    ) internal returns (uint256 positionId) {
+        uint256 incomingMargin = (incomingExposure * 1e18) / leverage / 1e18;
+        require(incomingMargin > 0, "Invalid margin");
+        collateralManager.addReservedMargin(trader, incomingMargin);
+
+        return _createPosition(
+            trader,
+            incomingSide,
+            incomingExposure,
+            incomingMargin,
+            entryPrice,
+            marketId,
+            marginMode
+        );
+    }
+
+    function _getCurrentFunding(PerpStorage.Side side, bytes32 marketId) internal view returns (int256) {
+        bytes32 resolvedMarketId = marketId == bytes32(0) ? perpStorage.marketFeedId() : marketId;
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(resolvedMarketId);
+        require(market.exists, "Unknown market");
+
+        return side == PerpStorage.Side.Long
+            ? market.cumulativeFundingLong
+            : market.cumulativeFundingShort;
+    }
+
+    function _getSingleActivePositionForMarket(address trader, bytes32 marketId)
+        internal
+        view
+        returns (bool hasActive, uint256 activePositionId, PerpStorage.Position memory activePosition, uint256 activeCount)
+    {
+        uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
+
+        for (uint256 i = 0; i < positionIds.length; i++) {
+            PerpStorage.Position memory position = perpStorage.getPosition(positionIds[i]);
+            if (!position.active) continue;
+            if (position.marketId != marketId) continue;
+
+            activeCount++;
+            if (!hasActive) {
+                hasActive = true;
+                activePositionId = positionIds[i];
+                activePosition = position;
+            }
+        }
     }
 
     /**
