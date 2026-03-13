@@ -1,0 +1,74 @@
+[
+  {
+    "trader": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "size": "23481.0",
+    "collateral": "2348.1",
+    "leverage": "10.00",
+    "entryPrice": "2041.66",
+    "markPrice": "2037.53",
+    "pnl": "47.41939",
+    "pnlPercent": "2.02%",
+    "health": "1.02",
+    "isLiquidatable": false
+  },
+  {
+    "trader": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+    "size": "4618.0",
+    "collateral": "461.8",
+    "leverage": "10.00",
+    "entryPrice": "2038.65",
+    "markPrice": "2037.53",
+    "pnl": "2.532064",
+    "pnlPercent": "0.55%",
+    "health": "1.01",
+    "isLiquidatable": false
+  },
+  {
+    "trader": "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+    "size": "25610.0",
+    "collateral": "2561.0",
+    "leverage": "10.00",
+    "entryPrice": "2022.41",
+    "markPrice": "2037.53",
+    "pnl": "191.544981",
+    "pnlPercent": "7.48%",
+    "health": "1.07",
+    "isLiquidatable": false
+  },
+  {
+    "trader": "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+    "size": "7244.0",
+    "collateral": "724.4",
+    "leverage": "10.00",
+    "entryPrice": "2047.26",
+    "markPrice": "2037.53",
+    "pnl": "34.425042",
+    "pnlPercent": "4.75%",
+    "health": "1.05",
+    "isLiquidatable": false
+  },
+  {
+    "trader": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+    "size": "6414.0",
+    "collateral": "641.4",
+    "leverage": "10.00",
+    "entryPrice": "2049.02",
+    "markPrice": "2037.53",
+    "pnl": "35.962268",
+    "pnlPercent": "5.61%",
+    "health": "1.06",
+    "isLiquidatable": false
+  },
+  {
+    "trader": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+    "size": "26751.0",
+    "collateral": "2675.1",
+    "leverage": "10.00",
+    "entryPrice": "2021.92",
+    "markPrice": "2037.53",
+    "pnl": "206.537312",
+    "pnlPercent": "7.72%",
+    "health": "1.08",
+    "isLiquidatable": false
+  }
+]

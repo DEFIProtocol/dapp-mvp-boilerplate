@@ -1,0 +1,48 @@
+SIMULATION SUMMARY
+==================
+
+Scenario: normal
+Seed: 12345
+Duration: 1000 steps
+Start Time: 2026-03-13T20:44:11.841Z
+
+MARKET
+Price Change: 4.96%
+Open Interest: $15034.0 -> $36669.0 (143.91%)
+TVL: $85000.0 -> $13373.155
+
+INSURANCE & SOLVENCY
+Insurance Start: $0.0
+Insurance End: $33425.861
+Max Drawdown: $0.0 (0.00%)
+Insurance Used: $0.0
+Liquidations / 100 orders: 16.92
+Average Leverage: 10.17x
+Insolvent Steps: 0
+
+EXECUTION QUALITY
+Orders Placed: 6000
+Order Fill Rate: 33.77%
+Final Open Orders: 0
+Avg Spread (bps): 10.24
+Avg Slippage (bps): 5.64
+Avg Price Impact (bps): 3.59
+
+REVENUE
+Protocol Fees: $5142.4545
+Maker Fees: $1714.1515
+Taker Fees: $3428.303
+
+FUNDING
+Funding Transferred: $0.003755
+
+LIQUIDATOR FLOW
+Liquidator Orders: 1015
+Liquidator Rewards Paid: $38200.984
+Liquidation Penalty Collected: $71626.845
+Margin Returned: $2134286.480748
+Insurance Used: $0.0
+
+INSURANCE FLOW
+Insurance Inflow: $33425.861
+Insurance Outflow: $0.0

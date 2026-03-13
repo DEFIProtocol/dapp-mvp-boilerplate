@@ -1,0 +1,369 @@
+{
+  "step": 300,
+  "blockNumber": 1732,
+  "timestamp": 1773526384,
+  "scenarioPrice": 2044.735363000342,
+  "onChain": {
+    "collateralManagerBalance": "35479630000",
+    "insuranceTreasuryBalance": "23109506000",
+    "protocolTreasuryBalance": "0",
+    "feePool": "3522517500",
+    "protocolTreasuryNonTradingInflow": "0",
+    "insuranceFundBalance": "23109506000",
+    "totalBadDebt": "0",
+    "totalLongExposure": "37875000000",
+    "totalShortExposure": "1033000000",
+    "cumulativeFundingLong": "0",
+    "cumulativeFundingShort": "0",
+    "sumAccountCollateral": "30791814980",
+    "sumReservedMargin": "3890800000",
+    "sumAvailableCollateral": "27113944091",
+    "sumTraderFundingOwed": "0",
+    "activeLongExposure": "37875000000",
+    "activeShortExposure": "1033000000",
+    "activePositionCount": 9,
+    "externalWalletBalances": "297410864000",
+    "totalBooked": "57423838480",
+    "totalContractBalance": "58589136000"
+  },
+  "traders": [
+    {
+      "trader": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "accountCollateral": "1238718747",
+      "reservedMargin": "512300000",
+      "availableCollateral": "755274542",
+      "fundingOwed": "0",
+      "equity": "1267574542",
+      "maintenanceRequirement": "512300000",
+      "healthRatio": "2474281752879172359",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "accountCollateral": "808288779",
+      "reservedMargin": "0",
+      "availableCollateral": "808288779",
+      "fundingOwed": "0",
+      "equity": "808288779",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "accountCollateral": "1305541153",
+      "reservedMargin": "103300000",
+      "availableCollateral": "1202241153",
+      "fundingOwed": "0",
+      "equity": "1305541153",
+      "maintenanceRequirement": "103300000",
+      "healthRatio": "12638346108422071636",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "accountCollateral": "601276208",
+      "reservedMargin": "415500000",
+      "availableCollateral": "205265563",
+      "fundingOwed": "0",
+      "equity": "620765563",
+      "maintenanceRequirement": "415500000",
+      "healthRatio": "1494020608904933814",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "accountCollateral": "895455674",
+      "reservedMargin": "441300000",
+      "availableCollateral": "464341698",
+      "fundingOwed": "0",
+      "equity": "905641698",
+      "maintenanceRequirement": "441300000",
+      "healthRatio": "2052213229095853161",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "accountCollateral": "3317618927",
+      "reservedMargin": "193100000",
+      "availableCollateral": "3127826820",
+      "fundingOwed": "0",
+      "equity": "3320926820",
+      "maintenanceRequirement": "193100000",
+      "healthRatio": "17197963852925945106",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "accountCollateral": "2533102258",
+      "reservedMargin": "98000000",
+      "availableCollateral": "2441257776",
+      "fundingOwed": "0",
+      "equity": "2539257776",
+      "maintenanceRequirement": "98000000",
+      "healthRatio": "25910793632653061224",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+      "accountCollateral": "2519746503",
+      "reservedMargin": "48800000",
+      "availableCollateral": "2471782469",
+      "fundingOwed": "0",
+      "equity": "2520582469",
+      "maintenanceRequirement": "48800000",
+      "healthRatio": "51651280102459016393",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+      "accountCollateral": "1156077329",
+      "reservedMargin": "256700000",
+      "availableCollateral": "903436485",
+      "fundingOwed": "0",
+      "equity": "1160136485",
+      "maintenanceRequirement": "256700000",
+      "healthRatio": "4519425340864822750",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+      "accountCollateral": "1706984604",
+      "reservedMargin": "0",
+      "availableCollateral": "1706984604",
+      "fundingOwed": "0",
+      "equity": "1706984604",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+      "accountCollateral": "1020370909",
+      "reservedMargin": "0",
+      "availableCollateral": "1020370909",
+      "fundingOwed": "0",
+      "equity": "1020370909",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+      "accountCollateral": "2550687732",
+      "reservedMargin": "0",
+      "availableCollateral": "2550687732",
+      "fundingOwed": "0",
+      "equity": "2550687732",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+      "accountCollateral": "3121876488",
+      "reservedMargin": "0",
+      "availableCollateral": "3121876488",
+      "fundingOwed": "0",
+      "equity": "3121876488",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+      "accountCollateral": "2521657935",
+      "reservedMargin": "0",
+      "availableCollateral": "2521657935",
+      "fundingOwed": "0",
+      "equity": "2521657935",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+      "accountCollateral": "764966336",
+      "reservedMargin": "0",
+      "availableCollateral": "764966336",
+      "fundingOwed": "0",
+      "equity": "764966336",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+      "accountCollateral": "2836901845",
+      "reservedMargin": "1821800000",
+      "availableCollateral": "1155141249",
+      "fundingOwed": "0",
+      "equity": "2976941249",
+      "maintenanceRequirement": "1821800000",
+      "healthRatio": "1634065895817323526",
+      "activePositionCount": 1
+    },
+    {
+      "trader": "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
+      "accountCollateral": "1892543553",
+      "reservedMargin": "0",
+      "availableCollateral": "1892543553",
+      "fundingOwed": "0",
+      "equity": "1892543553",
+      "maintenanceRequirement": "0",
+      "healthRatio": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "activePositionCount": 0
+    },
+    {
+      "trader": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+      "accountCollateral": "0",
+      "reservedMargin": "0",
+      "availableCollateral": "0",
+      "fundingOwed": "0",
+      "equity": "0",
+      "maintenanceRequirement": "0",
+      "healthRatio": "0",
+      "activePositionCount": 0
+    }
+  ],
+  "assertions": [
+    {
+      "name": "solvency-bound",
+      "ok": true,
+      "expected": ">= 57423838480",
+      "actual": "356000000000"
+    },
+    {
+      "name": "insurance-balance-sync",
+      "ok": true,
+      "expected": "23109506000",
+      "actual": "23109506000"
+    },
+    {
+      "name": "protocol-fee-sync",
+      "ok": true,
+      "expected": "0",
+      "actual": "0"
+    },
+    {
+      "name": "long-exposure-sync",
+      "ok": true,
+      "expected": "37875000000",
+      "actual": "37875000000"
+    },
+    {
+      "name": "short-exposure-sync",
+      "ok": true,
+      "expected": "1033000000",
+      "actual": "1033000000"
+    },
+    {
+      "name": "available-collateral-0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "ok": true,
+      "expected": "755274542",
+      "actual": "755274542"
+    },
+    {
+      "name": "available-collateral-0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "ok": true,
+      "expected": "808288779",
+      "actual": "808288779"
+    },
+    {
+      "name": "available-collateral-0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "ok": true,
+      "expected": "1202241153",
+      "actual": "1202241153"
+    },
+    {
+      "name": "available-collateral-0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "ok": true,
+      "expected": "205265563",
+      "actual": "205265563"
+    },
+    {
+      "name": "available-collateral-0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "ok": true,
+      "expected": "464341698",
+      "actual": "464341698"
+    },
+    {
+      "name": "available-collateral-0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "ok": true,
+      "expected": "3127826820",
+      "actual": "3127826820"
+    },
+    {
+      "name": "available-collateral-0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "ok": true,
+      "expected": "2441257776",
+      "actual": "2441257776"
+    },
+    {
+      "name": "available-collateral-0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+      "ok": true,
+      "expected": "2471782469",
+      "actual": "2471782469"
+    },
+    {
+      "name": "available-collateral-0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+      "ok": true,
+      "expected": "903436485",
+      "actual": "903436485"
+    },
+    {
+      "name": "available-collateral-0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+      "ok": true,
+      "expected": "1706984604",
+      "actual": "1706984604"
+    },
+    {
+      "name": "available-collateral-0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+      "ok": true,
+      "expected": "1020370909",
+      "actual": "1020370909"
+    },
+    {
+      "name": "available-collateral-0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+      "ok": true,
+      "expected": "2550687732",
+      "actual": "2550687732"
+    },
+    {
+      "name": "available-collateral-0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+      "ok": true,
+      "expected": "3121876488",
+      "actual": "3121876488"
+    },
+    {
+      "name": "available-collateral-0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+      "ok": true,
+      "expected": "2521657935",
+      "actual": "2521657935"
+    },
+    {
+      "name": "available-collateral-0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+      "ok": true,
+      "expected": "764966336",
+      "actual": "764966336"
+    },
+    {
+      "name": "available-collateral-0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+      "ok": true,
+      "expected": "1155141249",
+      "actual": "1155141249"
+    },
+    {
+      "name": "available-collateral-0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
+      "ok": true,
+      "expected": "1892543553",
+      "actual": "1892543553"
+    },
+    {
+      "name": "available-collateral-0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+      "ok": true,
+      "expected": "0",
+      "actual": "0"
+    }
+  ]
+}
