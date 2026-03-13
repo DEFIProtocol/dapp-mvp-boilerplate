@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/PnlLib.sol";
-import "../library/FundingLib.sol";
-import "../library/LiquidationLib.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/PnlLib.sol";
+import "../../library/FundingLib.sol";
+import "../../library/LiquidationLib.sol";
 
 interface IMarkOracle {
     function getMarkPrice(bytes32 feedId) external view returns (uint256);

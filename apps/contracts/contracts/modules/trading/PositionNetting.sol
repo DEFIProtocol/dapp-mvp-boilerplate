@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/PnlLib.sol";
-import "../library/FundingLib.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/PnlLib.sol";
+import "../../library/FundingLib.sol";
 
 library PositionNetting {
 	function calculateWeightedEntryPrice(

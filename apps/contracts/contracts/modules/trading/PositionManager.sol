@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/PnlLib.sol";
-import "../library/FundingLib.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/PnlLib.sol";
+import "../../library/FundingLib.sol";
 import "./PositionNetting.sol";
-import "./CollateralManager.sol";
+import "../account/CollateralManager.sol";
 
 /**
  * @title PositionManager
@@ -224,6 +224,69 @@ contract PositionManager {
         emit PositionClosed(positionId, position.trader, pnl, funding, totalDelta);
         
         return (pnl, funding);
+    }
+
+    /**
+     * @notice Force-reduce a position by notional exposure without opening any new opposing leg.
+     * @dev Used by ADL and other risk modules. Keeps position active unless fully reduced.
+     */
+    function forceReducePosition(
+        uint256 positionId,
+        uint256 reductionExposure,
+        uint256 closePrice
+    ) external onlyModule returns (uint256 reducedExposure, int256 reductionDelta) {
+        PerpStorage.Position memory position = perpStorage.getPosition(positionId);
+
+        require(position.active, "Position not active");
+        require(reductionExposure > 0, "Invalid reduction");
+        require(reductionExposure <= position.exposure, "Reduction too large");
+        require(closePrice > 0, "Invalid close price");
+
+        int256 currentFunding = _getCurrentFunding(position.side, position.marketId);
+        (, , reductionDelta) = PositionNetting.calculateReductionDelta(
+            position.side,
+            reductionExposure,
+            position.entryPrice,
+            closePrice,
+            position.entryFunding,
+            currentFunding
+        );
+
+        if (reductionDelta != 0) {
+            collateralManager.applyAccountDelta(position.trader, reductionDelta);
+        }
+
+        uint256 releasedMargin = PositionNetting.calculateProportionalMarginRelease(
+            position.margin,
+            position.exposure,
+            reductionExposure
+        );
+        if (releasedMargin > 0) {
+            collateralManager.removeReservedMargin(position.trader, releasedMargin);
+        }
+
+        if (position.side == PerpStorage.Side.Long) {
+            perpStorage.setTotalLongExposure(perpStorage.totalLongExposure() - reductionExposure);
+            perpStorage.setMarketLongExposure(position.marketId, perpStorage.marketLongExposure(position.marketId) - reductionExposure);
+        } else {
+            perpStorage.setTotalShortExposure(perpStorage.totalShortExposure() - reductionExposure);
+            perpStorage.setMarketShortExposure(position.marketId, perpStorage.marketShortExposure(position.marketId) - reductionExposure);
+        }
+
+        uint256 remainingExposure = position.exposure - reductionExposure;
+        if (remainingExposure == 0) {
+            perpStorage.setPositionActive(positionId, false);
+            _removeTraderPosition(position.trader, positionId);
+            perpStorage.setHasPosition(position.trader, positionId, false);
+            perpStorage.decrementPositionCount(position.trader);
+        } else {
+            uint256 remainingMargin = position.margin - releasedMargin;
+            perpStorage.setPositionExposure(positionId, remainingExposure);
+            perpStorage.setPositionMargin(positionId, remainingMargin);
+            emit PositionModified(positionId, remainingExposure, remainingMargin, reductionDelta);
+        }
+
+        return (reductionExposure, reductionDelta);
     }
 
     /**

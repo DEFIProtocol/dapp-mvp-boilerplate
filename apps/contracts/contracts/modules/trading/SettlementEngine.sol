@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/OrderLib.sol";
-import "../library/FeeLib.sol";
-import "./CollateralManager.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/OrderLib.sol";
+import "../../library/FeeLib.sol";
+import "../account/CollateralManager.sol";
 import "./PositionManager.sol";
-import "./RiskManager.sol";
+import "../risk/RiskManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 /**

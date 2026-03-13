@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/LiquidationLib.sol";
-import "../interfaces/IInsuranceTreasury.sol";
-import "./CollateralManager.sol";
-import "./PositionManager.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/LiquidationLib.sol";
+import "../../interfaces/IInsuranceTreasury.sol";
+import "../account/CollateralManager.sol";
+import "../trading/PositionManager.sol";
 import "./RiskManager.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+interface IADLEngine {
+    function executeAutoDeleverage(
+        bytes32 marketId,
+        bool targetLongSide,
+        uint256 deficit,
+        uint256 eventId
+    ) external returns (uint256 covered, uint256 remainingDeficit);
+}
 
 /**
  * @title LiquidationEngine
@@ -21,6 +30,8 @@ contract LiquidationEngine {
     CollateralManager public collateralManager;
     PositionManager public positionManager;
     RiskManager public riskManager;
+    address public adlEngine;
+    uint256 public adlEventNonce;
 
     // Events
     event PositionLiquidated(
@@ -36,6 +47,15 @@ contract LiquidationEngine {
     
     event BadDebtRecorded(uint256 amount, address indexed trader);
     event InsuranceFundUsed(uint256 amount, uint256 remaining);
+    event ADLEngineUpdated(address indexed oldEngine, address indexed newEngine);
+    event ADLExecuted(
+        bytes32 indexed marketId,
+        bool indexed targetLongSide,
+        uint256 indexed eventId,
+        uint256 requestedDeficit,
+        uint256 covered,
+        uint256 remainingDeficit
+    );
 
     constructor(
         address _perpStorage,
@@ -57,6 +77,17 @@ contract LiquidationEngine {
     modifier notPaused() {
         require(!perpStorage.emergencyPause(), "Contract paused");
         _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == perpStorage.owner(), "Only owner");
+        _;
+    }
+
+    function setAdlEngine(address _adlEngine) external onlyOwner {
+        address old = adlEngine;
+        adlEngine = _adlEngine;
+        emit ADLEngineUpdated(old, _adlEngine);
     }
 
     /**
@@ -130,6 +161,8 @@ contract LiquidationEngine {
         (uint256 rewardPaid, uint256 insuranceContribution, uint256 penaltyCollected, uint256 marginReturned) = _distributeLiquidationProceeds(
             position.trader,
             liquidator,
+            position.marketId,
+            position.side,
             reward,
             penalty,
             toInsurance,
@@ -190,6 +223,8 @@ contract LiquidationEngine {
     function _distributeLiquidationProceeds(
         address trader,
         address liquidator,
+        bytes32 marketId,
+        PerpStorage.Side liquidatedSide,
         uint256 reward,
         uint256 penalty,
         uint256 toInsurance,
@@ -227,14 +262,42 @@ contract LiquidationEngine {
         marginReturned = newCollateral;
 
         if (badDebt > 0) {
-            _coverBadDebtWithInsurance(badDebt);
+            uint256 uncovered = _coverBadDebtWithInsurance(badDebt);
+            if (uncovered > 0 && adlEngine != address(0)) {
+                bytes32 resolvedMarketId = marketId == bytes32(0) ? perpStorage.marketFeedId() : marketId;
+                bool targetLongSide = liquidatedSide == PerpStorage.Side.Short;
+                uint256 eventId = ++adlEventNonce;
+
+                (uint256 coveredByAdl, uint256 remainingAfterAdl) = IADLEngine(adlEngine).executeAutoDeleverage(
+                    resolvedMarketId,
+                    targetLongSide,
+                    uncovered,
+                    eventId
+                );
+
+                if (coveredByAdl > 0) {
+                    uint256 currentBadDebt = perpStorage.totalBadDebt();
+                    uint256 debtReduction = coveredByAdl > currentBadDebt ? currentBadDebt : coveredByAdl;
+                    perpStorage.setTotalBadDebt(currentBadDebt - debtReduction);
+                }
+
+                emit ADLExecuted(
+                    resolvedMarketId,
+                    targetLongSide,
+                    eventId,
+                    uncovered,
+                    coveredByAdl,
+                    remainingAfterAdl
+                );
+            }
         }
     }
 
     /**
      * @notice Use insurance fund to cover bad debt
      */
-    function _coverBadDebtWithInsurance(uint256 badDebt) internal {
+    function _coverBadDebtWithInsurance(uint256 badDebt) internal returns (uint256 remainingDebt) {
+        remainingDebt = badDebt;
         uint256 insuranceBalance = perpStorage.insuranceFundBalance();
         uint256 totalBadDebt = perpStorage.totalBadDebt();
         uint256 treasuryBalance = IInsuranceTreasury(perpStorage.insuranceFund()).balance();
@@ -249,7 +312,7 @@ contract LiquidationEngine {
             }
 
             if (coverAmount == 0) {
-                return;
+                return remainingDebt;
             }
 
             // Move funds back to CollateralManager where trader collateral accounting lives.
@@ -257,9 +320,12 @@ contract LiquidationEngine {
             
             perpStorage.setInsuranceFundBalance(insuranceBalance - coverAmount);
             perpStorage.setTotalBadDebt(totalBadDebt - coverAmount);
+            remainingDebt = badDebt > coverAmount ? badDebt - coverAmount : 0;
             
             emit InsuranceFundUsed(coverAmount, insuranceBalance - coverAmount);
         }
+
+        return remainingDebt;
     }
 
     /**

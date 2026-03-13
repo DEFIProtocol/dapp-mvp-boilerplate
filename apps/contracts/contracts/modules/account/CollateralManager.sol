@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/FeeLib.sol";
-import "../library/PnlLib.sol";
-import "../library/FundingLib.sol";
-import "../interfaces/IInsuranceTreasury.sol";
-import "../interfaces/IProtocolTreasury.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/FeeLib.sol";
+import "../../library/PnlLib.sol";
+import "../../library/FundingLib.sol";
+import "../../interfaces/IInsuranceTreasury.sol";
+import "../../interfaces/IProtocolTreasury.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface ICollateralMarkOracle {

@@ -2,13 +2,14 @@
 pragma solidity ^0.8.24;
 
 import "./storage/PerpStorage.sol";
-import "./modules/CollateralManager.sol";
-import "./modules/PositionManager.sol";
-import "./modules/RiskManager.sol";
-import "./modules/LiquidationEngine.sol";
-import "./modules/SettlementEngine.sol";
-import "./modules/FundingEngine.sol";
-import "./modules/CrossMargin.sol";
+import "./modules/account/CollateralManager.sol";
+import "./modules/trading/PositionManager.sol";
+import "./modules/risk/RiskManager.sol";
+import "./modules/risk/LiquidationEngine.sol";
+import "./modules/trading/SettlementEngine.sol";
+import "./modules/risk/FundingEngine.sol";
+import "./modules/account/CrossMargin.sol";
+import "./modules/adl/ADLEngine.sol";
 import "./library/OrderLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -32,6 +33,7 @@ contract PerpEngine is Ownable {
     SettlementEngine public settlementEngine;
     FundingEngine public fundingEngine;
     CrossMargin public crossMargin;
+    ADLEngine public adlEngine;
 
     // Events
     event ModuleInitialized(string name, address moduleAddress);
@@ -39,6 +41,7 @@ contract PerpEngine is Ownable {
     event OracleUpdated(address oldOracle, address newOracle, bytes32 feedId);
     event InsuranceFundUpdated(address oldInsuranceFund, address newInsuranceFund);
     event ExecutionLeverageUpdated(uint256 oldLeverage, uint256 newLeverage);
+    event ADLEngineUpdated(address oldAdlEngine, address newAdlEngine);
 
     constructor(
         address _collateral,
@@ -150,6 +153,28 @@ contract PerpEngine is Ownable {
         for (uint256 i = 0; i < modules.length; i++) {
             perpStorage.setAuthorizedModule(modules[i], true);
         }
+    }
+
+    /**
+     * @notice Set external ADL engine module and authorize/deauthorize it in storage.
+     * @dev ADL is intentionally a separate contract that can be upgraded independently.
+     */
+    function setAdlEngine(address newAdlEngine) external onlyOwner {
+        address oldAdlEngine = address(adlEngine);
+
+        if (oldAdlEngine != address(0) && oldAdlEngine != newAdlEngine) {
+            perpStorage.setAuthorizedModule(oldAdlEngine, false);
+        }
+
+        if (newAdlEngine != address(0)) {
+            perpStorage.setAuthorizedModule(newAdlEngine, true);
+            adlEngine = ADLEngine(newAdlEngine);
+        } else {
+            adlEngine = ADLEngine(address(0));
+        }
+
+        liquidationEngine.setAdlEngine(newAdlEngine);
+        emit ADLEngineUpdated(oldAdlEngine, newAdlEngine);
     }
 
     // ============ USER FACING FUNCTIONS ============

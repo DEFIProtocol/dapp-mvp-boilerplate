@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../storage/PerpStorage.sol";
-import "../library/FundingLib.sol";
-import "./CollateralManager.sol";
+import "../../storage/PerpStorage.sol";
+import "../../library/FundingLib.sol";
+import "../account/CollateralManager.sol";
 
 /**
  * @title FundingEngine
