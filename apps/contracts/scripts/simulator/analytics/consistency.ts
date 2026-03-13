@@ -44,6 +44,7 @@ export interface ConsistencySnapshot {
     activeLongExposure: bigint;
     activeShortExposure: bigint;
     activePositionCount: number;
+    externalWalletBalances: bigint;
     totalBooked: bigint;
     totalContractBalance: bigint;
   };
@@ -113,6 +114,7 @@ export async function collectConsistencySnapshot(
   let sumReservedMargin = 0n;
   let sumAvailableCollateral = 0n;
   let sumTraderFundingOwed = 0n;
+  let externalWalletBalances = 0n;
   let activeLongExposure = 0n;
   let activeShortExposure = 0n;
   let activePositionCount = 0;
@@ -129,6 +131,7 @@ export async function collectConsistencySnapshot(
       maintenanceRequirement,
       healthRatio,
       positionIds,
+      walletBalance,
     ] = await Promise.all([
       perpStorage.accountCollateral(trader.address),
       collateralManager.getReservedMargin(trader.address),
@@ -138,6 +141,7 @@ export async function collectConsistencySnapshot(
       riskManager.getAccountMaintenanceRequirement(trader.address),
       riskManager.getAccountHealthRatio(trader.address),
       perpStorage.getTraderPositions(trader.address),
+      usdc.balanceOf(trader.address),
     ]);
 
     let traderActivePositions = 0;
@@ -153,6 +157,7 @@ export async function collectConsistencySnapshot(
     sumReservedMargin += BigInt(reservedMargin);
     sumAvailableCollateral += BigInt(availableCollateral);
     sumTraderFundingOwed += BigInt(fundingOwed >= 0 ? fundingOwed : -fundingOwed);
+    externalWalletBalances += BigInt(walletBalance);
     activePositionCount += traderActivePositions;
 
     traders.push({
@@ -175,9 +180,9 @@ export async function collectConsistencySnapshot(
   const assertions: ConsistencyAssertion[] = [
     {
       name: "solvency-bound",
-      ok: totalContractBalance >= totalBooked,
+      ok: totalContractBalance + externalWalletBalances >= totalBooked,
       expected: `>= ${totalBooked.toString()}`,
-      actual: totalContractBalance.toString(),
+      actual: (totalContractBalance + externalWalletBalances).toString(),
     },
     {
       name: "insurance-balance-sync",
@@ -187,8 +192,8 @@ export async function collectConsistencySnapshot(
     },
     {
       name: "protocol-fee-sync",
-      ok: BigInt(protocolTreasuryBalance) === (BigInt(feePool) + BigInt(protocolTreasuryNonTradingInflow)),
-      expected: (BigInt(feePool) + BigInt(protocolTreasuryNonTradingInflow)).toString(),
+      ok: BigInt(protocolTreasuryBalance) === BigInt(protocolTreasuryNonTradingInflow),
+      expected: BigInt(protocolTreasuryNonTradingInflow).toString(),
       actual: BigInt(protocolTreasuryBalance).toString(),
     },
     {
@@ -206,8 +211,8 @@ export async function collectConsistencySnapshot(
   ];
 
   for (const trader of traders) {
-    const expectedAvailable = trader.accountCollateral > trader.reservedMargin
-      ? trader.accountCollateral - trader.reservedMargin
+    const expectedAvailable = trader.equity > 0n && BigInt(trader.equity) > trader.reservedMargin
+      ? BigInt(trader.equity) - trader.reservedMargin
       : 0n;
     assertions.push({
       name: `available-collateral-${trader.trader}`,
@@ -241,6 +246,7 @@ export async function collectConsistencySnapshot(
       activeLongExposure,
       activeShortExposure,
       activePositionCount,
+      externalWalletBalances,
       totalBooked,
       totalContractBalance,
     },

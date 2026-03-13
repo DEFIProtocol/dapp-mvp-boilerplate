@@ -41,6 +41,7 @@ describe("PerpSettlement - Security & Edge Cases", function () {
 
   let nonceCounter = 0;
   let chainId: number;
+  let rngState = 0x9abcdef0n;
 
   before(async function () {
     ({ ethers } = await network.connect());
@@ -55,6 +56,7 @@ describe("PerpSettlement - Security & Edge Cases", function () {
   });
 
   beforeEach(async function () {
+    rngState = 0x9abcdef0n;
     // Deploy all contracts (same as in your existing tests)
     await deployContracts();
     await setupContracts();
@@ -1021,11 +1023,23 @@ describe("PerpSettlement - Security & Edge Cases", function () {
     return r + malleatedS + malleatedV.padStart(2, '0');
   }
 
+  function nextRandomUnit(): number {
+    rngState = (1664525n * rngState + 1013904223n) % 4294967296n;
+    return Number(rngState) / 4294967296;
+  }
+
+  function nextRandomIndex(length: number): number {
+    return Math.floor(nextRandomUnit() * length);
+  }
+
+  function nextRandomInt(minInclusive: number, maxInclusive: number): number {
+    return minInclusive + Math.floor(nextRandomUnit() * (maxInclusive - minInclusive + 1));
+  }
+
   async function openPosition(trader: SignerWithAddress, side: 0 | 1, exposure: bigint, margin: bigint) {
     // Find counterparty
     const otherTraders = traders.filter(t => t.address !== trader.address);
-    const counterparty = otherTraders[Math.floor(Math.random() * otherTraders.length)];
-    const otherSide: 0 | 1 = side === 0 ? 1 : 0;
+    const counterparty = otherTraders[nextRandomIndex(otherTraders.length)];
 
     const longTrader = side === 0 ? trader : counterparty;
     const shortTrader = side === 0 ? counterparty : trader;
@@ -1043,16 +1057,16 @@ describe("PerpSettlement - Security & Edge Cases", function () {
   }
 
   async function executeRandomTrade() {
-    const longIndex = Math.floor(Math.random() * traders.length);
+    const longIndex = nextRandomIndex(traders.length);
     let shortIndex;
     do {
-      shortIndex = Math.floor(Math.random() * traders.length);
+      shortIndex = nextRandomIndex(traders.length);
     } while (shortIndex === longIndex);
     
     const longTrader = traders[longIndex];
     const shortTrader = traders[shortIndex];
     
-    const exposure = ethers.parseEther((100 + Math.random() * 4900).toFixed(0));
+    const exposure = ethers.parseEther(nextRandomInt(100, 5000).toString());
     
     try {
       const nonce1 = BigInt(++nonceCounter);
@@ -1082,8 +1096,8 @@ describe("PerpSettlement - Security & Edge Cases", function () {
     }
 
     const insuranceBalance = await perpStorage.insuranceFundBalance();
-    const protocolRevenue = await mockToken.balanceOf(await protocolTreasury.getAddress());
-    const totalBooked = totalUserCollateral + insuranceBalance + protocolRevenue;
+  const feePool = await perpStorage.feePool();
+  const totalBooked = totalUserCollateral + insuranceBalance + feePool;
 
     // Collateral manager can hold unrealized PnL buffer; require solvency bound
     expect(totalContractBalance).to.be.gte(totalBooked);
