@@ -30,6 +30,7 @@ export interface ConsistencySnapshot {
     insuranceTreasuryBalance: bigint;
     protocolTreasuryBalance: bigint;
     feePool: bigint;
+    protocolTreasuryNonTradingInflow: bigint;
     insuranceFundBalance: bigint;
     totalBadDebt: bigint;
     totalLongExposure: bigint;
@@ -85,6 +86,7 @@ export async function collectConsistencySnapshot(
     insuranceTreasuryBalance,
     protocolTreasuryBalance,
     feePool,
+    protocolTreasuryNonTradingInflow,
     insuranceFundBalance,
     totalBadDebt,
     totalLongExposure,
@@ -98,6 +100,7 @@ export async function collectConsistencySnapshot(
     insuranceTreasury.balance(),
     protocolTreasury.balance(),
     perpStorage.feePool(),
+    perpStorage.protocolTreasuryNonTradingInflow(),
     perpStorage.insuranceFundBalance(),
     perpStorage.totalBadDebt(),
     perpStorage.totalLongExposure(),
@@ -184,8 +187,8 @@ export async function collectConsistencySnapshot(
     },
     {
       name: "protocol-fee-sync",
-      ok: BigInt(protocolTreasuryBalance) === BigInt(feePool),
-      expected: BigInt(feePool).toString(),
+      ok: BigInt(protocolTreasuryBalance) === (BigInt(feePool) + BigInt(protocolTreasuryNonTradingInflow)),
+      expected: (BigInt(feePool) + BigInt(protocolTreasuryNonTradingInflow)).toString(),
       actual: BigInt(protocolTreasuryBalance).toString(),
     },
     {
@@ -224,6 +227,7 @@ export async function collectConsistencySnapshot(
       insuranceTreasuryBalance: BigInt(insuranceTreasuryBalance),
       protocolTreasuryBalance: BigInt(protocolTreasuryBalance),
       feePool: BigInt(feePool),
+      protocolTreasuryNonTradingInflow: BigInt(protocolTreasuryNonTradingInflow),
       insuranceFundBalance: BigInt(insuranceFundBalance),
       totalBadDebt: BigInt(totalBadDebt),
       totalLongExposure: BigInt(totalLongExposure),

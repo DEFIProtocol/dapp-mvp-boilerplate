@@ -23,6 +23,7 @@ interface TraderOrder {
   limitPrice: bigint;
   expiry: bigint;
   nonce: bigint;
+  marketId: string;
 }
 
 interface CumulativeFlows {
@@ -118,6 +119,7 @@ export async function runSimulation(options: SimulationOptions) {
   const priceEngine = new MarketPriceEngine(scenario, options.seed);
   const random = new DeterministicRandom(options.seed + 1337);
   const nonceByTrader = new Map<string, bigint>();
+  const defaultMarketId = await perpStorage.marketFeedId();
   const traderBehaviorByAddress = buildTraderBehaviorMap(addresses.agents);
   const traderIntentLeverage = new Map<string, { long: number[]; short: number[] }>();
 
@@ -206,6 +208,7 @@ export async function runSimulation(options: SimulationOptions) {
         limitPrice: 0n,
         expiry: nowTs + 3600n,
         nonce: nonceByTrader.get(longTrader.address) ?? 0n,
+        marketId: defaultMarketId,
       };
 
       const shortOrder: TraderOrder = {
@@ -215,6 +218,7 @@ export async function runSimulation(options: SimulationOptions) {
         limitPrice: 0n,
         expiry: nowTs + 3600n,
         nonce: nonceByTrader.get(shortTrader.address) ?? 0n,
+        marketId: defaultMarketId,
       };
 
       stepNewOrders += 2;
@@ -477,6 +481,7 @@ async function trySettleMatch(
       { name: "limitPrice", type: "uint256" },
       { name: "expiry", type: "uint256" },
       { name: "nonce", type: "uint256" },
+      { name: "marketId", type: "bytes32" },
     ],
   };
 

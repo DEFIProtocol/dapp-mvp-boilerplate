@@ -144,7 +144,8 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setInsuranceFund(insuranceFundAddress);
   await perpStorage.setProtocolTreasury(protocolTreasuryAddress);
   await perpStorage.setMarkOracle(oracleAddress);
-  await perpStorage.setMarketFeedId(ethers.encodeBytes32String("SIM_MARK"));
+  const simMarketId = ethers.encodeBytes32String("SIM_MARK");
+  await perpStorage.setMarketFeedId(simMarketId);
 
   // Use protocol defaults from PerpSettlement constructor.
   await perpStorage.setMakerFeeBps(5);
@@ -153,6 +154,16 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setMaintenanceMarginBps(1000);
   await perpStorage.setLiquidationRewardBps(80);
   await perpStorage.setLiquidationPenaltyBps(150);
+
+  await perpStorage.addMarket(
+    simMarketId,
+    simMarketId,
+    5,
+    10,
+    1000,
+    80,
+    150
+  );
 
   const latest = await ethers.provider.getBlock("latest");
   const nowTs = latest?.timestamp ?? Math.floor(Date.now() / 1000);

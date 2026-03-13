@@ -9,6 +9,7 @@ type TestOrder = {
   limitPrice: bigint;
   expiry: bigint;
   nonce: bigint;
+  marketId: string;
 };
 
 describe("PerpSettlement Module Integration", function () {
@@ -103,7 +104,8 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setCollateral(await mockToken.getAddress());
       await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
     await perpStorage.setMarkOracle(await mockOracle.getAddress());
-    await perpStorage.setMarketFeedId(ethers.encodeBytes32String("ETH/USD"));
+    const marketId = ethers.encodeBytes32String("ETH/USD");
+    await perpStorage.setMarketFeedId(marketId);
 
     await perpStorage.setMakerFeeBps(5);
     await perpStorage.setTakerFeeBps(10);
@@ -111,6 +113,7 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setMaintenanceMarginBps(750);
     await perpStorage.setLiquidationRewardBps(80);
     await perpStorage.setLiquidationPenaltyBps(150);
+    await perpStorage.addMarket(marketId, marketId, 5, 10, 750, 80, 150);
     await perpStorage.setLastFundingUpdate(latest.timestamp);
     await perpStorage.setNextFundingTime(latest.timestamp + 3600);
 
@@ -582,6 +585,7 @@ describe("PerpSettlement Module Integration", function () {
       limitPrice,
       expiry: BigInt(latest.timestamp + 3600),
       nonce,
+      marketId: await perpStorage.marketFeedId(),
     };
   }
 
@@ -604,6 +608,7 @@ describe("PerpSettlement Module Integration", function () {
         { name: "limitPrice", type: "uint256" },
         { name: "expiry", type: "uint256" },
         { name: "nonce", type: "uint256" },
+        { name: "marketId", type: "bytes32" },
       ],
     };
 
