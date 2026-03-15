@@ -268,6 +268,14 @@ contract PerpEngine is Ownable {
         );
     }
 
+    function setMaxOracleDeviationBps(uint256 bps) external onlyOwner {
+        perpStorage.setMaxOracleDeviationBps(bps);
+    }
+
+    function setMarketOracleDeviationBps(bytes32 marketId, uint256 bps) external onlyOwner {
+        perpStorage.setMarketOracleDeviationBps(marketId, bps);
+    }
+
     function getMarketConfig(bytes32 marketId) external view returns (PerpStorage.MarketConfig memory) {
         return perpStorage.getMarketConfig(marketId);
     }
@@ -557,7 +565,7 @@ contract PerpEngine is Ownable {
         uint256 totalBadDebt,
         uint256 nextFundingTime
     ) {
-        totalValueLocked = perpStorage.collateral().balanceOf(address(this));
+        totalValueLocked = perpStorage.collateral().balanceOf(address(collateralManager));
         totalLongExposure = perpStorage.totalLongExposure();
         totalShortExposure = perpStorage.totalShortExposure();
         openInterest = totalLongExposure + totalShortExposure;
@@ -681,11 +689,9 @@ contract PerpEngine is Ownable {
      * @notice Withdraw fees
      */
     function withdrawFees(address to, uint256 amount) external onlyOwner {
-        uint256 feePool = perpStorage.feePool();
-        require(amount <= feePool, "Insufficient fees");
-        
-        perpStorage.setFeePool(feePool - amount);
-        collateralManager.transferOut(to, amount);
+        to;
+        amount;
+        revert("Fees are routed directly to ProtocolTreasury");
     }
 
     /**

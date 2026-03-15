@@ -147,19 +147,21 @@ describe("Margin Vault Drain Isolation", function () {
   // ═══════════════════════════════════════════════════════════
 
   describe("Fee accounting – per trade invariant", function () {
-    it("feePool increase equals the sum of fees deducted from both traders", async function () {
-      const { perpStorage } = fixture.contracts;
+    it("trading fees are deducted from traders and routed to protocol treasury", async function () {
+      const { perpStorage, protocolTreasury, mockToken } = fixture.contracts;
       const makerBps = await perpStorage.makerFeeBps();
       const takerBps = await perpStorage.takerFeeBps();
       const exposure = fixture.ethers.parseEther("1000");
 
       const beforeFeePoll = await feePool(fixture);
+      const beforeProtocolTreasury = await mockToken.balanceOf(await protocolTreasury.getAddress());
       const beforeLong = await perpStorage.accountCollateral(fixture.traders[0].address);
       const beforeShort = await perpStorage.accountCollateral(fixture.traders[1].address);
 
       await fixture.settleMatch(fixture.traders[0], fixture.traders[1], exposure);
 
       const afterFeePool = await feePool(fixture);
+      const afterProtocolTreasury = await mockToken.balanceOf(await protocolTreasury.getAddress());
       const afterLong = await perpStorage.accountCollateral(fixture.traders[0].address);
       const afterShort = await perpStorage.accountCollateral(fixture.traders[1].address);
 
@@ -169,9 +171,10 @@ describe("Margin Vault Drain Isolation", function () {
       const expectedTotalFee = expectedTakerFee + expectedMakerFee;
 
       const feeIncrease = afterFeePool - beforeFeePoll;
-      expect(feeIncrease).to.equal(
+      expect(feeIncrease).to.equal(0n, "feePool should remain unchanged when fees are routed immediately to treasury");
+      expect(afterProtocolTreasury - beforeProtocolTreasury).to.equal(
         expectedTotalFee,
-        `feePool must grow by exactly makerFee + takerFee (expected ${expectedTotalFee}, got ${feeIncrease})`
+        `protocol treasury must grow by exactly makerFee + takerFee (expected ${expectedTotalFee})`
       );
 
       // addReservedMargin is a SEPARATE counter – it does NOT deduct from accountCollateral.

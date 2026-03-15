@@ -403,29 +403,29 @@ async function main() {
   });
 
   // Initialize debugger
-  const debugger = new MarginDrainDebugger(
+  const drainDebugger = new MarginDrainDebugger(
     publicClient,
     walletClient,
     '0xYourMarginVaultAddress' // Replace with actual vault address
   );
 
   // Start monitoring
-  debugger.startMonitoring(5, "main loop");
+  drainDebugger.startMonitoring(5, "main loop");
 
   // Run diagnostics
-  const issues = await debugger.runDiagnostics();
+  const issues = await drainDebugger.runDiagnostics();
   console.log("Issues found:", issues);
 
   // Wrap suspect operations
-  const safeLiquidate = debugger.monitorOperation('liquidatePosition', async (positionId: string) => {
+  const safeLiquidate = drainDebugger.monitorOperation('liquidatePosition', async (positionId: string) => {
     // Your liquidation logic here
     console.log(`Liquidating ${positionId}`);
   });
 
   // Generate report after some time
   setTimeout(async () => {
-    debugger.stopMonitoring();
-    const report = await debugger.generateReport();
+    drainDebugger.stopMonitoring();
+    const report = await drainDebugger.generateReport();
     console.log(report);
   }, 60000); // Run for 1 minute
 }

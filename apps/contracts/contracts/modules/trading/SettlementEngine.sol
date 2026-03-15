@@ -19,6 +19,7 @@ contract SettlementEngine is EIP712 {
     CollateralManager public collateralManager;
     PositionManager public positionManager;
     RiskManager public riskManager;
+    uint256 private constant BPS_DENOMINATOR = 10000;
 
     // Settlement policy: leverage used when opening matched positions.
     uint256 public executionLeverage = 10;
@@ -82,15 +83,18 @@ contract SettlementEngine is EIP712 {
         bytes calldata shortSignature,
         uint256 matchSize
     ) external notPaused returns (bytes32 matchId) {
-        return _settleMatch(
+        (matchId, ) = _settleMatch(
             longOrder,
             longSignature,
             shortOrder,
             shortSignature,
             matchSize,
             true,
-            perpStorage.marketFeedId()
+            perpStorage.marketFeedId(),
+            true
         );
+
+        return matchId;
     }
 
     function settleMatchForMarket(
@@ -101,7 +105,8 @@ contract SettlementEngine is EIP712 {
         bytes calldata shortSignature,
         uint256 matchSize
     ) external notPaused returns (bytes32 matchId) {
-        return _settleMatch(longOrder, longSignature, shortOrder, shortSignature, matchSize, true, marketId);
+        (matchId, ) = _settleMatch(longOrder, longSignature, shortOrder, shortSignature, matchSize, true, marketId, true);
+        return matchId;
     }
 
     /**
@@ -116,15 +121,18 @@ contract SettlementEngine is EIP712 {
         uint256 matchSize,
         bool longIsTaker
     ) external notPaused returns (bytes32 matchId) {
-        return _settleMatch(
+        (matchId, ) = _settleMatch(
             longOrder,
             longSignature,
             shortOrder,
             shortSignature,
             matchSize,
             longIsTaker,
-            perpStorage.marketFeedId()
+            perpStorage.marketFeedId(),
+            true
         );
+
+        return matchId;
     }
 
     function settleMatchWithRolesForMarket(
@@ -136,7 +144,8 @@ contract SettlementEngine is EIP712 {
         uint256 matchSize,
         bool longIsTaker
     ) external notPaused returns (bytes32 matchId) {
-        return _settleMatch(longOrder, longSignature, shortOrder, shortSignature, matchSize, longIsTaker, marketId);
+        (matchId, ) = _settleMatch(longOrder, longSignature, shortOrder, shortSignature, matchSize, longIsTaker, marketId, true);
+        return matchId;
     }
 
     /**
@@ -157,16 +166,25 @@ contract SettlementEngine is EIP712 {
 
         matchIds = new bytes32[](n);
         
+        uint256 batchedFees;
+
         for (uint256 i = 0; i < n; i++) {
-            matchIds[i] = _settleMatch(
+            uint256 matchFees;
+            (matchIds[i], matchFees) = _settleMatch(
                 longOrders[i],
                 longSignatures[i],
                 shortOrders[i],
                 shortSignatures[i],
                 sizes[i],
                 true,
-                perpStorage.marketFeedId()
+                perpStorage.marketFeedId(),
+                false
             );
+            batchedFees += matchFees;
+        }
+
+        if (batchedFees > 0) {
+            collateralManager.routeTradingFeesToTreasury(batchedFees);
         }
     }
 
@@ -222,28 +240,21 @@ contract SettlementEngine is EIP712 {
         collateralManager.requireAvailableCollateral(msg.sender, takerFee);
         collateralManager.requireAvailableCollateral(counterOrder.trader, _calculateRequiredMargin(matchSize) + makerFee);
 
-        collateralManager.chargeTradingFeesForMarket(msg.sender, matchSize, false, marketId);
-        collateralManager.chargeTradingFeesForMarket(counterOrder.trader, matchSize, true, marketId);
+        _chargeFeesAndMaybeRoute(msg.sender, false, counterOrder.trader, true, matchSize, marketId, true);
 
         uint256 matchPrice = _getSyntheticMatchPrice(counterOrder.limitPrice, markPrice);
+        _requireWithinOracleDeviation(matchPrice, markPrice, marketId);
 
-        positionManager.openPositionWithMarket(
+        _openMatchedPositions(
             msg.sender,
             callerCloseSide,
-            matchSize,
             executionLeverage,
-            matchPrice,
-            marketId,
-            _marginModeForTrader(msg.sender)
-        );
-        positionManager.openPositionWithMarket(
             counterOrder.trader,
             position.side,
-            matchSize,
             executionLeverage,
+            matchSize,
             matchPrice,
-            marketId,
-            _marginModeForTrader(counterOrder.trader)
+            marketId
         );
 
         address longTrader = longIsTaker ? msg.sender : counterOrder.trader;
@@ -284,26 +295,18 @@ contract SettlementEngine is EIP712 {
         collateralManager.requireAvailableCollateral(msg.sender, _calculateRequiredMargin(matchSize) + liquidatorFee);
         collateralManager.requireAvailableCollateral(position.trader, liquidatedMakerFee);
 
-        collateralManager.chargeTradingFeesForMarket(msg.sender, matchSize, false, marketId);
-        collateralManager.chargeTradingFeesForMarket(position.trader, matchSize, true, marketId);
+        _chargeFeesAndMaybeRoute(msg.sender, false, position.trader, true, matchSize, marketId, true);
 
-        positionManager.openPositionWithMarket(
+        _openMatchedPositions(
             position.trader,
             liquidatedCloseSide,
-            matchSize,
             executionLeverage,
-            matchPrice,
-            marketId,
-            _marginModeForTrader(position.trader)
-        );
-        positionManager.openPositionWithMarket(
             msg.sender,
             liquidatorSide,
-            matchSize,
             executionLeverage,
+            matchSize,
             matchPrice,
-            marketId,
-            _marginModeForTrader(msg.sender)
+            marketId
         );
 
         address longTrader = longIsTaker ? msg.sender : position.trader;
@@ -323,8 +326,9 @@ contract SettlementEngine is EIP712 {
         bytes calldata shortSignature,
         uint256 matchSize,
         bool longIsTaker,
-        bytes32 marketId
-    ) internal returns (bytes32 matchId) {
+        bytes32 marketId,
+        bool routeFeesNow
+    ) internal returns (bytes32 matchId, uint256 totalFees) {
         bytes32 resolvedMarketId = _resolveMarketId(marketId);
         _requireMarketTradeable(resolvedMarketId);
         require(_resolveMarketId(longOrder.marketId) == resolvedMarketId, "Long market mismatch");
@@ -373,35 +377,35 @@ contract SettlementEngine is EIP712 {
         collateralManager.requireAvailableCollateral(shortOrder.trader, shortMargin + shortFee);
         
         // Apply fees
-        collateralManager.chargeTradingFeesForMarket(longOrder.trader, matchSize, !longIsTaker, resolvedMarketId);
-        collateralManager.chargeTradingFeesForMarket(shortOrder.trader, matchSize, longIsTaker, resolvedMarketId);
+        totalFees = _chargeFeesAndMaybeRoute(
+            longOrder.trader,
+            !longIsTaker,
+            shortOrder.trader,
+            longIsTaker,
+            matchSize,
+            resolvedMarketId,
+            routeFeesNow
+        );
         
         // Get match price
         uint256 matchPrice = OrderLib.getMatchPrice(longOrder, shortOrder, markPrice);
+        _requireWithinOracleDeviation(matchPrice, markPrice, resolvedMarketId);
         
         // Calculate leverage from margin (exposure / margin)
         uint256 longLeverage = matchSize / longMargin;
         uint256 shortLeverage = matchSize / shortMargin;
         
         // Open positions through PositionManager
-        positionManager.openPositionWithMarket(
+        _openMatchedPositions(
             longOrder.trader,
             PerpStorage.Side.Long,
-            matchSize,
             longLeverage,
-            matchPrice,
-            resolvedMarketId,
-            _marginModeForTrader(longOrder.trader)
-        );
-        
-        positionManager.openPositionWithMarket(
             shortOrder.trader,
             PerpStorage.Side.Short,
-            matchSize,
             shortLeverage,
+            matchSize,
             matchPrice,
-            resolvedMarketId,
-            _marginModeForTrader(shortOrder.trader)
+            resolvedMarketId
         );
         
         // Create unique match ID
@@ -416,6 +420,8 @@ contract SettlementEngine is EIP712 {
             longFee,
             shortFee
         );
+
+        return (matchId, totalFees);
     }
 
     /**
@@ -476,6 +482,71 @@ contract SettlementEngine is EIP712 {
 
     function _getSyntheticMatchPrice(uint256 makerLimitPrice, uint256 markPrice) internal pure returns (uint256) {
         return makerLimitPrice > 0 ? makerLimitPrice : markPrice;
+    }
+
+    function _chargeFeesAndMaybeRoute(
+        address firstTrader,
+        bool firstIsMaker,
+        address secondTrader,
+        bool secondIsMaker,
+        uint256 matchSize,
+        bytes32 marketId,
+        bool routeFeesNow
+    ) internal returns (uint256 totalFees) {
+        uint256 firstCharge = collateralManager.chargeTradingFeesForMarket(firstTrader, matchSize, firstIsMaker, marketId);
+        uint256 secondCharge = collateralManager.chargeTradingFeesForMarket(secondTrader, matchSize, secondIsMaker, marketId);
+        totalFees = firstCharge + secondCharge;
+
+        if (routeFeesNow && totalFees > 0) {
+            collateralManager.routeTradingFeesToTreasury(totalFees);
+        }
+    }
+
+    function _openMatchedPositions(
+        address firstTrader,
+        PerpStorage.Side firstSide,
+        uint256 firstLeverage,
+        address secondTrader,
+        PerpStorage.Side secondSide,
+        uint256 secondLeverage,
+        uint256 matchSize,
+        uint256 matchPrice,
+        bytes32 marketId
+    ) internal {
+        positionManager.openPositionWithMarket(
+            firstTrader,
+            firstSide,
+            matchSize,
+            firstLeverage,
+            matchPrice,
+            marketId,
+            _marginModeForTrader(firstTrader)
+        );
+        positionManager.openPositionWithMarket(
+            secondTrader,
+            secondSide,
+            matchSize,
+            secondLeverage,
+            matchPrice,
+            marketId,
+            _marginModeForTrader(secondTrader)
+        );
+    }
+
+    function _requireWithinOracleDeviation(uint256 executionPrice, uint256 markPrice, bytes32 marketId) internal view {
+        if (markPrice == 0) revert("Invalid mark price");
+
+        uint256 diff = executionPrice > markPrice
+            ? executionPrice - markPrice
+            : markPrice - executionPrice;
+
+        PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(marketId);
+        uint256 maxDeviationBps = market.maxOracleDeviationBps > 0
+            ? market.maxOracleDeviationBps
+            : perpStorage.maxOracleDeviationBps();
+
+        uint256 maxDiff = (markPrice * maxDeviationBps) / BPS_DENOMINATOR;
+        require(diff <= maxDiff, "Price deviation > 5%");
     }
 
     /**

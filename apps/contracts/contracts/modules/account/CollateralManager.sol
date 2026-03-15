@@ -28,6 +28,7 @@ contract CollateralManager {
     event CollateralWithdrawn(address indexed trader, uint256 amount, uint256 newBalance);
     event ReservedMarginUpdated(address indexed trader, uint256 newReserved, int256 change);
     event FeeCharged(address indexed trader, uint256 feeAmount, uint256 insuranceCut);
+    event TradingFeesRoutedToTreasury(uint256 amount, address indexed treasury, uint256 remainingFeePool);
 
     constructor(address _perpStorage) {
         perpStorage = PerpStorage(_perpStorage);
@@ -70,6 +71,10 @@ contract CollateralManager {
 
         uint256 newBalance = perpStorage.accountCollateral(msg.sender) - amount;
         perpStorage.setAccountCollateral(msg.sender, newBalance);
+
+        int256 equityAfter = _getAccountEquity(msg.sender);
+        uint256 maintenanceAfter = _getAccountMaintenanceRequirement(msg.sender);
+        require(equityAfter >= int256(maintenanceAfter), "Insufficient maintenance margin after withdraw");
 
         IERC20 collateral = perpStorage.collateral();
         collateral.safeTransfer(msg.sender, amount);
@@ -191,6 +196,28 @@ contract CollateralManager {
     }
 
     /**
+     * @notice Route already-accrued trading fees from feePool to protocol treasury.
+     * @dev Intended for tx-level batching by SettlementEngine.
+     */
+    function routeTradingFeesToTreasury(uint256 amount) external onlyModule {
+        if (amount == 0) return;
+
+        uint256 currentFeePool = perpStorage.feePool();
+        require(currentFeePool >= amount, "Insufficient fee pool");
+
+        address treasury = perpStorage.protocolTreasury();
+        require(treasury != address(0), "Protocol treasury not set");
+
+        perpStorage.setFeePool(currentFeePool - amount);
+
+        IERC20 collateral = perpStorage.collateral();
+        collateral.forceApprove(treasury, amount);
+        IProtocolTreasury(treasury).deposit(amount);
+
+        emit TradingFeesRoutedToTreasury(amount, treasury, currentFeePool - amount);
+    }
+
+    /**
      * @notice Transfer collateral out to an external recipient (module-controlled)
      */
     function transferOut(address to, uint256 amount) external onlyModuleOrOwner {
@@ -299,6 +326,25 @@ contract CollateralManager {
             );
 
             equity += pnl - funding;
+        }
+    }
+
+    function _getAccountMaintenanceRequirement(address trader) internal view returns (uint256 totalReq) {
+        uint256[] memory positionIds = perpStorage.getTraderPositions(trader);
+
+        for (uint256 i = 0; i < positionIds.length; i++) {
+            PerpStorage.Position memory position = perpStorage.getPosition(positionIds[i]);
+            if (!position.active) continue;
+
+            bytes32 marketId = position.marketId == bytes32(0) ? perpStorage.marketFeedId() : position.marketId;
+            PerpStorage.MarketConfig memory market = perpStorage.getMarketConfig(marketId);
+            require(market.exists, "Unknown market");
+
+            uint256 maintenanceBps = market.maintenanceMarginBps > 0
+                ? market.maintenanceMarginBps
+                : perpStorage.maintenanceMarginBps();
+
+            totalReq += (position.exposure * maintenanceBps) / perpStorage.BPS_DENOMINATOR();
         }
     }
 

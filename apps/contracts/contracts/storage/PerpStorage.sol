@@ -13,6 +13,7 @@ contract PerpStorage is Ownable {
         bool enabled;
         bool paused;
         bytes32 feedId;
+        uint256 maxOracleDeviationBps;
         uint256 makerFeeBps;
         uint256 takerFeeBps;
         uint256 maintenanceMarginBps;
@@ -65,6 +66,7 @@ contract PerpStorage is Ownable {
     uint256 public maintenanceMarginBps;
     uint256 public liquidationRewardBps;
     uint256 public liquidationPenaltyBps;
+    uint256 public maxOracleDeviationBps;
 
     // Global state
     uint256 public feePool;
@@ -127,7 +129,9 @@ contract PerpStorage is Ownable {
         _;
     }
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        maxOracleDeviationBps = 500;
+    }
 
     // SETTERS
     function setAuthorizedModule(address module, bool authorized) external onlyOwner {
@@ -180,6 +184,7 @@ contract PerpStorage is Ownable {
             enabled: true,
             paused: false,
             feedId: feedId,
+            maxOracleDeviationBps: 0,
             makerFeeBps: _makerFeeBps,
             takerFeeBps: _takerFeeBps,
             maintenanceMarginBps: _maintenanceMarginBps,
@@ -224,6 +229,17 @@ contract PerpStorage is Ownable {
         markets[marketId].maintenanceMarginBps = _maintenanceMarginBps;
         markets[marketId].liquidationRewardBps = _liquidationRewardBps;
         markets[marketId].liquidationPenaltyBps = _liquidationPenaltyBps;
+    }
+
+    function setMaxOracleDeviationBps(uint256 bps) external onlyOwner {
+        require(bps > 0 && bps <= BPS_DENOMINATOR, "Invalid oracle deviation");
+        maxOracleDeviationBps = bps;
+    }
+
+    function setMarketOracleDeviationBps(bytes32 marketId, uint256 bps) external onlyOwner {
+        require(markets[marketId].exists, "Unknown market");
+        require(bps <= BPS_DENOMINATOR, "Invalid oracle deviation");
+        markets[marketId].maxOracleDeviationBps = bps;
     }
 
     function setMarketFundingIndices(bytes32 marketId, int256 longIndex, int256 shortIndex) external onlyModule {
