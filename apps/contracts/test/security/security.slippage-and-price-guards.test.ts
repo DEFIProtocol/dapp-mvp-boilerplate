@@ -66,7 +66,7 @@ describe("PerpSettlement - Security & Edge Cases", function () {
   // ==================== 1️⃣ NONCE & REPLAY PROTECTION ====================
 
   describe("Price Slippage Protection", function () {
-    it("should reject orders when price moves beyond limit", async function () {
+    it("should reject crossed orders when execution drifts more than 5% from oracle", async function () {
       const trader = traders[0];
       const exposure = ethers.parseEther("1000");
       
@@ -94,8 +94,10 @@ describe("PerpSettlement - Security & Edge Cases", function () {
       const longSig2 = await signOrder(trader, longOrder2);
       const shortSig2 = await signOrder(traders[1], shortOrder2);
       
-      // Orders still cross because crossing is limit-vs-limit, independent of mark price
-      await settlementEngine.settleMatch(longOrder2, longSig2, shortOrder2, shortSig2, exposure);
+      // Orders still cross on limits, but execution is now blocked if midpoint drifts too far from oracle.
+      await expect(
+        settlementEngine.settleMatch(longOrder2, longSig2, shortOrder2, shortSig2, exposure)
+      ).to.be.revertedWith("Price deviation > 5%");
     });
 
     it("should respect tight slippage limits", async function () {

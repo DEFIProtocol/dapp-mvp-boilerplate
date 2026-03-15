@@ -13,12 +13,15 @@ type TestOrder = {
 };
 
 describe("PerpSettlement Module Integration", function () {
+  this.timeout(180000);
+
   const INITIAL_PRICE = 1_000n * 10n ** 18n;
   const BPS_DENOMINATOR = 10000n;
 
   let mockToken: Contract;
   let mockOracle: Contract;
-    let insuranceTreasury: Contract;
+  let insuranceTreasury: Contract;
+  let protocolTreasury: Contract;
 
   let perpStorage: Contract;
   let collateralManager: Contract;
@@ -47,9 +50,13 @@ describe("PerpSettlement Module Integration", function () {
     await mockOracle.waitForDeployment();
     await mockOracle.setPrice(INITIAL_PRICE);
 
-      const InsuranceTreasury = await ethers.getContractFactory("InsuranceTreasury");
-      insuranceTreasury = await InsuranceTreasury.deploy(await mockToken.getAddress(), owner.address);
-      await insuranceTreasury.waitForDeployment();
+    const InsuranceTreasury = await ethers.getContractFactory("InsuranceTreasury");
+    insuranceTreasury = await InsuranceTreasury.deploy(await mockToken.getAddress(), owner.address);
+    await insuranceTreasury.waitForDeployment();
+
+    const ProtocolTreasury = await ethers.getContractFactory("ProtocolTreasury");
+    protocolTreasury = await ProtocolTreasury.deploy(await mockToken.getAddress(), owner.address);
+    await protocolTreasury.waitForDeployment();
 
     const PerpStorage = await ethers.getContractFactory("PerpStorage");
     perpStorage = await PerpStorage.deploy();
@@ -102,7 +109,8 @@ describe("PerpSettlement Module Integration", function () {
     }
 
     await perpStorage.setCollateral(await mockToken.getAddress());
-      await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
+    await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
+    await perpStorage.setProtocolTreasury(await protocolTreasury.getAddress());
     await perpStorage.setMarkOracle(await mockOracle.getAddress());
     const marketId = ethers.encodeBytes32String("ETH/USD");
     await perpStorage.setMarketFeedId(marketId);
@@ -124,8 +132,9 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setAuthorizedModule(await fundingEngine.getAddress(), true);
     await perpStorage.setAuthorizedModule(await liquidationEngine.getAddress(), true);
 
-      await insuranceTreasury.setAuthorizedModule(await collateralManager.getAddress(), true);
-      await insuranceTreasury.setAuthorizedModule(await liquidationEngine.getAddress(), true);
+    await insuranceTreasury.setAuthorizedModule(await collateralManager.getAddress(), true);
+    await insuranceTreasury.setAuthorizedModule(await liquidationEngine.getAddress(), true);
+    await protocolTreasury.setAuthorizedModule(await collateralManager.getAddress(), true);
     await seedCollateral(longTrader.address, ethers.parseEther("10000"));
     await seedCollateral(shortTrader.address, ethers.parseEther("10000"));
     await seedCollateral(liquidator.address, ethers.parseEther("10000"));
@@ -207,6 +216,105 @@ describe("PerpSettlement Module Integration", function () {
         collateralManager.connect(longTrader).withdrawCollateral(1n)
       ).to.be.revertedWith("Insufficient available collateral");
     });
+
+    it("rejects settlement prices that deviate by more than 5% from oracle mark", async function () {
+      const exposure = ethers.parseEther("500");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 1200n * 10n ** 18n, 25n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 1000n * 10n ** 18n, 26n);
+
+      const longSig = await signOrder(longTrader, longOrder);
+      const shortSig = await signOrder(shortTrader, shortOrder);
+
+      await expect(
+        settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure)
+      ).to.be.revertedWith("Price deviation > 5%");
+    });
+
+    it("supports dynamic global and per-market oracle deviation (both tighter and looser)", async function () {
+      const exposure = ethers.parseEther("500");
+      const marketId = await perpStorage.marketFeedId();
+
+      // Baseline: 10% midpoint deviation should fail at default 5%.
+      const longOrderDefault = await buildOrder(longTrader.address, 0, exposure, 1200n * 10n ** 18n, 251n);
+      const shortOrderDefault = await buildOrder(shortTrader.address, 1, exposure, 1000n * 10n ** 18n, 252n);
+      await expect(
+        settlementEngine.settleMatch(
+          longOrderDefault,
+          await signOrder(longTrader, longOrderDefault),
+          shortOrderDefault,
+          await signOrder(shortTrader, shortOrderDefault),
+          exposure
+        )
+      ).to.be.revertedWith("Price deviation > 5%");
+
+      // Looser global policy: allow up to 12%, so the same 10% deviation should pass.
+      await perpStorage.setMaxOracleDeviationBps(1200);
+      const longOrderGlobalLoose = await buildOrder(longTrader.address, 0, exposure, 1200n * 10n ** 18n, 253n);
+      const shortOrderGlobalLoose = await buildOrder(shortTrader.address, 1, exposure, 1000n * 10n ** 18n, 254n);
+      await settlementEngine.settleMatch(
+        longOrderGlobalLoose,
+        await signOrder(longTrader, longOrderGlobalLoose),
+        shortOrderGlobalLoose,
+        await signOrder(shortTrader, shortOrderGlobalLoose),
+        exposure
+      );
+
+      // Tighten market override to 3% while global is reset to 5%.
+      await perpStorage.setMaxOracleDeviationBps(500);
+      await perpStorage.setMarketOracleDeviationBps(marketId, 300);
+
+      // 4% midpoint deviation should now fail due to tighter market setting.
+      const longOrderMarketTight = await buildOrder(longTrader.address, 0, exposure, 1080n * 10n ** 18n, 255n);
+      const shortOrderMarketTight = await buildOrder(shortTrader.address, 1, exposure, 1000n * 10n ** 18n, 256n);
+      await expect(
+        settlementEngine.settleMatchForMarket(
+          marketId,
+          longOrderMarketTight,
+          await signOrder(longTrader, longOrderMarketTight),
+          shortOrderMarketTight,
+          await signOrder(shortTrader, shortOrderMarketTight),
+          exposure
+        )
+      ).to.be.revertedWith("Price deviation > 5%");
+
+      // Loosen market override to 15%; same 10% deviation should pass even with global 5%.
+      await perpStorage.setMarketOracleDeviationBps(marketId, 1500);
+      const longOrderMarketLoose = await buildOrder(longTrader.address, 0, exposure, 1200n * 10n ** 18n, 257n);
+      const shortOrderMarketLoose = await buildOrder(shortTrader.address, 1, exposure, 1000n * 10n ** 18n, 258n);
+      await settlementEngine.settleMatchForMarket(
+        marketId,
+        longOrderMarketLoose,
+        await signOrder(longTrader, longOrderMarketLoose),
+        shortOrderMarketLoose,
+        await signOrder(shortTrader, shortOrderMarketLoose),
+        exposure
+      );
+    });
+
+    it("re-checks maintenance margin after withdraw even when available collateral is positive", async function () {
+      const exposure = ethers.parseEther("1000");
+      await settlementEngine.setExecutionLeverage(100);
+
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 27n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 28n);
+
+      const longSig = await signOrder(longTrader, longOrder);
+      const shortSig = await signOrder(shortTrader, shortOrder);
+
+      await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure);
+
+      const longCollateral = await perpStorage.accountCollateral(longTrader.address);
+      const reservedMargin = await perpStorage.reservedMargin(longTrader.address);
+      const maintenanceRequirement = exposure * BigInt(await perpStorage.maintenanceMarginBps()) / BPS_DENOMINATOR;
+      const withdrawAmount = longCollateral - (maintenanceRequirement - 1n);
+
+      expect(await collateralManager.getAvailableCollateral(longTrader.address)).to.be.gte(withdrawAmount);
+      expect(maintenanceRequirement).to.be.gt(reservedMargin);
+
+      await expect(
+        collateralManager.connect(longTrader).withdrawCollateral(withdrawAmount)
+      ).to.be.revertedWith("Insufficient maintenance margin after withdraw");
+    });
   });
 
   // ==================== VERIFICATION TESTS ====================
@@ -217,18 +325,19 @@ describe("PerpSettlement Module Integration", function () {
       // Get fee parameters
       const makerFeeBps = await perpStorage.makerFeeBps();
       const takerFeeBps = await perpStorage.takerFeeBps();
-      const insuranceBps = await perpStorage.insuranceBps();
       
       // Expected calculations
       const expectedMakerFee = exposure * BigInt(makerFeeBps) / BPS_DENOMINATOR;
       const expectedTakerFee = exposure * BigInt(takerFeeBps) / BPS_DENOMINATOR;
       const expectedInsurance = 0n;
+      const expectedTotalFee = expectedMakerFee + expectedTakerFee;
       
       // Get balances before
       const beforeLongBalance = await perpStorage.accountCollateral(longTrader.address);
       const beforeShortBalance = await perpStorage.accountCollateral(shortTrader.address);
       const beforeFeePool = await perpStorage.feePool();
       const beforeInsurance = await perpStorage.insuranceFundBalance();
+      const beforeProtocolTreasury = await protocolTreasury.balance();
       
       // Execute match
       const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 31n);
@@ -243,6 +352,7 @@ describe("PerpSettlement Module Integration", function () {
       const afterShortBalance = await perpStorage.accountCollateral(shortTrader.address);
       const afterFeePool = await perpStorage.feePool();
       const afterInsurance = await perpStorage.insuranceFundBalance();
+      const afterProtocolTreasury = await protocolTreasury.balance();
       
       // Long pays taker fee only (insurance now funded by liquidation penalties)
       expect(beforeLongBalance - afterLongBalance).to.equal(expectedTakerFee + expectedInsurance);
@@ -250,8 +360,9 @@ describe("PerpSettlement Module Integration", function () {
       // Short pays maker fee
       expect(beforeShortBalance - afterShortBalance).to.equal(expectedMakerFee);
       
-      // Fee pool increases by both fees
-      expect(afterFeePool - beforeFeePool).to.equal(expectedMakerFee + expectedTakerFee);
+      // Fees are routed to protocol treasury (batched per transaction), leaving feePool unchanged.
+      expect(afterFeePool - beforeFeePool).to.equal(0n);
+      expect(afterProtocolTreasury - beforeProtocolTreasury).to.equal(expectedTotalFee);
       
       // Trading does not fund insurance under current liquidation-only policy.
       expect(afterInsurance - beforeInsurance).to.equal(expectedInsurance);
@@ -332,11 +443,91 @@ describe("PerpSettlement Module Integration", function () {
         expect(priceDiff).to.be.lt(ethers.parseEther("1"));
       }
     });
+
+    it("charges pro-rata fees across partial fills and routes each fill to protocol treasury", async function () {
+      const totalExposure = ethers.parseEther("1000");
+      const firstFill = ethers.parseEther("400");
+      const secondFill = totalExposure - firstFill;
+
+      const makerFeeBps = await perpStorage.makerFeeBps();
+      const takerFeeBps = await perpStorage.takerFeeBps();
+
+      const longOrder = await buildOrder(longTrader.address, 0, totalExposure, 0n, 131n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, totalExposure, 0n, 132n);
+      const longSig = await signOrder(longTrader, longOrder);
+      const shortSig = await signOrder(shortTrader, shortOrder);
+
+      const beforeProtocolTreasury = await protocolTreasury.balance();
+      const beforeLongBalance = await perpStorage.accountCollateral(longTrader.address);
+      const beforeShortBalance = await perpStorage.accountCollateral(shortTrader.address);
+
+      await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, firstFill);
+      await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, secondFill);
+
+      const [filled, remaining] = await settlementEngine.getOrderFillStatus(longOrder);
+      expect(filled).to.equal(totalExposure);
+      expect(remaining).to.equal(0n);
+
+      const expectedTakerFee = totalExposure * BigInt(takerFeeBps) / BPS_DENOMINATOR;
+      const expectedMakerFee = totalExposure * BigInt(makerFeeBps) / BPS_DENOMINATOR;
+      const expectedTotalFee = expectedTakerFee + expectedMakerFee;
+
+      const afterProtocolTreasury = await protocolTreasury.balance();
+      const afterLongBalance = await perpStorage.accountCollateral(longTrader.address);
+      const afterShortBalance = await perpStorage.accountCollateral(shortTrader.address);
+
+      expect(afterProtocolTreasury - beforeProtocolTreasury).to.equal(expectedTotalFee);
+      expect(beforeLongBalance - afterLongBalance).to.equal(expectedTakerFee);
+      expect(beforeShortBalance - afterShortBalance).to.equal(expectedMakerFee);
+      expect(await perpStorage.feePool()).to.equal(0n);
+    });
+
+    it("charges fees only on the partially closed portion in closePositionViaMatch", async function () {
+      const totalExposure = ethers.parseEther("1000");
+      const closeSize = ethers.parseEther("300");
+
+      // Open baseline position pair.
+      const openLong = await buildOrder(longTrader.address, 0, totalExposure, 0n, 141n);
+      const openShort = await buildOrder(shortTrader.address, 1, totalExposure, 0n, 142n);
+      const openLongSig = await signOrder(longTrader, openLong);
+      const openShortSig = await signOrder(shortTrader, openShort);
+      await settlementEngine.settleMatch(openLong, openLongSig, openShort, openShortSig, totalExposure);
+
+      const longPositions = await positionManager.getTraderPositions(longTrader.address);
+      const positionId = longPositions[0];
+
+      // Counterparty order for partial close. Caller (longTrader) is taker by design.
+      const counterOrder = await buildOrder(shortTrader.address, 0, closeSize, 0n, 143n);
+      const counterSig = await signOrder(shortTrader, counterOrder);
+
+      const makerFeeBps = await perpStorage.makerFeeBps();
+      const takerFeeBps = await perpStorage.takerFeeBps();
+      const expectedTakerFee = closeSize * BigInt(takerFeeBps) / BPS_DENOMINATOR;
+      const expectedMakerFee = closeSize * BigInt(makerFeeBps) / BPS_DENOMINATOR;
+
+      const beforeProtocolTreasury = await protocolTreasury.balance();
+      const beforeCaller = await perpStorage.accountCollateral(longTrader.address);
+      const beforeMaker = await perpStorage.accountCollateral(shortTrader.address);
+
+      await settlementEngine.connect(longTrader).closePositionViaMatch(positionId, counterOrder, counterSig, closeSize);
+
+      const afterProtocolTreasury = await protocolTreasury.balance();
+      const afterCaller = await perpStorage.accountCollateral(longTrader.address);
+      const afterMaker = await perpStorage.accountCollateral(shortTrader.address);
+
+      expect(afterProtocolTreasury - beforeProtocolTreasury).to.equal(expectedTakerFee + expectedMakerFee);
+      expect(beforeCaller - afterCaller).to.equal(expectedTakerFee);
+      expect(beforeMaker - afterMaker).to.equal(expectedMakerFee);
+
+      const updatedPosition = await perpStorage.positions(positionId);
+      expect(updatedPosition.active).to.equal(true);
+      expect(updatedPosition.exposure).to.equal(totalExposure - closeSize);
+    });
   });
 
   // ==================== INVARIANT TESTS ====================
   describe("Invariants: System Properties", function () {
-    it("should maintain that total collateral = sum(user balances) + feePool + insurance", async function () {
+    it("should maintain that total collateral = sum(user balances) + feePool + insurance + protocol treasury", async function () {
       // Run some matches to generate fees
       for (let i = 0; i < 3; i++) {
         const exposure = ethers.parseEther("500");
@@ -349,8 +540,9 @@ describe("PerpSettlement Module Integration", function () {
       
       // System assets are split across CollateralManager and InsuranceTreasury.
       const collateralManagerBalance = await mockToken.balanceOf(await collateralManager.getAddress());
-      const treasuryBalance = await mockToken.balanceOf(await insuranceTreasury.getAddress());
-      const contractBalance = collateralManagerBalance + treasuryBalance;
+      const insuranceTreasuryBalance = await mockToken.balanceOf(await insuranceTreasury.getAddress());
+      const protocolTreasuryBalance = await mockToken.balanceOf(await protocolTreasury.getAddress());
+      const contractBalance = collateralManagerBalance + insuranceTreasuryBalance + protocolTreasuryBalance;
       
       // Sum all user collateral
       let totalUserCollateral = 0n;
@@ -364,7 +556,7 @@ describe("PerpSettlement Module Integration", function () {
       const insuranceBalance = await perpStorage.insuranceFundBalance();
       
       // They should match
-      expect(totalUserCollateral + feePool + insuranceBalance).to.equal(contractBalance);
+      expect(totalUserCollateral + feePool + insuranceBalance + protocolTreasuryBalance).to.equal(contractBalance);
     });
 
     it("should maintain that total exposure equals sum of position exposures", async function () {
@@ -428,9 +620,10 @@ describe("PerpSettlement Module Integration", function () {
       // Get fees collected
       const feePool = await perpStorage.feePool();
       const insuranceBalance = await perpStorage.insuranceFundBalance();
+      const protocolTreasuryBalance = await protocolTreasury.balance();
       
       // Total equity + fees should equal initial deposits (within rounding)
-      const totalNow = finalTotalEquity + feePool + insuranceBalance;
+      const totalNow = finalTotalEquity + feePool + insuranceBalance + protocolTreasuryBalance;
       const diff = totalNow > initialTotalEquity ? totalNow - initialTotalEquity : initialTotalEquity - totalNow;
       expect(diff).to.be.lt(ethers.parseEther("1"));
     });
