@@ -36,9 +36,9 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     behavior: {
       minTradeSize: '5000',
       maxTradeSize: '25000',
-      minLeverage: 2,
-      maxLeverage: 5,
-      tradeFrequency: 0.2,
+      minLeverage: 1.5,
+      maxLeverage: 3,
+      tradeFrequency: 0.12,
       maxPositions: 5
     }
   },
@@ -50,10 +50,10 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     behavior: {
       minTradeSize: '100',
       maxTradeSize: '5000',
-      minLeverage: 15,
-      maxLeverage: 40,
-      tradeFrequency: 0.1,
-      maxPositions: 3
+      minLeverage: 6,
+      maxLeverage: 10,
+      tradeFrequency: 0.05,
+      maxPositions: 2
     }
   },
   {
@@ -63,10 +63,10 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     balance: '5000000', // 5M USDC each
     behavior: {
       minTradeSize: '500000',
-      maxTradeSize: '2000000',
-      minLeverage: 5,
-      maxLeverage: 10,
-      tradeFrequency: 0.05,
+      maxTradeSize: '1500000',
+      minLeverage: 2,
+      maxLeverage: 5,
+      tradeFrequency: 0.04,
       maxPositions: 2
     }
   },

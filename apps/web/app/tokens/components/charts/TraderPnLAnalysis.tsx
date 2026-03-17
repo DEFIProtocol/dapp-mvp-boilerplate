@@ -3,6 +3,8 @@ import React, { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,7 +16,7 @@ import {
   Legend,
 } from 'recharts';
 import { DollarSign, TrendingUp, TrendingDown, Skull } from 'lucide-react';
-import type { Position, LiquidationActivity } from '../../types/simulation';
+import type { Position, LiquidationActivity, SimulationMetrics } from '../../types/simulation';
 
 interface Props {
   positions: Position[];
@@ -122,15 +124,17 @@ export const TraderPnLAnalysis: React.FC<Props> = ({ positions, liquidations, me
     const totalPnL = positions.reduce((sum, p) => sum + p.pnl, 0);
     const profitableTraders = positions.filter(p => p.pnl > 0).length;
     const totalLiquidations = liquidations.reduce((sum, l) => sum + l.liquidations, 0);
+    const positionCount = positions.length;
+    const pnlValues = positions.map((p) => p.pnl);
     
     return {
       totalPnL,
-      avgPnL: totalPnL / positions.length,
+      avgPnL: positionCount > 0 ? totalPnL / positionCount : 0,
       profitableTraders,
-      profitablePercent: (profitableTraders / positions.length) * 100,
+      profitablePercent: positionCount > 0 ? (profitableTraders / positionCount) * 100 : 0,
       totalLiquidations,
-      largestWinner: Math.max(...positions.map(p => p.pnl)),
-      largestLoser: Math.min(...positions.map(p => p.pnl)),
+      largestWinner: pnlValues.length ? Math.max(...pnlValues) : 0,
+      largestLoser: pnlValues.length ? Math.min(...pnlValues) : 0,
     };
   }, [positions, liquidations]);
 

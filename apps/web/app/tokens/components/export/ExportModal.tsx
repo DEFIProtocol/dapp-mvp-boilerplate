@@ -109,6 +109,8 @@ export const ExportModal: React.FC<Props> = ({ isOpen, onClose, data, chartRefs 
 
   if (!isOpen) return null;
 
+  const estimatedSizeMb = ((data.metrics.length * 0.8) / 1024).toFixed(1);
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-xl max-w-2xl w-full border border-gray-700">
@@ -254,7 +256,7 @@ export const ExportModal: React.FC<Props> = ({ isOpen, onClose, data, chartRefs 
 
           {/* File Info */}
           <div className="text-xs text-gray-500 text-center">
-            Estimated file size: {(Math.random() * 5 + 1).toFixed(1)} MB
+            Estimated file size: {estimatedSizeMb} MB
           </div>
         </div>
       </div>

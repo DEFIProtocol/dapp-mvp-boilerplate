@@ -1,6 +1,7 @@
 // utils/shareableUrl.ts
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+'use client';
+
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface ShareParams {
   runs?: string[];
@@ -10,8 +11,9 @@ interface ShareParams {
 }
 
 export const useShareableUrl = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const updateUrl = (params: ShareParams) => {
     const searchParams = new URLSearchParams();
@@ -29,11 +31,12 @@ export const useShareableUrl = () => {
       searchParams.set('scenario', params.scenario);
     }
 
-    navigate(`${location.pathname}?${searchParams.toString()}`, { replace: true });
+    const queryString = searchParams.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname);
   };
 
   const getParams = (): ShareParams => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(searchParams.toString());
     const runs = params.get('runs')?.split(',').filter(Boolean);
     
     return {

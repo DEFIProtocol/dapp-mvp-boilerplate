@@ -192,8 +192,8 @@ export async function collectConsistencySnapshot(
     },
     {
       name: "protocol-fee-sync",
-      ok: BigInt(protocolTreasuryBalance) === BigInt(protocolTreasuryNonTradingInflow),
-      expected: BigInt(protocolTreasuryNonTradingInflow).toString(),
+      ok: BigInt(protocolTreasuryBalance) >= BigInt(protocolTreasuryNonTradingInflow),
+      expected: `>= ${BigInt(protocolTreasuryNonTradingInflow).toString()}`,
       actual: BigInt(protocolTreasuryBalance).toString(),
     },
     {

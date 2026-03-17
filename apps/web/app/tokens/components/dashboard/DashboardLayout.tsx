@@ -1,12 +1,18 @@
+'use client';
+
 // components/dashboard/DashboardLayout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Download, Share2 } from 'lucide-react';
 import { SystemHealthOverview } from './SystemHealthOverview';
 import { RiskMetricsPanel } from './RiskMetricsPanel';
 import { ProtocolEconomics } from './ProtocolEconomics';
-import { TraderActivityHub } from './TraderActivityHub';
+import { TraderReplayPositionsPanel } from './TraderReplayPositionsPanel';
+import { TokenPricePanel } from './TokenPricePanel';
+import { SimulationPerpetualOrderCard } from './SimulationPerpetualOrderCard';
 import { TimelineController } from '../simulation/TimelineController';
 import { ScenarioSelector } from '../simulation/ScenarioSelector';
-import { SimulationApi } from '../../services/simulationApi';
+import { ExportModal } from '../export/ExportModal';
+import { SimulationApi } from '../services/simulationApi';
 import type { SimulationData } from '../../types/simulation';
 
 export const DashboardLayout: React.FC = () => {
@@ -16,6 +22,15 @@ export const DashboardLayout: React.FC = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState('ETH');
+
+  const chartRefs = {
+    liquidationMap: useRef<HTMLDivElement>(null),
+    positionDist: useRef<HTMLDivElement>(null),
+    orderFlow: useRef<HTMLDivElement>(null),
+    pnlAnalysis: useRef<HTMLDivElement>(null),
+  };
 
   useEffect(() => {
     loadLatestSimulation();
@@ -52,8 +67,36 @@ export const DashboardLayout: React.FC = () => {
     }
   };
 
-  const currentMetrics = simulationData?.metrics?.[currentStep];
-  const currentLiquidations = simulationData?.liquidations?.[currentStep];
+  const loadScenarioSimulation = async (selectedScenario: string) => {
+    try {
+      setIsLoading(true);
+      const { runs } = await SimulationApi.getSimulationRuns();
+      const matchingRun = runs.find(
+        (run) => run.id === selectedScenario || run.scenario === selectedScenario,
+      );
+
+      if (matchingRun?.id) {
+        const data = await SimulationApi.getSimulationRun(matchingRun.id);
+        setSimulationData(data);
+      } else {
+        const latest = await SimulationApi.getLatestSimulation();
+        setSimulationData({
+          ...latest,
+          config: {
+            ...latest.config,
+            scenario: selectedScenario,
+          },
+        });
+      }
+
+      setCurrentStep(0);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load selected scenario');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -83,6 +126,29 @@ export const DashboardLayout: React.FC = () => {
     );
   }
 
+  const data = simulationData;
+  const currentMetrics = data.metrics[currentStep];
+  const currentLiquidations = data.liquidations[currentStep];
+  const totalOrders = data.metrics.reduce((sum, metric) => sum + metric.newOrders, 0);
+  const totalLiquidations = data.liquidations.reduce((sum, step) => sum + step.liquidations, 0);
+  const runLiquidationRate = totalOrders > 0 ? (totalLiquidations / totalOrders) * 100 : 0;
+  const runAverageLeverage = data.metrics.length > 0
+    ? data.metrics.reduce((sum, metric) => sum + metric.avgLeverage, 0) / data.metrics.length
+    : 0;
+  const currentMarkPrice = currentMetrics?.price || 0;
+
+  const handleShare = async () => {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('step', String(currentStep));
+    shareUrl.searchParams.set('scenario', data.config.scenario || 'normal');
+
+    try {
+      await navigator.clipboard.writeText(shareUrl.toString());
+    } catch (copyError) {
+      console.error('Failed to copy share URL:', copyError);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
       {/* Header */}
@@ -104,10 +170,24 @@ export const DashboardLayout: React.FC = () => {
             <div className="flex items-center space-x-4">
               <ScenarioSelector 
                 currentScenario={simulationData.config.scenario}
-                onSelectScenario={(scenario) => {
-                  // Load selected scenario
-                }}
+                onSelectScenario={loadScenarioSimulation}
               />
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="p-2 hover:bg-gray-700 rounded-lg transition"
+                  title="Export Data"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="p-2 hover:bg-gray-700 rounded-lg transition"
+                  title="Copy Share URL"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
               <div className="text-sm bg-gray-800 px-4 py-2 rounded-lg">
                 <span className="text-gray-400">Step:</span>
                 <span className="ml-2 font-mono text-blue-400">
@@ -120,67 +200,89 @@ export const DashboardLayout: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* KPI Row */}
-        <SystemHealthOverview metrics={currentMetrics} />
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RiskMetricsPanel 
-            metrics={currentMetrics}
-            historicalMetrics={simulationData.metrics.slice(0, currentStep + 1)}
-          />
-          <ProtocolEconomics 
-            metrics={currentMetrics}
-            liquidations={currentLiquidations}
-          />
-        </div>
-
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <TraderActivityHub 
-              metrics={currentMetrics}
-              positions={simulationData.positions}
-            />
-          </div>
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-3">Quick Stats</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Open Orders:</span>
-                <span className="font-mono">{currentMetrics?.openOrders}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Unique Traders:</span>
-                <span className="font-mono">{currentMetrics?.uniqueTraders}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Avg Leverage:</span>
-                <span className="font-mono">{currentMetrics?.avgLeverage.toFixed(2)}x</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Long/Short:</span>
-                <span className="font-mono">{currentMetrics?.longShortRatio.toFixed(2)}</span>
+      <main className="container mx-auto px-4 py-6">
+        <div className="flex flex-col space-y-6">
+          {/* Row 1: Two column layout - Left 40% / Right 60% */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Left Column - 40% width */}
+            <div className="w-full lg:w-2/5">
+              <div className="flex flex-col space-y-6">
+                {/* Token Price Panel */}
+                <div ref={chartRefs.liquidationMap}>
+                  <TokenPricePanel
+                    metrics={simulationData.metrics}
+                    currentStep={currentStep}
+                    selectedSymbol={selectedSymbol}
+                    onSymbolChange={setSelectedSymbol}
+                  />
+                </div>
+                
+                {/* Risk Metrics Panel */}
+                <div ref={chartRefs.positionDist}>
+                  <RiskMetricsPanel 
+                    metrics={currentMetrics}
+                    historicalMetrics={simulationData.metrics.slice(0, currentStep + 1)}
+                  />
+                </div>
               </div>
             </div>
+            
+            {/* Right Column - 60% width */}
+            <div className="w-full lg:w-3/5">
+              <ProtocolEconomics 
+                metrics={currentMetrics}
+                liquidations={currentLiquidations}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: System Health Overview - Full Width */}
+          <div className="w-full">
+            <SystemHealthOverview metrics={currentMetrics} />
+          </div>
+
+          {/* Row 3: Perpetual Order Card - Full Width */}
+          <div className="w-full" ref={chartRefs.orderFlow}>
+            <SimulationPerpetualOrderCard
+              symbol={selectedSymbol}
+              currentPrice={currentMarkPrice}
+              currentStep={currentStep}
+            />
+          </div>
+
+          {/* Row 4: Trader Replay Positions - Full Width */}
+          <div className="w-full" ref={chartRefs.pnlAnalysis}>
+            <TraderReplayPositionsPanel
+              positionsByStep={simulationData.positionsByStep}
+              metrics={simulationData.metrics}
+              currentStep={currentStep}
+            />
+          </div>
+
+          {/* Timeline Controller - Full Width */}
+          <div className="w-full">
+            <TimelineController
+              totalSteps={simulationData.metrics.length}
+              currentStep={currentStep}
+              onStepChange={setCurrentStep}
+              isPlaying={isPlaying}
+              onPlayPause={() => setIsPlaying(!isPlaying)}
+              speed={playbackSpeed}
+              onSpeedChange={setPlaybackSpeed}
+              bookmarks={simulationData.liquidations
+                ?.filter(l => l.liquidations > 0)
+                .map(l => l.step) || []}
+            />
           </div>
         </div>
-
-        {/* Timeline Controller */}
-        <TimelineController
-          totalSteps={simulationData.metrics.length}
-          currentStep={currentStep}
-          onStepChange={setCurrentStep}
-          isPlaying={isPlaying}
-          onPlayPause={() => setIsPlaying(!isPlaying)}
-          speed={playbackSpeed}
-          onSpeedChange={setPlaybackSpeed}
-          bookmarks={simulationData.liquidations
-            ?.filter(l => l.liquidations > 0)
-            .map(l => l.step) || []}
-        />
       </main>
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        data={simulationData}
+        chartRefs={chartRefs}
+      />
     </div>
   );
 };

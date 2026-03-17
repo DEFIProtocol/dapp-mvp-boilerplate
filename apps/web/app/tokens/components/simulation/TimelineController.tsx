@@ -32,10 +32,13 @@ export const TimelineController: React.FC<Props> = ({
   onSpeedChange,
   bookmarks,
 }) => {
-  const progress = (currentStep / (totalSteps - 1)) * 100;
+  const maxStep = Math.max(0, totalSteps - 1);
+  const progress = maxStep > 0 ? (currentStep / maxStep) * 100 : 0;
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onStepChange(parseInt(e.target.value));
+    const parsed = Number(e.target.value);
+    if (!Number.isFinite(parsed)) return;
+    onStepChange(Math.min(Math.max(Math.trunc(parsed), 0), maxStep));
   };
 
   const speedOptions = [0.5, 1, 2, 5, 10];
@@ -78,7 +81,7 @@ export const TimelineController: React.FC<Props> = ({
             <ChevronRight className="w-5 h-5" />
           </button>
           <button
-            onClick={() => onStepChange(totalSteps - 1)}
+            onClick={() => onStepChange(maxStep)}
             className="p-2 hover:bg-gray-700 rounded-lg transition"
             title="Last step"
           >
@@ -110,7 +113,7 @@ export const TimelineController: React.FC<Props> = ({
         <div className="flex items-center space-x-2 text-sm text-gray-400">
           <Clock className="w-4 h-4" />
           <span>
-            Step {currentStep} of {totalSteps - 1}
+            Step {currentStep} of {maxStep}
           </span>
         </div>
 
@@ -119,7 +122,7 @@ export const TimelineController: React.FC<Props> = ({
           <input
             type="range"
             min="0"
-            max={totalSteps - 1}
+            max={maxStep}
             value={currentStep}
             onChange={handleSliderChange}
             className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
@@ -135,7 +138,7 @@ export const TimelineController: React.FC<Props> = ({
                 key={step}
                 className="absolute w-1 h-4 bg-yellow-400 -mt-1"
                 style={{
-                  left: `${(step / (totalSteps - 1)) * 100}%`,
+                  left: `${maxStep > 0 ? (step / maxStep) * 100 : 0}%`,
                   transform: 'translateX(-50%)',
                 }}
                 title={`Liquidation event at step ${step}`}

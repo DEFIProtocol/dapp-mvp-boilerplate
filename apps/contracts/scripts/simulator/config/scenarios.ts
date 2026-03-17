@@ -30,11 +30,11 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     priceModel: {
       type: 'randomWalk',
       initialPrice: 2000,
-      volatility: 0.002,
+      volatility: 0.0012,
       maxStepMovePct: 0.005 // +/-0.5% step bound
     },
     traderActivity: {
-      baseFrequency: 0.2,
+      baseFrequency: 0.11,
       volumeMultiplier: 1.0
     }
   },

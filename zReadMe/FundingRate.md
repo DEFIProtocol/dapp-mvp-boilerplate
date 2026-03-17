@@ -1,3 +1,9 @@
+
+
+/// Need to fix (long exposure - short exposure) / total exposure ( its a resonable approximation )
+
+
+
 Anyone calls: perpEngine.updateFunding()
 
 TRACE:

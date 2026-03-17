@@ -46,7 +46,7 @@ export interface SimulationMetrics {
   spreadBps: number;
   slippageBps: number;
   priceImpactBps: number;
-  isInsolvent: number;
+  isInsolvent: boolean;
 }
 
 export interface Position {
@@ -60,6 +60,22 @@ export interface Position {
   pnlPercent: string;
   health: number;
   isLiquidatable: boolean;
+}
+
+export interface SyntheticPositionInput {
+  direction: 'buy' | 'sell';
+  size: number;
+  leverage: number;
+  entryPrice: number;
+}
+
+export interface SyntheticPositionSnapshot {
+  step: number;
+  markPrice: number;
+  pnl: number;
+  pnlPercent: number;
+  liqPrice: number;
+  liquidated: boolean;
 }
 
 export interface LiquidationActivity {
@@ -91,4 +107,5 @@ export interface SimulationData {
   metrics: SimulationMetrics[];
   liquidations: LiquidationActivity[];
   positions?: Position[];
+  positionsByStep?: Record<number, Position[]>;
 }

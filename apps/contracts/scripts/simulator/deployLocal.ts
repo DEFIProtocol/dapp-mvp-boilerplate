@@ -151,7 +151,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setMakerFeeBps(5);
   await perpStorage.setTakerFeeBps(10);
   await perpStorage.setInsuranceBps(200);
-  await perpStorage.setMaintenanceMarginBps(1000);
+  await perpStorage.setMaintenanceMarginBps(800);
   await perpStorage.setLiquidationRewardBps(80);
   await perpStorage.setLiquidationPenaltyBps(150);
 
@@ -160,7 +160,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     simMarketId,
     5,
     10,
-    1000,
+    800,
     80,
     150
   );

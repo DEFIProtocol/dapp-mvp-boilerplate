@@ -1,6 +1,24 @@
 
 
 
+
+
+src/
+  components/
+    dashboard/
+      - SystemHealthOverview.tsx    // Real-time health metrics
+      - RiskMetricsPanel.tsx        // Liquidation risk, solvency buffer
+      - TraderActivityHub.tsx       // Open positions, leverage distribution
+      - ProtocolEconomics.tsx       // Revenue, fees, insurance fund
+    charts/
+      - TimeSeriesChart.tsx         // Reusable chart component
+      - LiquidationHeatMap.tsx      // Visualize liquidation clusters
+      - PositionDistribution.tsx    // Size/leverage distribution
+    simulation/
+      - ScenarioSelector.tsx        // Switch between simulation types
+      - TimelineController.tsx      // Play/pause/step through simulation
+      - ComparisonView.tsx 
+
 1.) In funding : /// Need to fix (long exposure - short exposure) / total exposure ( its a resonable approximation )
 
 
