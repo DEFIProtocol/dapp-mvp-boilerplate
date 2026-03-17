@@ -4,6 +4,30 @@ import path from "path";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+interface ExecutionLedgerRow {
+	step: number;
+	eventType: string;
+	trader: string;
+	counterparty?: string;
+	agentType: string;
+	side: string;
+	exposure: number;
+	leverage: number;
+	reason: string;
+}
+
+interface AgentActivityRow {
+	agentType: string;
+	intents: number;
+	filled: number;
+	failed: number;
+	cancelled: number;
+	liquidations: number;
+	fillRatePercent: number;
+	intentNotional: number;
+	filledNotional: number;
+}
+
 function resolveSimulationResultsDir(): string {
 	const candidates = [
 		path.resolve(process.cwd(), "apps/contracts/simulation-results"),
@@ -21,6 +45,89 @@ function resolveSimulationResultsDir(): string {
 function readJsonFile(filePath: string): JsonValue {
 	const content = fs.readFileSync(filePath, "utf8");
 	return JSON.parse(content) as JsonValue;
+}
+
+function toNumber(value: string | undefined): number {
+	if (!value) return 0;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseCsv(filePath: string): string[][] {
+	if (!fs.existsSync(filePath)) return [];
+	const content = fs.readFileSync(filePath, "utf8").trim();
+	if (!content) return [];
+	return content
+		.split(/\r?\n/)
+		.map((line) => line.split(","));
+}
+
+function getLatestRunId(baseDir: string): string | null {
+	if (!fs.existsSync(baseDir)) return null;
+
+	const dirs = fs
+		.readdirSync(baseDir, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => ({
+			id: entry.name,
+			mtime: fs.statSync(path.join(baseDir, entry.name)).mtime.getTime(),
+		}))
+		.sort((left, right) => right.mtime - left.mtime);
+
+	return dirs.length > 0 ? dirs[0].id : null;
+}
+
+function readDiagnostics(baseDir: string, runId: string, limit: number, step?: number) {
+	const runDir = path.join(baseDir, runId);
+	const executionPath = path.join(runDir, "execution_ledger.csv");
+	const agentActivityPath = path.join(runDir, "agent_activity.csv");
+
+	const executionRows = parseCsv(executionPath);
+	const executionData = executionRows.slice(1).map((columns): ExecutionLedgerRow => ({
+		step: toNumber(columns[0]),
+		eventType: columns[1] ?? "",
+		trader: columns[2] ?? "",
+		counterparty: columns[3] || undefined,
+		agentType: columns[4] ?? "",
+		side: columns[5] ?? "",
+		exposure: toNumber(columns[6]),
+		leverage: toNumber(columns[7]),
+		reason: columns[8] ?? "",
+	}));
+
+	const filteredByStep = typeof step === "number"
+		? executionData.filter((row) => row.step === step)
+		: executionData;
+
+	const safeLimit = Math.max(1, Math.min(limit, 5000));
+	const executionLedger = filteredByStep.slice(0, safeLimit);
+
+	const agentRows = parseCsv(agentActivityPath);
+	const agentActivity = agentRows.slice(1).map((columns): AgentActivityRow => ({
+		agentType: columns[0] ?? "",
+		intents: toNumber(columns[1]),
+		filled: toNumber(columns[2]),
+		failed: toNumber(columns[3]),
+		cancelled: toNumber(columns[4]),
+		liquidations: toNumber(columns[5]),
+		fillRatePercent: toNumber(columns[6]),
+		intentNotional: toNumber(columns[7]),
+		filledNotional: toNumber(columns[8]),
+	}));
+
+	return {
+		runId,
+		executionLedger,
+		agentActivity,
+		meta: {
+			totalEvents: executionData.length,
+			returnedEvents: executionLedger.length,
+			step: typeof step === "number" ? step : null,
+			limit: safeLimit,
+			hasExecutionLedger: fs.existsSync(executionPath),
+			hasAgentActivity: fs.existsSync(agentActivityPath),
+		},
+	};
 }
 
 export default function contractSimulationRouter() {
@@ -146,6 +253,55 @@ export default function contractSimulationRouter() {
 			console.error("Error reading simulation summary:", error);
 			return res.status(500).json({
 				error: error instanceof Error ? error.message : "Failed to read simulation summary",
+			});
+		}
+	});
+
+	router.get("/runs/:id/diagnostics", (req, res) => {
+		try {
+			const baseDir = resolveSimulationResultsDir();
+			const runDir = path.join(baseDir, req.params.id);
+
+			if (!fs.existsSync(runDir)) {
+				return res.status(404).json({
+					error: "Simulation run not found",
+					id: req.params.id,
+				});
+			}
+
+			const limit = toNumber(typeof req.query.limit === "string" ? req.query.limit : undefined) || 1000;
+			const rawStep = typeof req.query.step === "string" ? req.query.step : undefined;
+			const step = rawStep !== undefined ? toNumber(rawStep) : undefined;
+
+			return res.json(readDiagnostics(baseDir, req.params.id, limit, step));
+		} catch (error) {
+			console.error("Error reading simulation diagnostics:", error);
+			return res.status(500).json({
+				error: error instanceof Error ? error.message : "Failed to read simulation diagnostics",
+			});
+		}
+	});
+
+	router.get("/latest/diagnostics", (req, res) => {
+		try {
+			const baseDir = resolveSimulationResultsDir();
+			const latestRunId = getLatestRunId(baseDir);
+
+			if (!latestRunId) {
+				return res.status(404).json({
+					error: "No simulation runs found",
+				});
+			}
+
+			const limit = toNumber(typeof req.query.limit === "string" ? req.query.limit : undefined) || 1000;
+			const rawStep = typeof req.query.step === "string" ? req.query.step : undefined;
+			const step = rawStep !== undefined ? toNumber(rawStep) : undefined;
+
+			return res.json(readDiagnostics(baseDir, latestRunId, limit, step));
+		} catch (error) {
+			console.error("Error reading latest simulation diagnostics:", error);
+			return res.status(500).json({
+				error: error instanceof Error ? error.message : "Failed to read latest simulation diagnostics",
 			});
 		}
 	});

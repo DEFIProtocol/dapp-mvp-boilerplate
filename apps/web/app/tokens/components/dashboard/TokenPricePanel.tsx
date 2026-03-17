@@ -38,20 +38,26 @@ export const TokenPricePanel: React.FC<Props> = ({
   selectedSymbol,
   onSymbolChange,
 }) => {
-  const currentMetric = metrics[currentStep];
+  const maxStep = Math.max(metrics.length - 1, 0);
+  const safeStep = Math.min(Math.max(currentStep, 0), maxStep);
+  const currentMetric = metrics[safeStep];
 
   const priceData = React.useMemo(
-    () =>
-      metrics.slice(0, currentStep + 1).map((metric, index) => {
-        const previousPrice = index > 0 ? metrics[index - 1]?.price ?? metric.price : metric.price;
+    () => {
+      const capped = metrics.slice(0, safeStep + 1);
+      const finite = capped.filter((metric) => Number.isFinite(metric.price));
+
+      return finite.map((metric, index, series) => {
+        const previousPrice = index > 0 ? series[index - 1].price : metric.price;
         return {
           step: metric.step,
           price: metric.price,
           upperBand: Math.max(metric.price, previousPrice),
           lowerBand: Math.min(metric.price, previousPrice),
         };
-      }),
-    [metrics, currentStep]
+      });
+    },
+    [metrics, safeStep]
   );
 
   const currentStepData = priceData[priceData.length - 1];
@@ -76,7 +82,9 @@ export const TokenPricePanel: React.FC<Props> = ({
           <select
             value={selectedSymbol}
             onChange={(event) => onSymbolChange(event.target.value)}
-            className="bg-gray-900 border border-gray-700 text-gray-200 rounded-lg px-3 py-1.5 text-sm"
+            disabled
+            className="bg-gray-900 border border-gray-700 text-gray-400 rounded-lg px-3 py-1.5 text-sm opacity-70 cursor-not-allowed"
+            title="Current simulator provides a single mark-price stream"
           >
             {SYMBOL_OPTIONS.map((symbol) => (
               <option key={symbol} value={symbol}>
@@ -88,6 +96,10 @@ export const TokenPricePanel: React.FC<Props> = ({
             {formatCurrency(currentMetric?.price ?? 0)}
           </div>
         </div>
+      </div>
+
+      <div className="text-[11px] text-gray-400 mb-2">
+        Displaying simulation mark price (single stream). Multi-symbol streams are not yet available in replay data.
       </div>
 
       {priceData.length > 0 ? (

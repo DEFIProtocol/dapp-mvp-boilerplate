@@ -109,3 +109,41 @@ export interface SimulationData {
   positions?: Position[];
   positionsByStep?: Record<number, Position[]>;
 }
+
+export interface ExecutionLedgerEvent {
+  step: number;
+  eventType: 'intent' | 'filled' | 'failed' | 'cancelled' | 'liquidation' | string;
+  trader: string;
+  counterparty?: string;
+  agentType: string;
+  side: 'long' | 'short' | string;
+  exposure: number;
+  leverage: number;
+  reason: string;
+}
+
+export interface AgentActivitySummary {
+  agentType: string;
+  intents: number;
+  filled: number;
+  failed: number;
+  cancelled: number;
+  liquidations: number;
+  fillRatePercent: number;
+  intentNotional: number;
+  filledNotional: number;
+}
+
+export interface SimulationDiagnostics {
+  runId: string;
+  executionLedger: ExecutionLedgerEvent[];
+  agentActivity: AgentActivitySummary[];
+  meta: {
+    totalEvents: number;
+    returnedEvents: number;
+    step: number | null;
+    limit: number;
+    hasExecutionLedger: boolean;
+    hasAgentActivity: boolean;
+  };
+}

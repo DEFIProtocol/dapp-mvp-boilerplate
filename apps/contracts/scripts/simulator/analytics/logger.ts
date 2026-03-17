@@ -6,6 +6,28 @@ import { formatUnits } from 'ethers';
 import type { ConsistencySnapshot } from './consistency.ts';
 import type { PositionDetail, ProtocolMetrics } from './metrics.ts';
 
+export interface ExecutionEvent {
+  step: number;
+  eventType: 'intent' | 'filled' | 'failed' | 'cancelled' | 'liquidation';
+  trader: string;
+  counterparty?: string;
+  agentType: string;
+  side: 'long' | 'short';
+  exposure: bigint;
+  leverage: number;
+  reason: string;
+}
+
+interface AgentActivityStats {
+  intents: number;
+  filled: number;
+  failed: number;
+  cancelled: number;
+  liquidations: number;
+  notionalIntent: bigint;
+  notionalFilled: bigint;
+}
+
 export interface SimulationLog {
   config: {
     scenario: string;
@@ -31,11 +53,15 @@ export class SimulationLogger {
   private logs: SimulationLog;
   private simulationId: string;
   private baseDir: string;
+  private executionCsvPath: string;
+  private executionCsvInitialized = false;
+  private agentStats = new Map<string, AgentActivityStats>();
 
   constructor(simulationId: string, baseDir: string = './simulation-results') {
     this.simulationId = simulationId;
     this.baseDir = baseDir;
     this.logDir = path.join(baseDir, simulationId);
+    this.executionCsvPath = path.join(this.logDir, 'execution_ledger.csv');
     this.ensureDirectoryExists();
 
     this.logs = {
@@ -176,6 +202,71 @@ export class SimulationLogger {
     console.log(
       `\x1b[31mLIQUIDATION trader=${trader.substring(0, 8)} size=${formatUnits(size, 6)} insurance=${formatUnits(insuranceUsed, 6)}\x1b[0m`
     );
+  }
+
+  logExecutionEvent(event: ExecutionEvent): void {
+    this.appendExecutionEventCsv(event);
+    this.updateAgentStats(event);
+  }
+
+  private appendExecutionEventCsv(event: ExecutionEvent): void {
+    if (!this.executionCsvInitialized) {
+      const header = [
+        'step',
+        'eventType',
+        'trader',
+        'counterparty',
+        'agentType',
+        'side',
+        'exposure',
+        'leverage',
+        'reason',
+      ].join(',');
+      fs.writeFileSync(this.executionCsvPath, header + '\n');
+      this.executionCsvInitialized = true;
+    }
+
+    const cleanReason = event.reason.replaceAll(',', ';');
+    const line = [
+      event.step,
+      event.eventType,
+      event.trader,
+      event.counterparty ?? '',
+      event.agentType,
+      event.side,
+      formatUnits(event.exposure, 6),
+      event.leverage.toFixed(3),
+      cleanReason,
+    ].join(',');
+    fs.appendFileSync(this.executionCsvPath, line + '\n');
+  }
+
+  private updateAgentStats(event: ExecutionEvent): void {
+    const stats = this.agentStats.get(event.agentType) ?? {
+      intents: 0,
+      filled: 0,
+      failed: 0,
+      cancelled: 0,
+      liquidations: 0,
+      notionalIntent: 0n,
+      notionalFilled: 0n,
+    };
+
+    if (event.eventType === 'intent') {
+      stats.intents += 1;
+      stats.notionalIntent += event.exposure;
+    }
+
+    if (event.eventType === 'filled') {
+      stats.filled += 1;
+      stats.notionalFilled += event.exposure;
+    }
+
+    if (event.eventType === 'failed') stats.failed += 1;
+    if (event.eventType === 'cancelled') stats.cancelled += 1;
+    if (event.eventType === 'liquidation') stats.liquidations += 1;
+
+    this.agentStats.set(event.agentType, stats);
   }
 
   private appendToCsv(step: number, metrics: ProtocolMetrics): void {
@@ -329,8 +420,41 @@ export class SimulationLogger {
     fs.writeFileSync(summaryPath, this.formatSummaryText(summary));
 
     this.saveLiquidatorActivityTable();
+    this.saveAgentActivityTable();
 
     console.log(`\nResults saved to: ${this.logDir}`);
+  }
+
+  private saveAgentActivityTable(): void {
+    const outputPath = path.join(this.logDir, 'agent_activity.csv');
+    const header = [
+      'agentType',
+      'intents',
+      'filled',
+      'failed',
+      'cancelled',
+      'liquidations',
+      'fillRatePercent',
+      'intentNotional',
+      'filledNotional',
+    ].join(',');
+
+    const rows = [...this.agentStats.entries()].map(([agentType, stats]) => {
+      const fillRate = stats.intents > 0 ? (stats.filled / stats.intents) * 100 : 0;
+      return [
+        agentType,
+        stats.intents,
+        stats.filled,
+        stats.failed,
+        stats.cancelled,
+        stats.liquidations,
+        fillRate.toFixed(2),
+        formatUnits(stats.notionalIntent, 6),
+        formatUnits(stats.notionalFilled, 6),
+      ].join(',');
+    });
+
+    fs.writeFileSync(outputPath, header + '\n' + rows.join('\n') + '\n');
   }
 
   private formatSummaryText(summary: any): string {

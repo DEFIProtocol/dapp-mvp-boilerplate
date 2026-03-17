@@ -23,22 +23,22 @@ export const AGENT_CONFIGS: AgentConfig[] = [
       minTradeSize: '10000',
       maxTradeSize: '50000',
       minLeverage: 1,
-      maxLeverage: 2,
-      tradeFrequency: 0.3, // 30% chance per step
+      maxLeverage: 3,
+      tradeFrequency: 0.22,
       maxPositions: 10
     }
   },
   {
-    name: 'Momentum Traders',
+    name: 'Momentum / Swing Traders',
     type: 'momentum',
     count: 10,
     balance: '100000', // 100k USDC each
     behavior: {
-      minTradeSize: '5000',
-      maxTradeSize: '25000',
-      minLeverage: 1.5,
-      maxLeverage: 3,
-      tradeFrequency: 0.12,
+      minTradeSize: '2000',
+      maxTradeSize: '10000',
+      minLeverage: 3,
+      maxLeverage: 10,
+      tradeFrequency: 0.16,
       maxPositions: 5
     }
   },
@@ -48,12 +48,12 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     count: 50,
     balance: '10000', // 10k USDC each
     behavior: {
-      minTradeSize: '100',
-      maxTradeSize: '5000',
-      minLeverage: 6,
-      maxLeverage: 10,
-      tradeFrequency: 0.05,
-      maxPositions: 2
+      minTradeSize: '200',
+      maxTradeSize: '600',
+      minLeverage: 20,
+      maxLeverage: 50,
+      tradeFrequency: 0.35,
+      maxPositions: 4
     }
   },
   {
@@ -66,7 +66,7 @@ export const AGENT_CONFIGS: AgentConfig[] = [
       maxTradeSize: '1500000',
       minLeverage: 2,
       maxLeverage: 5,
-      tradeFrequency: 0.04,
+      tradeFrequency: 0.03,
       maxPositions: 2
     }
   },
@@ -89,11 +89,11 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     count: 2,
     balance: '500000',
     behavior: {
-      minTradeSize: '10000',
-      maxTradeSize: '100000',
-      minLeverage: 1,
-      maxLeverage: 3,
-      tradeFrequency: 0.15
+      minTradeSize: '5000',
+      maxTradeSize: '50000',
+      minLeverage: 2,
+      maxLeverage: 6,
+      tradeFrequency: 0.1
     }
   }
 ];

@@ -15,10 +15,17 @@ interface Props {
 type TraderReplayRow = {
   trader: string;
   current?: Position;
+  display?: Position;
   entry?: Position;
   peakPnl: number;
   troughPnl: number;
+  lastSeenStep?: number;
   status: 'open' | 'liquidatable' | 'liquidated' | 'closed' | 'inactive';
+  outcome: string;
+  estimatedMarkPrice?: number;
+  estimatedPnl?: number;
+  estimatedPnlPercent?: number;
+  usesEstimatedCurrentValues: boolean;
 };
 
 const ASSUMED_MAINTENANCE_MARGIN = 0.05;
@@ -32,6 +39,12 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 const formatCompactTrader = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+const inferDirectionMultiplier = (position: Position): 1 | -1 => {
+  const priceDelta = position.markPrice - position.entryPrice;
+  if (priceDelta === 0) return position.pnl >= 0 ? 1 : -1;
+  return position.pnl * priceDelta >= 0 ? 1 : -1;
+};
 
 export const TraderReplayPositionsPanel: React.FC<Props> = ({
   positionsByStep,
@@ -75,16 +88,20 @@ export const TraderReplayPositionsPanel: React.FC<Props> = ({
     return fixedTraders.map((trader) => {
       const entry = positionsMapByStep[firstStep]?.get(trader);
       const current = positionsMapByStep[currentStep]?.get(trader);
+      let display: Position | undefined;
       let peakPnl = Number.NEGATIVE_INFINITY;
       let troughPnl = Number.POSITIVE_INFINITY;
       let hasHistory = false;
       let everLiquidatable = false;
+      let lastSeenStep: number | undefined;
 
       for (const step of stepKeys) {
         if (step > currentStep) break;
         const position = positionsMapByStep[step]?.get(trader);
         if (!position) continue;
         hasHistory = true;
+        display = position;
+        lastSeenStep = step;
         peakPnl = Math.max(peakPnl, position.pnl);
         troughPnl = Math.min(troughPnl, position.pnl);
         if (position.isLiquidatable) {
@@ -98,16 +115,44 @@ export const TraderReplayPositionsPanel: React.FC<Props> = ({
       else if (hasHistory && everLiquidatable) status = 'liquidated';
       else if (hasHistory) status = 'closed';
 
+      const outcome =
+        status === 'open'
+          ? 'Position is currently open'
+          : status === 'liquidatable'
+            ? 'Currently at liquidation risk'
+            : status === 'liquidated'
+              ? `Likely liquidated after step ${lastSeenStep ?? '-'} (risk state observed)`
+              : status === 'closed'
+                ? `Closed after last seen step ${lastSeenStep ?? '-'}`
+                : 'No position history yet';
+
+      const usesEstimatedCurrentValues = !current && !!display;
+      const estimatedMarkPrice = usesEstimatedCurrentValues ? currentMark : undefined;
+      const directionMultiplier = display ? inferDirectionMultiplier(display) : 1;
+      const estimatedPnl = usesEstimatedCurrentValues && display && display.entryPrice > 0
+        ? directionMultiplier * (display.size / display.entryPrice) * (currentMark - display.entryPrice)
+        : undefined;
+      const estimatedPnlPercent = usesEstimatedCurrentValues && estimatedPnl !== undefined && display && display.size > 0
+        ? (estimatedPnl / display.size) * 100
+        : undefined;
+
       return {
         trader,
         current,
+        display,
         entry,
         peakPnl: peakPnl === Number.NEGATIVE_INFINITY ? 0 : peakPnl,
         troughPnl: troughPnl === Number.POSITIVE_INFINITY ? 0 : troughPnl,
+        lastSeenStep,
         status,
+        outcome,
+        estimatedMarkPrice,
+        estimatedPnl,
+        estimatedPnlPercent,
+        usesEstimatedCurrentValues,
       };
     });
-  }, [fixedTraders, positionsMapByStep, firstStep, currentStep, stepKeys]);
+  }, [fixedTraders, positionsMapByStep, firstStep, currentStep, stepKeys, currentMark]);
 
   const syntheticSnapshots = useMemo<SyntheticPositionSnapshot[]>(() => {
     if (!syntheticPosition || metrics.length === 0) return [];
@@ -189,34 +234,48 @@ export const TraderReplayPositionsPanel: React.FC<Props> = ({
               <th className="py-2 text-right">PnL %</th>
               <th className="py-2 text-right">Health</th>
               <th className="py-2 text-right">Peak/Trough</th>
+              <th className="py-2 text-right">Last Seen</th>
               <th className="py-2 text-right">Status</th>
+              <th className="py-2 text-right">Outcome</th>
             </tr>
           </thead>
           <tbody>
             {replayRows.map((row) => {
-              const pnlValue = row.current?.pnl ?? 0;
+              const activePosition = row.display;
+              const displayedMarkPrice = row.current ? row.current.markPrice : row.estimatedMarkPrice;
+              const displayedPnl = row.current ? row.current.pnl : row.estimatedPnl;
+              const displayedPnlPercent = row.current
+                ? row.current.pnlPercent
+                : row.estimatedPnlPercent !== undefined
+                  ? `${row.estimatedPnlPercent.toFixed(2)}%`
+                  : '-';
+              const pnlValue = displayedPnl ?? 0;
               const pnlClass = pnlValue >= 0 ? 'text-green-300' : 'text-red-300';
               return (
                 <tr key={row.trader} className="border-b border-gray-700/40">
                   <td className="py-2 font-mono">{formatCompactTrader(row.trader)}</td>
-                  <td className="py-2 text-right">{row.current ? formatCurrency(row.current.size) : '-'}</td>
-                  <td className="py-2 text-right">{row.current ? `${row.current.leverage.toFixed(2)}x` : '-'}</td>
-                  <td className="py-2 text-right">{row.current ? formatCurrency(row.current.entryPrice) : '-'}</td>
-                  <td className="py-2 text-right">{row.current ? formatCurrency(row.current.markPrice) : '-'}</td>
+                  <td className="py-2 text-right">{activePosition ? formatCurrency(activePosition.size) : '-'}</td>
+                  <td className="py-2 text-right">{activePosition ? `${activePosition.leverage.toFixed(2)}x` : '-'}</td>
+                  <td className="py-2 text-right">{activePosition ? formatCurrency(activePosition.entryPrice) : '-'}</td>
+                  <td className="py-2 text-right">{displayedMarkPrice !== undefined ? formatCurrency(displayedMarkPrice) : '-'}</td>
                   <td className={`py-2 text-right font-mono ${pnlClass}`}>
-                    {row.current ? formatCurrency(row.current.pnl) : '-'}
+                    {displayedPnl !== undefined ? formatCurrency(displayedPnl) : '-'}
                   </td>
                   <td className={`py-2 text-right ${pnlClass}`}>
-                    {row.current?.pnlPercent ?? '-'}
+                    {displayedPnlPercent}
                   </td>
-                  <td className="py-2 text-right">{row.current ? row.current.health.toFixed(2) : '-'}</td>
+                  <td className="py-2 text-right">{activePosition ? activePosition.health.toFixed(2) : '-'}</td>
                   <td className="py-2 text-right font-mono">
                     {formatCurrency(row.peakPnl)} / {formatCurrency(row.troughPnl)}
                   </td>
+                  <td className="py-2 text-right text-gray-300">{row.lastSeenStep ?? '-'}</td>
                   <td className="py-2 text-right">
                     <span className={`px-2 py-1 rounded ${statusBadgeClass(row.status)}`}>
                       {row.status.toUpperCase()}
                     </span>
+                  </td>
+                  <td className="py-2 text-right text-gray-300 max-w-[260px] truncate" title={row.outcome}>
+                    {row.usesEstimatedCurrentValues ? `Estimated to step ${currentStep} · ${row.outcome}` : row.outcome}
                   </td>
                 </tr>
               );

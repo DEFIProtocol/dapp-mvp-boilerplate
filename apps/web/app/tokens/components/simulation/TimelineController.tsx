@@ -20,6 +20,12 @@ interface Props {
   speed: number;
   onSpeedChange: (speed: number) => void;
   bookmarks: number[];
+  stepOutcomes?: Array<{
+    step: number;
+    filled: number;
+    cancelled: number;
+    failed: number;
+  }>;
 }
 
 export const TimelineController: React.FC<Props> = ({
@@ -31,6 +37,7 @@ export const TimelineController: React.FC<Props> = ({
   speed,
   onSpeedChange,
   bookmarks,
+  stepOutcomes = [],
 }) => {
   const maxStep = Math.max(0, totalSteps - 1);
   const progress = maxStep > 0 ? (currentStep / maxStep) * 100 : 0;
@@ -42,6 +49,11 @@ export const TimelineController: React.FC<Props> = ({
   };
 
   const speedOptions = [0.5, 1, 2, 5, 10];
+
+  const maxOutcomeValue = stepOutcomes.reduce((max, outcome) => {
+    const total = outcome.filled + outcome.cancelled + outcome.failed;
+    return Math.max(max, total);
+  }, 0);
 
   return (
     <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 sticky bottom-4">
@@ -147,6 +159,35 @@ export const TimelineController: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {stepOutcomes.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[11px] text-gray-400 mb-1">Step outcomes (filled/cancelled/failed)</div>
+          <div className="h-10 bg-gray-900/60 border border-gray-700 rounded p-1 flex items-end gap-[2px] overflow-hidden">
+            {stepOutcomes.map((outcome) => {
+              const total = outcome.filled + outcome.cancelled + outcome.failed;
+              const normalizedHeight = maxOutcomeValue > 0 ? Math.max((total / maxOutcomeValue) * 100, 8) : 8;
+              const filledPct = total > 0 ? (outcome.filled / total) * 100 : 0;
+              const cancelledPct = total > 0 ? (outcome.cancelled / total) * 100 : 0;
+              const failedPct = Math.max(0, 100 - filledPct - cancelledPct);
+              const isCurrent = outcome.step === currentStep;
+
+              return (
+                <div
+                  key={outcome.step}
+                  title={`Step ${outcome.step}: ${outcome.filled} filled, ${outcome.cancelled} cancelled, ${outcome.failed} failed`}
+                  className={`flex-1 min-w-[2px] rounded-sm overflow-hidden ${isCurrent ? 'ring-1 ring-blue-400' : ''}`}
+                  style={{ height: `${normalizedHeight}%` }}
+                >
+                  <div className="w-full bg-green-500/80" style={{ height: `${filledPct}%` }} />
+                  <div className="w-full bg-yellow-500/80" style={{ height: `${cancelledPct}%` }} />
+                  <div className="w-full bg-red-500/80" style={{ height: `${failedPct}%` }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

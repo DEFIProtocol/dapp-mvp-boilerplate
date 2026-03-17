@@ -45,6 +45,21 @@ interface TraderBehavior {
   maxLeverage: number;
 }
 
+interface TraderProfile extends TraderBehavior {
+  agentType: string;
+  tradeFrequency: number;
+  maxPositions: number;
+}
+
+interface TradeIntent {
+  trader: Signer;
+  side: 0 | 1;
+  exposure: bigint;
+  leverage: number;
+  agentType: string;
+  reason: string;
+}
+
 interface PositionStats {
   uniqueTraders: number;
   positionsAtRisk: number;
@@ -120,8 +135,8 @@ export async function runSimulation(options: SimulationOptions) {
   const random = new DeterministicRandom(options.seed + 1337);
   const nonceByTrader = new Map<string, bigint>();
   const defaultMarketId = await perpStorage.marketFeedId();
-  const traderBehaviorByAddress = buildTraderBehaviorMap(addresses.agents);
-  const traderIntentLeverage = new Map<string, { long: number[]; short: number[] }>();
+  const traderProfileByAddress = buildTraderProfileMap(addresses.agents);
+  const priceHistory: number[] = [scenario.priceModel.initialPrice];
 
   const cumulative: CumulativeFlows = {
     makerFees: 0n,
@@ -164,6 +179,7 @@ export async function runSimulation(options: SimulationOptions) {
   for (let step = 0; step < steps; step++) {
     const previousPrice = priceEngine.getCurrentPrice();
     const nextPrice = priceEngine.updatePrice();
+    priceHistory.push(nextPrice);
     await oracle.setPrice(toOraclePrice(ethers, nextPrice));
 
     await advanceTime(ethers.provider, 300);
@@ -175,30 +191,63 @@ export async function runSimulation(options: SimulationOptions) {
     const makerBps = BigInt(makerBpsRaw);
     const takerBps = BigInt(takerBpsRaw);
 
-    const tradesTarget = Math.max(1, Math.floor(traderSigners.length * scenario.traderActivity.baseFrequency));
     let stepTradeCount = 0;
     let stepNewOrders = 0;
     let stepFilledOrders = 0;
     let stepCancelledOrders = 0;
     let stepVolume = 0n;
     let stepFundingTransferred = 0n;
-    let stepIntentLeverageNotional = 0;
-    let stepIntentLeverageWeighted = 0;
+    const marketTrend = deriveMarketTrend(priceHistory);
+    const intents = buildStepIntents(
+      ethers,
+      traderSigners,
+      traderProfileByAddress,
+      scenario.traderActivity.baseFrequency,
+      scenario.traderActivity.volumeMultiplier,
+      marketTrend,
+      previousPrice,
+      nextPrice,
+      random
+    );
 
-    for (let i = 0; i < tradesTarget; i++) {
-      const longTrader = random.pick(traderSigners) as Signer;
-      let shortTrader = random.pick(traderSigners) as Signer;
-      if (shortTrader.address === longTrader.address) {
-        shortTrader = random.pick(traderSigners.filter((s: Signer) => s.address !== longTrader.address)) as Signer;
-      }
+    for (const intent of intents) {
+      logger.logExecutionEvent({
+        step,
+        eventType: "intent",
+        trader: intent.trader.address,
+        agentType: intent.agentType,
+        side: intent.side === 0 ? "long" : "short",
+        exposure: intent.exposure,
+        leverage: intent.leverage,
+        reason: intent.reason,
+      });
+    }
 
-      const longBehavior = traderBehaviorByAddress.get(longTrader.address) ?? getDefaultTraderBehavior();
-      const shortBehavior = traderBehaviorByAddress.get(shortTrader.address) ?? getDefaultTraderBehavior();
+    const { pairs, unmatched } = pairIntents(intents, random);
+    const stepIntentLeverages = intents.map((intent) => intent.leverage);
 
-      const minTradeUsd = Math.max(100, Math.min(longBehavior.minTradeSize, shortBehavior.minTradeSize));
-      const maxTradeUsd = Math.max(minTradeUsd, Math.min(longBehavior.maxTradeSize, shortBehavior.maxTradeSize));
-      const tradeUsd = Math.floor(random.range(minTradeUsd, maxTradeUsd) * scenario.traderActivity.volumeMultiplier);
-      const size = ethers.parseUnits(String(Math.max(100, tradeUsd)), 6);
+    stepNewOrders = intents.length;
+    stepCancelledOrders += unmatched.length;
+
+    for (const unmatchedIntent of unmatched) {
+      logger.logExecutionEvent({
+        step,
+        eventType: "cancelled",
+        trader: unmatchedIntent.trader.address,
+        agentType: unmatchedIntent.agentType,
+        side: unmatchedIntent.side === 0 ? "long" : "short",
+        exposure: unmatchedIntent.exposure,
+        leverage: unmatchedIntent.leverage,
+        reason: "unmatched-side",
+      });
+    }
+
+    for (const pair of pairs) {
+      const longIntent = pair.long;
+      const shortIntent = pair.short;
+      const longTrader = longIntent.trader;
+      const shortTrader = shortIntent.trader;
+      const size = longIntent.exposure < shortIntent.exposure ? longIntent.exposure : shortIntent.exposure;
       const nowTs = BigInt((await ethers.provider.getBlock("latest")).timestamp);
 
       const longOrder: TraderOrder = {
@@ -221,7 +270,6 @@ export async function runSimulation(options: SimulationOptions) {
         marketId: defaultMarketId,
       };
 
-      stepNewOrders += 2;
       const settled = await trySettleMatch(
         ethers,
         settlementEngine,
@@ -235,6 +283,28 @@ export async function runSimulation(options: SimulationOptions) {
 
       if (!settled) {
         stepCancelledOrders += 2;
+        logger.logExecutionEvent({
+          step,
+          eventType: "failed",
+          trader: longTrader.address,
+          counterparty: shortTrader.address,
+          agentType: longIntent.agentType,
+          side: "long",
+          exposure: size,
+          leverage: longIntent.leverage,
+          reason: "settlement-revert",
+        });
+        logger.logExecutionEvent({
+          step,
+          eventType: "failed",
+          trader: shortTrader.address,
+          counterparty: longTrader.address,
+          agentType: shortIntent.agentType,
+          side: "short",
+          exposure: size,
+          leverage: shortIntent.leverage,
+          reason: "settlement-revert",
+        });
         continue;
       }
 
@@ -245,20 +315,28 @@ export async function runSimulation(options: SimulationOptions) {
       stepFilledOrders += 2;
       stepVolume += size;
 
-      const sampledLongLeverage = random.range(longBehavior.minLeverage, longBehavior.maxLeverage);
-      const sampledShortLeverage = random.range(shortBehavior.minLeverage, shortBehavior.maxLeverage);
-
-      const longIntent = traderIntentLeverage.get(longTrader.address) ?? { long: [], short: [] };
-      longIntent.long.push(sampledLongLeverage);
-      traderIntentLeverage.set(longTrader.address, longIntent);
-
-      const shortIntent = traderIntentLeverage.get(shortTrader.address) ?? { long: [], short: [] };
-      shortIntent.short.push(sampledShortLeverage);
-      traderIntentLeverage.set(shortTrader.address, shortIntent);
-
-      const notionalUsd = Number(size) / 1e6;
-      stepIntentLeverageNotional += notionalUsd * 2;
-      stepIntentLeverageWeighted += (sampledLongLeverage * notionalUsd) + (sampledShortLeverage * notionalUsd);
+      logger.logExecutionEvent({
+        step,
+        eventType: "filled",
+        trader: longTrader.address,
+        counterparty: shortTrader.address,
+        agentType: longIntent.agentType,
+        side: "long",
+        exposure: size,
+        leverage: longIntent.leverage,
+        reason: longIntent.reason,
+      });
+      logger.logExecutionEvent({
+        step,
+        eventType: "filled",
+        trader: shortTrader.address,
+        counterparty: longTrader.address,
+        agentType: shortIntent.agentType,
+        side: "short",
+        exposure: size,
+        leverage: shortIntent.leverage,
+        reason: shortIntent.reason,
+      });
 
       const makerFee = (size * makerBps) / 10000n;
       const takerFee = (size * takerBps) / 10000n;
@@ -305,6 +383,19 @@ export async function runSimulation(options: SimulationOptions) {
       }
 
       cumulative.marginReturned += result.marginReturned;
+
+      const liquidatorProfile = traderProfileByAddress.get(liquidator.address) ?? getDefaultTraderProfile();
+      logger.logExecutionEvent({
+        step,
+        eventType: "liquidation",
+        trader: liquidator.address,
+        counterparty: pos.trader,
+        agentType: liquidatorProfile.agentType,
+        side: pos.side === 0 ? "long" : "short",
+        exposure: pos.exposure,
+        leverage: 1,
+        reason: `position:${pos.positionId.toString()}`,
+      });
     }
 
     const [insuranceBalance, feePool, badDebt, nextFunding, longOiRaw, shortOiRaw] = await Promise.all([
@@ -324,7 +415,9 @@ export async function runSimulation(options: SimulationOptions) {
     const positionStats = await collectPositionStats(perpStorage, positionManager, riskManager, traderSigners, nextPrice, ethers);
     const longShortRatio = shortOi > 0n ? Number(longOi) / Number(shortOi) : 0;
     const priceMoveBps = previousPrice > 0 ? Math.abs(((nextPrice - previousPrice) / previousPrice) * 10000) : 0;
-    const averageIntentLeverage = computeIntentAverageLeverage(traderIntentLeverage, stepIntentLeverageWeighted, stepIntentLeverageNotional);
+    const averageIntentLeverage = stepIntentLeverages.length > 0
+      ? stepIntentLeverages.reduce((sum, leverage) => sum + leverage, 0) / stepIntentLeverages.length
+      : 0;
 
     const snapshot = await collectConsistencySnapshot(step, nextPrice, traderSigners, {
       provider: ethers.provider,
@@ -530,58 +623,194 @@ async function findLiquidatablePositions(
   return positions;
 }
 
-function buildTraderBehaviorMap(agentAddressMap: Record<string, string[]>): Map<string, TraderBehavior> {
-  const behaviorMap = new Map<string, TraderBehavior>();
+function buildTraderProfileMap(agentAddressMap: Record<string, string[]>): Map<string, TraderProfile> {
+  const profileMap = new Map<string, TraderProfile>();
 
   for (const config of AGENT_CONFIGS) {
     if (config.type === "liquidator") continue;
     const addresses = agentAddressMap[config.type] ?? [];
-    const behavior: TraderBehavior = {
+    const profile: TraderProfile = {
+      agentType: config.type,
       minTradeSize: Number(config.behavior.minTradeSize),
       maxTradeSize: Number(config.behavior.maxTradeSize),
       minLeverage: config.behavior.minLeverage,
       maxLeverage: config.behavior.maxLeverage,
+      tradeFrequency: config.behavior.tradeFrequency,
+      maxPositions: config.behavior.maxPositions ?? 5,
     };
 
     for (const address of addresses) {
-      behaviorMap.set(address, behavior);
+      profileMap.set(address, profile);
     }
   }
 
-  return behaviorMap;
+  return profileMap;
 }
 
-function getDefaultTraderBehavior(): TraderBehavior {
+function getDefaultTraderProfile(): TraderProfile {
   return {
+    agentType: "fallback",
     minTradeSize: 500,
     maxTradeSize: 5000,
     minLeverage: 3,
     maxLeverage: 8,
+    tradeFrequency: 0.1,
+    maxPositions: 5,
   };
 }
 
-function computeIntentAverageLeverage(
-  traderIntentLeverage: Map<string, { long: number[]; short: number[] }>,
-  stepIntentLeverageWeighted: number,
-  stepIntentLeverageNotional: number
-): number {
-  let sum = 0;
-  let count = 0;
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
 
-  for (const intents of traderIntentLeverage.values()) {
-    for (const lev of intents.long) {
-      sum += lev;
-      count++;
-    }
-    for (const lev of intents.short) {
-      sum += lev;
-      count++;
+function deriveMarketTrend(priceHistory: number[]): "up" | "down" | "neutral" {
+  if (priceHistory.length < 8) return "neutral";
+
+  const recent = priceHistory.slice(-8);
+  const start = recent[0];
+  const end = recent[recent.length - 1];
+  if (start <= 0) return "neutral";
+
+  const change = (end - start) / start;
+  if (change > 0.01) return "up";
+  if (change < -0.01) return "down";
+  return "neutral";
+}
+
+function shuffleDeterministic<T>(items: T[], random: DeterministicRandom): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(random.next() * (i + 1));
+    const temp = next[i];
+    next[i] = next[j];
+    next[j] = temp;
+  }
+  return next;
+}
+
+function chooseDirectionalSide(
+  agentType: string,
+  marketTrend: "up" | "down" | "neutral",
+  random: DeterministicRandom,
+  stepMoveBps: number
+): 0 | 1 {
+  if (agentType === "momentum") {
+    if (marketTrend === "up") return random.next() > 0.2 ? 0 : 1;
+    if (marketTrend === "down") return random.next() > 0.2 ? 1 : 0;
+  }
+
+  if (agentType === "arbitrageur") {
+    if (Math.abs(stepMoveBps) > 35) {
+      return stepMoveBps > 0 ? 1 : 0;
     }
   }
 
-  if (count > 0) return sum / count;
-  if (stepIntentLeverageNotional > 0) return stepIntentLeverageWeighted / stepIntentLeverageNotional;
-  return 0;
+  if (agentType === "whale") {
+    if (marketTrend === "up") return random.next() > 0.25 ? 0 : 1;
+    if (marketTrend === "down") return random.next() > 0.25 ? 1 : 0;
+  }
+
+  return random.next() > 0.5 ? 0 : 1;
+}
+
+function buildStepIntents(
+  ethers: any,
+  traderSigners: Signer[],
+  profileByAddress: Map<string, TraderProfile>,
+  scenarioBaseFrequency: number,
+  volumeMultiplier: number,
+  marketTrend: "up" | "down" | "neutral",
+  previousPrice: number,
+  nextPrice: number,
+  random: DeterministicRandom
+): TradeIntent[] {
+  const intents: TradeIntent[] = [];
+  const activityScale = clamp(0.5 + (scenarioBaseFrequency * 2), 0.4, 1.8);
+  const stepMoveBps = previousPrice > 0 ? ((nextPrice - previousPrice) / previousPrice) * 10000 : 0;
+
+  for (const trader of traderSigners) {
+    const profile = profileByAddress.get(trader.address) ?? getDefaultTraderProfile();
+    const effectiveFrequency = clamp(profile.tradeFrequency * activityScale, 0.01, 0.95);
+    if (random.next() > effectiveFrequency) {
+      continue;
+    }
+
+    if (profile.agentType === "marketMaker") {
+      const baseUsd = Math.floor(random.range(profile.minTradeSize, profile.maxTradeSize) * volumeMultiplier * 0.7);
+      const exposure = ethers.parseUnits(String(Math.max(100, baseUsd)), 6);
+      const leverage = random.range(profile.minLeverage, profile.maxLeverage);
+      intents.push({
+        trader,
+        side: 0,
+        exposure,
+        leverage,
+        agentType: profile.agentType,
+        reason: "two-sided-liquidity",
+      });
+      intents.push({
+        trader,
+        side: 1,
+        exposure,
+        leverage,
+        agentType: profile.agentType,
+        reason: "two-sided-liquidity",
+      });
+      continue;
+    }
+
+    const side = chooseDirectionalSide(profile.agentType, marketTrend, random, stepMoveBps);
+    const baseUsd = Math.floor(random.range(profile.minTradeSize, profile.maxTradeSize) * volumeMultiplier);
+    const exposure = ethers.parseUnits(String(Math.max(100, baseUsd)), 6);
+    const leverage = random.range(profile.minLeverage, profile.maxLeverage);
+
+    intents.push({
+      trader,
+      side,
+      exposure,
+      leverage,
+      agentType: profile.agentType,
+      reason: marketTrend === "neutral" ? "random-entry" : `trend-${marketTrend}`,
+    });
+
+    if (profile.agentType === "retail" && random.next() > 0.75) {
+      const secondSide = random.next() > 0.5 ? 0 : 1;
+      const secondUsd = Math.floor(random.range(profile.minTradeSize, profile.maxTradeSize) * volumeMultiplier);
+      intents.push({
+        trader,
+        side: secondSide,
+        exposure: ethers.parseUnits(String(Math.max(100, secondUsd)), 6),
+        leverage: random.range(profile.minLeverage, profile.maxLeverage),
+        agentType: profile.agentType,
+        reason: "retail-follow-up",
+      });
+    }
+  }
+
+  return intents;
+}
+
+function pairIntents(
+  intents: TradeIntent[],
+  random: DeterministicRandom
+): { pairs: Array<{ long: TradeIntent; short: TradeIntent }>; unmatched: TradeIntent[] } {
+  const longs = shuffleDeterministic(intents.filter((intent) => intent.side === 0), random);
+  const shorts = shuffleDeterministic(intents.filter((intent) => intent.side === 1), random);
+  const pairs: Array<{ long: TradeIntent; short: TradeIntent }> = [];
+  const unmatched: TradeIntent[] = [];
+
+  for (const longIntent of longs) {
+    const shortIndex = shorts.findIndex((shortIntent) => shortIntent.trader.address !== longIntent.trader.address);
+    if (shortIndex < 0) {
+      unmatched.push(longIntent);
+      continue;
+    }
+
+    const shortIntent = shorts.splice(shortIndex, 1)[0];
+    pairs.push({ long: longIntent, short: shortIntent });
+  }
+
+  unmatched.push(...shorts);
+  return { pairs, unmatched };
 }
 
 async function tryLiquidate(

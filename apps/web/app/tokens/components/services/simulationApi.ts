@@ -1,5 +1,8 @@
 // services/simulationApi.ts
 import type {
+  AgentActivitySummary,
+  ExecutionLedgerEvent,
+  SimulationDiagnostics,
   LiquidationActivity,
   Position,
   SimulationData,
@@ -21,6 +24,20 @@ type RawSimulationResponse = {
   positions?: Position[] | Record<string, RawPosition[]>;
 };
 
+type RawDiagnosticsResponse = {
+  runId?: string;
+  executionLedger?: Array<Record<string, unknown>>;
+  agentActivity?: Array<Record<string, unknown>>;
+  meta?: {
+    totalEvents?: number;
+    returnedEvents?: number;
+    step?: number | null;
+    limit?: number;
+    hasExecutionLedger?: boolean;
+    hasAgentActivity?: boolean;
+  };
+};
+
 const toNumber = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
@@ -29,6 +46,8 @@ const toNumber = (value: unknown): number => {
   }
   return 0;
 };
+
+const finiteOrZero = (value: number): number => (Number.isFinite(value) ? value : 0);
 
 const toBoolean = (value: unknown): boolean => {
   if (typeof value === 'boolean') return value;
@@ -84,51 +103,51 @@ const normalizePositionsByStep = (
 const normalizeMetric = (rawMetric: RawSimulationMetric, step: number): SimulationMetrics => {
   return {
     step,
-    price: toNumber(rawMetric.price),
-    openInterest: toUsd(rawMetric.openInterest),
-    tvl: toUsd(rawMetric.tvl),
-    marginVaultDelta: toUsd(rawMetric.marginVaultDelta),
-    insuranceBalance: toUsd(rawMetric.insuranceBalance),
-    insuranceBalanceDelta: toUsd(rawMetric.insuranceBalanceDelta),
-    protocolTreasuryBalance: toUsd(rawMetric.protocolTreasuryBalance),
-    protocolTreasuryDelta: toUsd(rawMetric.protocolTreasuryDelta),
-    badDebt: toUsd(rawMetric.badDebt),
-    badDebtDelta: toUsd(rawMetric.badDebtDelta),
-    protocolRevenue: toUsd(rawMetric.protocolRevenue),
-    protocolRevenueDelta: toUsd(rawMetric.protocolRevenueDelta),
-    sumAccountCollateral: toUsd(rawMetric.sumAccountCollateral),
-    accountCollateralDelta: toUsd(rawMetric.accountCollateralDelta),
-    sumReservedMargin: toUsd(rawMetric.sumReservedMargin),
-    reservedMarginDelta: toUsd(rawMetric.reservedMarginDelta),
-    sumAvailableCollateral: toUsd(rawMetric.sumAvailableCollateral),
-    availableCollateralDelta: toUsd(rawMetric.availableCollateralDelta),
-    sumTraderFundingOwed: toUsd(rawMetric.sumTraderFundingOwed),
-    traderFundingOwedDelta: toUsd(rawMetric.traderFundingOwedDelta),
-    solvencyBuffer: toUsd(rawMetric.solvencyBuffer),
-    makerFeesCollected: toUsd(rawMetric.makerFeesCollected),
-    takerFeesCollected: toUsd(rawMetric.takerFeesCollected),
-    fundingFeesTransferred: toUsd(rawMetric.fundingFeesTransferred),
-    insuranceFundInflow: toUsd(rawMetric.insuranceFundInflow),
-    insuranceFundOutflow: toUsd(rawMetric.insuranceFundOutflow),
-    liquidationInsuranceInflow: toUsd(rawMetric.liquidationInsuranceInflow),
-    liquidations: toNumber(rawMetric.liquidationCount),
-    liquidatorOrders: toNumber(rawMetric.liquidatorOrders),
-    liquidatorRewardsPaid: toUsd(rawMetric.liquidatorRewardsPaid),
-    liquidationPenaltyCollected: toUsd(rawMetric.liquidationPenaltyCollected),
-    marginReturnedFromLiquidation: toUsd(rawMetric.marginReturnedFromLiquidation),
-    positionsAtRisk: toNumber(rawMetric.positionsAtRisk),
-    trades: toNumber(rawMetric.tradeCount),
-    uniqueTraders: toNumber(rawMetric.uniqueTraders),
-    openOrders: toNumber(rawMetric.openOrders),
-    newOrders: toNumber(rawMetric.newOrders),
-    filledOrders: toNumber(rawMetric.filledOrders),
-    cancelledOrders: toNumber(rawMetric.cancelledOrders),
-    liquidationsPer100Orders: toNumber(rawMetric.liquidationsPer100Orders),
-    avgLeverage: toNumber(rawMetric.averageLeverage),
-    longShortRatio: toNumber(rawMetric.longShortRatio),
-    spreadBps: toNumber(rawMetric.spreadBps),
-    slippageBps: toNumber(rawMetric.slippageBps),
-    priceImpactBps: toNumber(rawMetric.priceImpactBps),
+    price: finiteOrZero(toNumber(rawMetric.price)),
+    openInterest: finiteOrZero(toUsd(rawMetric.openInterest)),
+    tvl: finiteOrZero(toUsd(rawMetric.tvl)),
+    marginVaultDelta: finiteOrZero(toUsd(rawMetric.marginVaultDelta)),
+    insuranceBalance: finiteOrZero(toUsd(rawMetric.insuranceBalance)),
+    insuranceBalanceDelta: finiteOrZero(toUsd(rawMetric.insuranceBalanceDelta)),
+    protocolTreasuryBalance: finiteOrZero(toUsd(rawMetric.protocolTreasuryBalance)),
+    protocolTreasuryDelta: finiteOrZero(toUsd(rawMetric.protocolTreasuryDelta)),
+    badDebt: finiteOrZero(toUsd(rawMetric.badDebt)),
+    badDebtDelta: finiteOrZero(toUsd(rawMetric.badDebtDelta)),
+    protocolRevenue: finiteOrZero(toUsd(rawMetric.protocolRevenue)),
+    protocolRevenueDelta: finiteOrZero(toUsd(rawMetric.protocolRevenueDelta)),
+    sumAccountCollateral: finiteOrZero(toUsd(rawMetric.sumAccountCollateral)),
+    accountCollateralDelta: finiteOrZero(toUsd(rawMetric.accountCollateralDelta)),
+    sumReservedMargin: finiteOrZero(toUsd(rawMetric.sumReservedMargin)),
+    reservedMarginDelta: finiteOrZero(toUsd(rawMetric.reservedMarginDelta)),
+    sumAvailableCollateral: finiteOrZero(toUsd(rawMetric.sumAvailableCollateral)),
+    availableCollateralDelta: finiteOrZero(toUsd(rawMetric.availableCollateralDelta)),
+    sumTraderFundingOwed: finiteOrZero(toUsd(rawMetric.sumTraderFundingOwed)),
+    traderFundingOwedDelta: finiteOrZero(toUsd(rawMetric.traderFundingOwedDelta)),
+    solvencyBuffer: finiteOrZero(toUsd(rawMetric.solvencyBuffer)),
+    makerFeesCollected: finiteOrZero(toUsd(rawMetric.makerFeesCollected)),
+    takerFeesCollected: finiteOrZero(toUsd(rawMetric.takerFeesCollected)),
+    fundingFeesTransferred: finiteOrZero(toUsd(rawMetric.fundingFeesTransferred)),
+    insuranceFundInflow: finiteOrZero(toUsd(rawMetric.insuranceFundInflow)),
+    insuranceFundOutflow: finiteOrZero(toUsd(rawMetric.insuranceFundOutflow)),
+    liquidationInsuranceInflow: finiteOrZero(toUsd(rawMetric.liquidationInsuranceInflow)),
+    liquidations: finiteOrZero(toNumber(rawMetric.liquidationCount)),
+    liquidatorOrders: finiteOrZero(toNumber(rawMetric.liquidatorOrders)),
+    liquidatorRewardsPaid: finiteOrZero(toUsd(rawMetric.liquidatorRewardsPaid)),
+    liquidationPenaltyCollected: finiteOrZero(toUsd(rawMetric.liquidationPenaltyCollected)),
+    marginReturnedFromLiquidation: finiteOrZero(toUsd(rawMetric.marginReturnedFromLiquidation)),
+    positionsAtRisk: finiteOrZero(toNumber(rawMetric.positionsAtRisk)),
+    trades: finiteOrZero(toNumber(rawMetric.tradeCount)),
+    uniqueTraders: finiteOrZero(toNumber(rawMetric.uniqueTraders)),
+    openOrders: finiteOrZero(toNumber(rawMetric.openOrders)),
+    newOrders: finiteOrZero(toNumber(rawMetric.newOrders)),
+    filledOrders: finiteOrZero(toNumber(rawMetric.filledOrders)),
+    cancelledOrders: finiteOrZero(toNumber(rawMetric.cancelledOrders)),
+    liquidationsPer100Orders: finiteOrZero(toNumber(rawMetric.liquidationsPer100Orders)),
+    avgLeverage: finiteOrZero(toNumber(rawMetric.averageLeverage)),
+    longShortRatio: finiteOrZero(toNumber(rawMetric.longShortRatio)),
+    spreadBps: finiteOrZero(toNumber(rawMetric.spreadBps)),
+    slippageBps: finiteOrZero(toNumber(rawMetric.slippageBps)),
+    priceImpactBps: finiteOrZero(toNumber(rawMetric.priceImpactBps)),
     isInsolvent: toBoolean(rawMetric.isInsolvent),
   };
 };
@@ -163,6 +182,50 @@ const normalizeSimulationData = (raw: RawSimulationResponse): SimulationData => 
   };
 };
 
+const normalizeDiagnostics = (raw: RawDiagnosticsResponse): SimulationDiagnostics => {
+  const executionLedger: ExecutionLedgerEvent[] = Array.isArray(raw.executionLedger)
+    ? raw.executionLedger.map((row) => ({
+        step: toNumber(row.step),
+        eventType: typeof row.eventType === 'string' ? row.eventType : 'intent',
+        trader: typeof row.trader === 'string' ? row.trader : 'unknown',
+        counterparty: typeof row.counterparty === 'string' ? row.counterparty : undefined,
+        agentType: typeof row.agentType === 'string' ? row.agentType : 'unknown',
+        side: typeof row.side === 'string' ? row.side : 'long',
+        exposure: toNumber(row.exposure),
+        leverage: toNumber(row.leverage),
+        reason: typeof row.reason === 'string' ? row.reason : '',
+      }))
+    : [];
+
+  const agentActivity: AgentActivitySummary[] = Array.isArray(raw.agentActivity)
+    ? raw.agentActivity.map((row) => ({
+        agentType: typeof row.agentType === 'string' ? row.agentType : 'unknown',
+        intents: toNumber(row.intents),
+        filled: toNumber(row.filled),
+        failed: toNumber(row.failed),
+        cancelled: toNumber(row.cancelled),
+        liquidations: toNumber(row.liquidations),
+        fillRatePercent: toNumber(row.fillRatePercent),
+        intentNotional: toNumber(row.intentNotional),
+        filledNotional: toNumber(row.filledNotional),
+      }))
+    : [];
+
+  return {
+    runId: typeof raw.runId === 'string' ? raw.runId : 'unknown',
+    executionLedger,
+    agentActivity,
+    meta: {
+      totalEvents: toNumber(raw.meta?.totalEvents),
+      returnedEvents: toNumber(raw.meta?.returnedEvents),
+      step: typeof raw.meta?.step === 'number' ? raw.meta.step : null,
+      limit: toNumber(raw.meta?.limit),
+      hasExecutionLedger: toBoolean(raw.meta?.hasExecutionLedger),
+      hasAgentActivity: toBoolean(raw.meta?.hasAgentActivity),
+    },
+  };
+};
+
 export class SimulationApi {
   static async healthCheck() {
     const response = await fetch(`${API_BASE}/health`);
@@ -191,5 +254,32 @@ export class SimulationApi {
   static async getSimulationSummary(id: string): Promise<string> {
     const response = await fetch(`${API_BASE}/runs/${id}/summary`);
     return response.text();
+  }
+
+  static async getSimulationDiagnostics(
+    id: string,
+    options?: { step?: number; limit?: number },
+  ): Promise<SimulationDiagnostics> {
+    const params = new URLSearchParams();
+    if (typeof options?.step === 'number') params.set('step', String(options.step));
+    if (typeof options?.limit === 'number') params.set('limit', String(options.limit));
+
+    const query = params.toString();
+    const response = await fetch(`${API_BASE}/runs/${id}/diagnostics${query ? `?${query}` : ''}`);
+    if (!response.ok) throw new Error(`Failed to fetch simulation diagnostics: ${id}`);
+    return normalizeDiagnostics((await response.json()) as RawDiagnosticsResponse);
+  }
+
+  static async getLatestSimulationDiagnostics(
+    options?: { step?: number; limit?: number },
+  ): Promise<SimulationDiagnostics> {
+    const params = new URLSearchParams();
+    if (typeof options?.step === 'number') params.set('step', String(options.step));
+    if (typeof options?.limit === 'number') params.set('limit', String(options.limit));
+
+    const query = params.toString();
+    const response = await fetch(`${API_BASE}/latest/diagnostics${query ? `?${query}` : ''}`);
+    if (!response.ok) throw new Error('Failed to fetch latest simulation diagnostics');
+    return normalizeDiagnostics((await response.json()) as RawDiagnosticsResponse);
   }
 }

@@ -23,10 +23,20 @@ interface Props {
 export const RiskMetricsPanel: React.FC<Props> = ({ metrics, historicalMetrics }) => {
   if (!metrics) return null;
 
-  const solvencyData = historicalMetrics.map(m => ({
-    step: m.step,
-    solvency: m.solvencyBuffer,
-    price: m.price / 100, // Scale for visualization
+  const finiteHistory = historicalMetrics.filter((metric) =>
+    Number.isFinite(metric.step)
+    && Number.isFinite(metric.solvencyBuffer)
+    && Number.isFinite(metric.price)
+  );
+
+  const maxPrice = finiteHistory.length > 0
+    ? Math.max(...finiteHistory.map((metric) => metric.price), 1)
+    : 1;
+
+  const solvencyData = finiteHistory.map((metric) => ({
+    step: metric.step,
+    solvency: metric.solvencyBuffer,
+    price: (metric.price / maxPrice) * 100,
     threshold: 0,
   }));
 
