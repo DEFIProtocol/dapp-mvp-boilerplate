@@ -593,10 +593,28 @@ export async function runSimulation(options: SimulationOptions) {
     const failedAssertions = snapshot.assertions.filter((assertion) => !assertion.ok);
     if (failedAssertions.length > 0) {
       const details = failedAssertions
-        .slice(0, 5)
+        .slice(0, 8)
         .map((assertion) => `${assertion.name}: expected ${assertion.expected ?? "?"}, actual ${assertion.actual ?? "?"}`)
         .join(" | ");
-      throw new Error(`Consistency check failed at step ${step}: ${details}`);
+
+      const forensic = [
+        `totalContractBalance=${snapshot.onChain.totalContractBalance.toString()}`,
+        `externalWalletBalances=${snapshot.onChain.externalWalletBalances.toString()}`,
+        `totalBooked=${snapshot.onChain.totalBooked.toString()}`,
+        `insuranceTreasuryBalance=${snapshot.onChain.insuranceTreasuryBalance.toString()}`,
+        `insuranceFundBalance=${snapshot.onChain.insuranceFundBalance.toString()}`,
+        `activeLongExposure=${snapshot.onChain.activeLongExposure.toString()}`,
+        `activeShortExposure=${snapshot.onChain.activeShortExposure.toString()}`,
+        `totalLongExposure=${snapshot.onChain.totalLongExposure.toString()}`,
+        `totalShortExposure=${snapshot.onChain.totalShortExposure.toString()}`,
+        `sumAccountCollateral=${snapshot.onChain.sumAccountCollateral.toString()}`,
+        `sumReservedMargin=${snapshot.onChain.sumReservedMargin.toString()}`,
+        `sumAvailableCollateral=${snapshot.onChain.sumAvailableCollateral.toString()}`,
+      ].join(" | ");
+
+      throw new Error(
+        `Consistency check failed at step ${step} (block ${snapshot.blockNumber}, ts ${snapshot.timestamp}, price ${snapshot.scenarioPrice}): ${details} || ${forensic}`
+      );
     }
 
     if (step % 100 === 0) {

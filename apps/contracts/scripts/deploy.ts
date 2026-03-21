@@ -24,6 +24,7 @@ type ModuleAddresses = {
   adlEngine: string;
   settlementEngine: string;
   fundingEngine: string;
+  timelock: string;
 };
 
 type PerpEngineContract = BaseContract & {
@@ -120,7 +121,7 @@ async function resolveInsuranceFundAddress(
   );
 }
 
-async function getModuleAddresses(perpEngine: PerpEngineContract): Promise<ModuleAddresses> {
+async function getModuleAddresses(perpEngine: PerpEngineContract, timelockAddress: string): Promise<ModuleAddresses> {
   return {
     perpStorage: await perpEngine.perpStorage(),
     collateralManager: await perpEngine.collateralManager(),
@@ -130,6 +131,7 @@ async function getModuleAddresses(perpEngine: PerpEngineContract): Promise<Modul
     adlEngine: await perpEngine.adlEngine(),
     settlementEngine: await perpEngine.settlementEngine(),
     fundingEngine: await perpEngine.fundingEngine(),
+    timelock: timelockAddress,
   };
 }
 
@@ -323,7 +325,31 @@ async function main(): Promise<void> {
   const setAdlTx = await perpEngine.setAdlEngine(adlEngineAddress);
   await setAdlTx.wait();
 
-  const modules = await getModuleAddresses(perpEngine);
+  // ── Governance: deploy TimelockController and transfer ownership ────────────
+  // On local hardhat networks use 0-second delay so the timelock can be used
+  // immediately in tests/scripts. On any live network use 48 h.
+  const timelockDelay = networkName.startsWith("hardhat") || networkName.startsWith("localhost")
+    ? 0
+    : 2 * 24 * 3600;
+
+  const TimelockFactory = await ethers.getContractFactory("TimelockController");
+  const timelock = await TimelockFactory.deploy(
+    timelockDelay,
+    [deployer.address], // proposers
+    [deployer.address], // executors
+    deployer.address,   // admin (can manage roles; renounce after setup)
+  );
+  await timelock.waitForDeployment();
+  const timelockAddress = await timelock.getAddress();
+  console.log(`\nTimelockController: ${timelockAddress} (delay=${timelockDelay}s)`);
+
+  // Transfer PerpEngine ownership to the timelock.
+  const transferTx = await (perpEngine as any).transferOwnership(timelockAddress);
+  await transferTx.wait();
+  console.log(`PerpEngine ownership transferred to timelock`);
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const modules = await getModuleAddresses(perpEngine, timelockAddress);
   await verifyCodeExists({ perpEngine: perpEngineAddress, ...modules }, ethers);
 
   console.log("\nModule addresses:");
@@ -335,6 +361,7 @@ async function main(): Promise<void> {
   console.log(`  ADLEngine:         ${modules.adlEngine}`);
   console.log(`  SettlementEngine:  ${modules.settlementEngine}`);
   console.log(`  FundingEngine:     ${modules.fundingEngine}`);
+  console.log(`  TimelockController:${modules.timelock}`);
 
   await saveDeploymentInfo(
     networkName,

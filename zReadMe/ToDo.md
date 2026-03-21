@@ -21,10 +21,6 @@
 - Solvency check every sim step: `consistency.ts` solvency-bound assertion runs each step
 - Liquidator reward: `liquidate()` pays liquidator via `LiquidationEngine._distributeLiquidationProceeds`
 
----
-
-## PRIORITY 1 — Fix before stress-test sign-off
-
 **1. Solvency-bound consistency failures in stress runs**
 Simulator throws "Consistency check failed" in some stress scenarios. Root cause not yet diagnosed.
 Run oracle-failure and black-swan scenarios, isolate which assertion fails (solvency-bound /
@@ -38,6 +34,7 @@ There is no auto-trigger to pause new settlement on staleness — only manual `s
   operators can observe and act without needing an emergency manual call.
 - Files: `MarkPrice.sol` (`getMarkPrice`), `Oracle.sol` (`isStale`), `PerpSettlement`
 
+??
 **3. Circuit breakers, liquidation throttling, order size limits**
 `maxReductionBpsPerEvent` and `maxStepsPerTx` are defined in `ADLEngine` but never enforced —
 the while-loop in `executeAutoDeleverage` runs unbounded. No price-speed gate exists.
@@ -61,7 +58,7 @@ same block with the same orders produce an identical matchId (replay vector).
 - Fix: allocate a small bps from the fee pool per successful `updateFunding()` call, paid to
   `msg.sender` via `CollateralManager.transferOut`.
 - Files: `FundingEngine.updateFunding`, `CollateralManager`
-
+---
 **6. Anti-DoS: no max open orders per account**
 Max leverage and single-active-position-per-market are enforced, but a trader can place unlimited
 pending orders (no cap on the `filledAmount` mapping).
@@ -87,17 +84,23 @@ No proxies, migration scripts, or rollback plan.
   events and interface validation to `upgradeModule()`.
 - Files: `PerpSettlement.upgradeModule`
 
+## PRIORITY 1 — Fix before stress-test sign-off
+
+
 **9. Proof pack: risk parameters tied to scenario evidence**
 Simulation run outputs exist in `simulation-results/` but nothing formally links parameter
 choices (`maintenanceMarginBps`, `liquidationRewardBps`, ADL ratios) to scenario outcomes.
 - Fix: write `zReadMe/ProofPack.md` — a table of param → scenario → outcome with links to
   specific simulation JSON runs.
+- Status: ✅ Implemented in `zReadMe/ProofPack.md`.
 
 **10. Liquidation price caching (gas reduction)**
 `liquidationPrice` and `bankruptcyPrice` are computed on-demand inside every liquidation check.
 - Fix: store both in the `Position` struct, update on every margin/exposure change.
   Reduces gas for keepers scanning all positions.
 - Files: `PerpStorage.Position` struct, `PositionManager`, `RiskManager.isPositionLiquidatable`
+- Status: ✅ Implemented in `PerpStorage.Position`, `PositionManager` cache refresh hooks,
+  and `RiskManager` cached-liquidation checks.
 
 ---
 
