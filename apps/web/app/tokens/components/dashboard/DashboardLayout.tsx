@@ -1,30 +1,36 @@
 'use client';
 
 // components/dashboard/DashboardLayout.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Share2 } from 'lucide-react';
 import { SystemHealthOverview } from './SystemHealthOverview';
 import { RiskMetricsPanel } from './RiskMetricsPanel';
 import { ProtocolEconomics } from './ProtocolEconomics';
-import { TraderReplayPositionsPanel } from './TraderReplayPositionsPanel';
+import { SimulationStoryChartsPanel } from './SimulationStoryChartsPanel';
 import { SimulationDiagnosticsPanel } from './SimulationDiagnosticsPanel';
 import { TokenPricePanel } from './TokenPricePanel';
-import { SimulationPerpetualOrderCard } from './SimulationPerpetualOrderCard';
+import { ExecutiveSummaryPanel } from './ExecutiveSummaryPanel';
+import { ScenarioComparisonPanel } from './ScenarioComparisonPanel';
+import { ProtocolPerformancePanel } from './ProtocolPerformancePanel';
 import { TimelineController } from '../simulation/TimelineController';
 import { ScenarioSelector } from '../simulation/ScenarioSelector';
 import { ExportModal } from '../export/ExportModal';
 import { SimulationApi } from '../services/simulationApi';
-import type { SimulationData, SimulationDiagnostics } from '../../types/simulation';
+import type { SimulationData, SimulationDiagnostics, SimulationRun } from '../../types/simulation';
 
 export const DashboardLayout: React.FC = () => {
+  const playbackAccumulatorRef = useRef(0);
+  const lastTickRef = useRef<number | null>(null);
   const [simulationData, setSimulationData] = useState<SimulationData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [renderStepLimit, setRenderStepLimit] = useState<number | 'all'>(2000);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState('ETH');
+  const [simulationRuns, setSimulationRuns] = useState<SimulationRun[]>([]);
   const [diagnostics, setDiagnostics] = useState<SimulationDiagnostics | null>(null);
   const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(false);
   const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
@@ -43,31 +49,76 @@ export const DashboardLayout: React.FC = () => {
     loadLatestSimulation();
   }, []);
 
-  const maxStep = Math.max((simulationData?.metrics.length ?? 1) - 1, 0);
+  const visibleSimulationData = useMemo(() => {
+    if (!simulationData) return null;
+
+    const cappedLength = renderStepLimit === 'all'
+      ? simulationData.metrics.length
+      : Math.min(simulationData.metrics.length, renderStepLimit);
+
+    const metrics = simulationData.metrics.slice(0, cappedLength);
+    const liquidations = simulationData.liquidations.slice(0, cappedLength);
+    const positionsByStep = Object.fromEntries(
+      Object.entries(simulationData.positionsByStep ?? {}).filter(([stepKey]) => Number(stepKey) < cappedLength),
+    );
+
+    return {
+      ...simulationData,
+      config: {
+        ...simulationData.config,
+        steps: cappedLength,
+      },
+      metrics,
+      liquidations,
+      positionsByStep,
+      positions: metrics.length > 0 ? positionsByStep[metrics.length - 1] || positionsByStep[0] || [] : [],
+    };
+  }, [simulationData, renderStepLimit]);
+
+  const maxStep = Math.max((visibleSimulationData?.metrics.length ?? 1) - 1, 0);
   const safeStep = Math.min(Math.max(currentStep, 0), maxStep);
 
   useEffect(() => {
-    if (currentStep !== safeStep) {
-      setCurrentStep(safeStep);
-    }
-  }, [currentStep, safeStep]);
+    setCurrentStep((prev) => Math.min(Math.max(prev, 0), maxStep));
+  }, [maxStep]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && simulationData) {
+    if (isPlaying && visibleSimulationData) {
+      lastTickRef.current = Date.now();
+      playbackAccumulatorRef.current = 0;
+
       interval = setInterval(() => {
+        const now = Date.now();
+        const lastTick = lastTickRef.current ?? now;
+        const elapsedSeconds = (now - lastTick) / 1000;
+        lastTickRef.current = now;
+        playbackAccumulatorRef.current += elapsedSeconds * playbackSpeed;
+
+        const stepsToAdvance = Math.floor(playbackAccumulatorRef.current);
+        if (stepsToAdvance < 1) {
+          return;
+        }
+
+        playbackAccumulatorRef.current -= stepsToAdvance;
+
         setCurrentStep((prev) => {
-          const next = prev + 1;
+          const next = Math.min(prev + stepsToAdvance, maxStep);
           if (next >= maxStep) {
             setIsPlaying(false);
-            return maxStep;
+            playbackAccumulatorRef.current = 0;
           }
           return next;
         });
-      }, 1000 / playbackSpeed);
+      }, 100);
     }
-    return () => clearInterval(interval);
-  }, [isPlaying, playbackSpeed, simulationData, maxStep]);
+
+    return () => {
+      lastTickRef.current = null;
+      playbackAccumulatorRef.current = 0;
+      clearInterval(interval);
+    };
+  }, [isPlaying, playbackSpeed, visibleSimulationData, maxStep]);
 
   const loadLatestSimulation = async () => {
     try {
@@ -80,6 +131,9 @@ export const DashboardLayout: React.FC = () => {
         SimulationApi.getLatestSimulation(),
         SimulationApi.getLatestSimulationDiagnostics({ limit: 2500 }),
       ]);
+
+      const runsResult = await SimulationApi.getSimulationRuns();
+      setSimulationRuns(runsResult.runs || []);
 
       if (simulationResult.status !== 'fulfilled') {
         throw simulationResult.reason;
@@ -117,6 +171,7 @@ export const DashboardLayout: React.FC = () => {
       setDiagnosticsError(null);
 
       const { runs } = await SimulationApi.getSimulationRuns();
+      setSimulationRuns(runs || []);
       const matchingRun = runs.find(
         (run) => run.id === selectedScenario || run.scenario === selectedScenario,
       );
@@ -211,7 +266,7 @@ export const DashboardLayout: React.FC = () => {
       }
 
       try {
-        if (!diagnostics) {
+        if (!lastVisibleDiagnosticsRef.current) {
           setIsDiagnosticsLoading(true);
         }
 
@@ -242,7 +297,7 @@ export const DashboardLayout: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [safeStep, diagnosticsRunId, diagnostics]);
+  }, [safeStep, diagnosticsRunId]);
 
   if (isLoading) {
     return (
@@ -255,7 +310,7 @@ export const DashboardLayout: React.FC = () => {
     );
   }
 
-  if (error || !simulationData) {
+  if (error || !visibleSimulationData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
         <div className="bg-red-500/10 border border-red-500 rounded-lg p-8 max-w-lg">
@@ -272,7 +327,7 @@ export const DashboardLayout: React.FC = () => {
     );
   }
 
-  const data = simulationData;
+  const data = visibleSimulationData;
   const currentMetrics = data.metrics[safeStep] ?? data.metrics[data.metrics.length - 1];
   const currentLiquidations = data.liquidations[safeStep] ?? data.liquidations[data.liquidations.length - 1];
   const totalOrders = data.metrics.reduce((sum, metric) => sum + metric.newOrders, 0);
@@ -281,8 +336,7 @@ export const DashboardLayout: React.FC = () => {
   const runAverageLeverage = data.metrics.length > 0
     ? data.metrics.reduce((sum, metric) => sum + metric.avgLeverage, 0) / data.metrics.length
     : 0;
-  const currentMarkPrice = currentMetrics?.price || 0;
-  const stepOutcomes = simulationData.metrics.map((metric) => {
+  const stepOutcomes = data.metrics.map((metric) => {
     const failed = Math.max(metric.newOrders - metric.filledOrders - metric.cancelledOrders, 0);
     return {
       step: metric.step,
@@ -324,7 +378,7 @@ export const DashboardLayout: React.FC = () => {
             
             <div className="flex items-center space-x-4">
               <ScenarioSelector 
-                currentScenario={simulationData.config.scenario}
+                currentScenario={data.config.scenario}
                 onSelectScenario={loadScenarioSimulation}
               />
               <div className="flex items-center space-x-2">
@@ -346,8 +400,21 @@ export const DashboardLayout: React.FC = () => {
               <div className="text-sm bg-slate-800/60 border border-slate-700/70 px-4 py-2 rounded-lg">
                 <span className="text-slate-400">Step:</span>
                 <span className="ml-2 font-mono text-cyan-300">
-                  {safeStep}/{simulationData.metrics.length - 1}
+                  {safeStep}/{data.metrics.length - 1}
                 </span>
+              </div>
+              <div className="text-sm bg-slate-800/60 border border-slate-700/70 px-3 py-2 rounded-lg flex items-center gap-2">
+                <span className="text-slate-400">Range:</span>
+                <select
+                  value={String(renderStepLimit)}
+                  onChange={(event) => setRenderStepLimit(event.target.value === 'all' ? 'all' : Number(event.target.value))}
+                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-cyan-300"
+                >
+                  <option value="1000">1000</option>
+                  <option value="2000">2000</option>
+                  <option value="5000">5000</option>
+                  <option value="all">all</option>
+                </select>
               </div>
             </div>
           </div>
@@ -365,7 +432,7 @@ export const DashboardLayout: React.FC = () => {
                 {/* Token Price Panel */}
                 <div ref={chartRefs.liquidationMap}>
                   <TokenPricePanel
-                    metrics={simulationData.metrics}
+                    metrics={data.metrics}
                     currentStep={safeStep}
                     selectedSymbol={selectedSymbol}
                     onSymbolChange={setSelectedSymbol}
@@ -376,7 +443,7 @@ export const DashboardLayout: React.FC = () => {
                 <div ref={chartRefs.positionDist}>
                   <RiskMetricsPanel 
                     metrics={currentMetrics}
-                    historicalMetrics={simulationData.metrics.slice(0, safeStep + 1)}
+                    historicalMetrics={data.metrics.slice(0, safeStep + 1)}
                   />
                 </div>
               </div>
@@ -393,23 +460,40 @@ export const DashboardLayout: React.FC = () => {
 
           {/* Row 2: System Health Overview - Full Width */}
           <div className="w-full">
+            <ExecutiveSummaryPanel
+              metrics={currentMetrics}
+              scenario={data.config.scenario}
+              currentStep={safeStep}
+              totalSteps={data.metrics.length}
+            />
+          </div>
+
+          <div className="w-full">
+            <ScenarioComparisonPanel
+              runs={simulationRuns}
+              currentRunId={diagnosticsRunId}
+              currentScenario={data.config.scenario}
+              onSelectScenario={loadScenarioSimulation}
+            />
+          </div>
+
+          <div className="w-full">
             <SystemHealthOverview metrics={currentMetrics} />
           </div>
 
-          {/* Row 3: Perpetual Order Card - Full Width */}
+          {/* Row 3: Protocol Performance & Tuning - Full Width */}
           <div className="w-full" ref={chartRefs.orderFlow}>
-            <SimulationPerpetualOrderCard
-              symbol={selectedSymbol}
-              currentPrice={currentMarkPrice}
+            <ProtocolPerformancePanel
+              metrics={currentMetrics}
+              historicalMetrics={data.metrics.slice(0, safeStep + 1)}
               currentStep={safeStep}
             />
           </div>
 
-          {/* Row 4: Trader Replay Positions - Full Width */}
+          {/* Row 4: Simulation Story Charts - Full Width */}
           <div className="w-full" ref={chartRefs.pnlAnalysis}>
-            <TraderReplayPositionsPanel
-              positionsByStep={simulationData.positionsByStep}
-              metrics={simulationData.metrics}
+            <SimulationStoryChartsPanel
+              metrics={data.metrics}
               currentStep={safeStep}
             />
           </div>
@@ -426,7 +510,7 @@ export const DashboardLayout: React.FC = () => {
           {/* Timeline Controller - Full Width */}
           <div className="w-full">
             <TimelineController
-              totalSteps={simulationData.metrics.length}
+              totalSteps={data.metrics.length}
               currentStep={safeStep}
               onStepChange={setCurrentStep}
               isPlaying={isPlaying}
@@ -434,7 +518,7 @@ export const DashboardLayout: React.FC = () => {
               speed={playbackSpeed}
               onSpeedChange={setPlaybackSpeed}
               stepOutcomes={stepOutcomes}
-              bookmarks={simulationData.liquidations
+              bookmarks={data.liquidations
                 ?.filter(l => l.liquidations > 0)
                 .map(l => l.step) || []}
             />
@@ -445,7 +529,7 @@ export const DashboardLayout: React.FC = () => {
       <ExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
-        data={simulationData}
+        data={data}
         chartRefs={chartRefs}
       />
     </div>

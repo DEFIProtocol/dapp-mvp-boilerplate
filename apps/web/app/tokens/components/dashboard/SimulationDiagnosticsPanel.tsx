@@ -144,7 +144,7 @@ export const SimulationDiagnosticsPanel: React.FC<Props> = ({
   if (error) {
     return (
       <div className="bg-gray-800/50 rounded-xl p-4 border border-red-500/40">
-        <h3 className="text-lg font-semibold mb-2">Execution Diagnostics</h3>
+        <h3 className="text-lg font-semibold mb-2">Protocol Event Log</h3>
         <div className="text-sm text-red-300">{error}</div>
       </div>
     );
@@ -153,7 +153,7 @@ export const SimulationDiagnosticsPanel: React.FC<Props> = ({
   if (!diagnostics) {
     return (
       <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-        <h3 className="text-lg font-semibold mb-2">Execution Diagnostics</h3>
+        <h3 className="text-lg font-semibold mb-2">Protocol Event Log</h3>
         <div className="text-sm text-gray-400">No diagnostics available for this run.</div>
       </div>
     );
@@ -162,7 +162,7 @@ export const SimulationDiagnosticsPanel: React.FC<Props> = ({
   return (
     <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 space-y-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-        <h3 className="text-lg font-semibold">Execution Diagnostics</h3>
+        <h3 className="text-lg font-semibold">Protocol Event Log</h3>
         <div className="text-xs text-gray-400 flex items-center gap-2">
           <span>Run {diagnostics.runId} · Showing {diagnostics.meta.returnedEvents} / {diagnostics.meta.totalEvents} events</span>
           {isLoading && <span className="text-cyan-300">Refreshing…</span>}
@@ -253,7 +253,7 @@ export const SimulationDiagnosticsPanel: React.FC<Props> = ({
             <tr>
               <th className="py-2 text-left">Type</th>
               <th className="py-2 text-left">Agent</th>
-              <th className="py-2 text-left">Trader</th>
+              <th className="py-2 text-left">Account</th>
               <th className="py-2 text-left">Counterparty</th>
               <th className="py-2 text-right">Side</th>
               <th className="py-2 text-right">Exposure</th>

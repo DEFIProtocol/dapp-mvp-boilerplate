@@ -29,8 +29,8 @@ import {
   Copy,
   CheckCircle,
 } from 'lucide-react';
-import { SimulationApi } from '../../services/simulationApi';
-import type { SimulationData, SimulationRun } from '../../types/simulation';
+import { SimulationApi } from '../services/simulationApi';
+import type { SimulationData, SimulationMetrics, SimulationRun } from '../../types/simulation';
 
 interface Props {
   onLoadSimulation?: (id: string) => void;
@@ -48,16 +48,14 @@ interface ScenarioSummary {
   name: string;
   scenario: string;
   seed: number;
-  metrics: {
-    totalLiquidations: number;
-    maxDrawdown: number;
-    avgLeverage: number;
-    totalRevenue: number;
-    insuranceUsage: number;
-    maxSolvencyBuffer: number;
-    minSolvencyBuffer: number;
-    badDebtOccurred: boolean;
-  };
+  totalLiquidations: number;
+  maxDrawdown: number;
+  avgLeverage: number;
+  totalRevenue: number;
+  insuranceUsage: number;
+  maxSolvencyBuffer: number;
+  minSolvencyBuffer: number;
+  badDebtOccurred: boolean;
 }
 
 export const ScenarioComparison: React.FC<Props> = ({ onLoadSimulation }) => {

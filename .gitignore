@@ -5,3 +5,5 @@ dist/
 build/
 simulation-results/
 contracts/
+apps/contracts/contracts/
+packages/contracts/

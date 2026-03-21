@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 
 import { deployLocal } from "./deployLocal.ts";
 import { collectConsistencySnapshot } from "./analytics/consistency.ts";
+import { evaluateAdlInvariantFailures } from "./analytics/adlInvariants.ts";
 import { MetricsCollector } from "./analytics/metrics.ts";
 import { SimulationLogger } from "./analytics/logger.ts";
 import { ChartGenerator } from "./analytics/charts.ts";
@@ -36,6 +37,13 @@ interface CumulativeFlows {
   liquidationPenalty: bigint;
   marginReturned: bigint;
   fundingTransferred: bigint;
+  adlRequested: bigint;
+  adlCovered: bigint;
+  adlRemaining: bigint;
+  adlEvents: number;
+  proactiveAdlEvents: number;
+  proactiveAdlSoftEvents: number;
+  proactiveAdlHardEvents: number;
 }
 
 interface TraderBehavior {
@@ -90,6 +98,18 @@ interface SimulationOptions {
   generateCharts?: boolean;
 }
 
+const FIXED_SIMULATION_STEPS = 2000;
+const ADL_QUEUE_REFRESH_INTERVAL = 25;
+const STRESS_SCENARIOS = new Set([
+  "blackSwan",
+  "blackSwanDown",
+  "blackSwanUp",
+  "volatilityShock",
+  "liquidityCrisis",
+  "liquidationCascade",
+  "oracleFailure",
+]);
+
 export async function runSimulation(options: SimulationOptions) {
   const connection = (await network.connect()) as unknown as { ethers: any };
   const { ethers } = connection;
@@ -117,6 +137,7 @@ export async function runSimulation(options: SimulationOptions) {
   const positionManager = await ethers.getContractAt("PositionManager", addresses.positionManager);
   const riskManager = await ethers.getContractAt("RiskManager", addresses.riskManager);
   const liquidationEngine = await ethers.getContractAt("LiquidationEngine", addresses.liquidationEngine);
+  const adlEngine = await ethers.getContractAt("ADLEngine", addresses.adlEngine);
   const settlementEngine = await ethers.getContractAt("SettlementEngine", addresses.settlementEngine);
   const fundingEngine = await ethers.getContractAt("FundingEngine", addresses.fundingEngine);
   const insuranceTreasury = await ethers.getContractAt("InsuranceTreasury", addresses.insuranceFund);
@@ -130,13 +151,23 @@ export async function runSimulation(options: SimulationOptions) {
   await seedTraderCollateral(ethers, usdc, collateralManager, traderSigners);
 
   const scenario = SCENARIOS[String(options.scenario)];
-  const steps = options.steps ?? scenario.duration;
+  const scenarioKey = String(options.scenario);
+  const isStressScenario = STRESS_SCENARIOS.has(scenarioKey);
+  const steps = FIXED_SIMULATION_STEPS;
+  if (options.steps !== undefined && options.steps !== FIXED_SIMULATION_STEPS) {
+    console.log(
+      `Requested --steps ${options.steps} is ignored; using fixed ${FIXED_SIMULATION_STEPS} steps.`,
+    );
+  }
   const priceEngine = new MarketPriceEngine(scenario, options.seed);
   const random = new DeterministicRandom(options.seed + 1337);
   const nonceByTrader = new Map<string, bigint>();
   const defaultMarketId = await perpStorage.marketFeedId();
   const traderProfileByAddress = buildTraderProfileMap(addresses.agents);
   const priceHistory: number[] = [scenario.priceModel.initialPrice];
+
+  const adlEnabled = await adlEngine.adlEnabled();
+  console.log(`ADL Engine: ${addresses.adlEngine} (enabled=${adlEnabled ? "yes" : "no"})`);
 
   const cumulative: CumulativeFlows = {
     makerFees: 0n,
@@ -148,6 +179,13 @@ export async function runSimulation(options: SimulationOptions) {
     liquidationPenalty: 0n,
     marginReturned: 0n,
     fundingTransferred: 0n,
+    adlRequested: 0n,
+    adlCovered: 0n,
+    adlRemaining: 0n,
+    adlEvents: 0,
+    proactiveAdlEvents: 0,
+    proactiveAdlSoftEvents: 0,
+    proactiveAdlHardEvents: 0,
   };
 
   const metricsCollector = new MetricsCollector(
@@ -174,7 +212,20 @@ export async function runSimulation(options: SimulationOptions) {
   const initialPrice = scenario.priceModel.initialPrice;
   await oracle.setPrice(toOraclePrice(ethers, initialPrice));
 
+  const initialAdlQueueStats = await refreshAdlQueuesOnChain({
+    perpStorage,
+    riskManager,
+    adlEngine,
+    traderSigners,
+    ownerSigner: matcher,
+    marketId: defaultMarketId,
+  });
+  console.log(
+    `[ADL QUEUE] initial long=${initialAdlQueueStats.longQueued}/${initialAdlQueueStats.longCandidates} short=${initialAdlQueueStats.shortQueued}/${initialAdlQueueStats.shortCandidates}`,
+  );
+
   console.log("\nRunning simulation...\n");
+  console.log(`ADL invariant policy: ${isStressScenario ? "hard-fail" : "warn-only"}`);
 
   for (let step = 0; step < steps; step++) {
     const previousPrice = priceEngine.getCurrentPrice();
@@ -354,9 +405,28 @@ export async function runSimulation(options: SimulationOptions) {
       cumulative.fundingTransferred += stepFundingTransferred;
     }
 
+    if (step % ADL_QUEUE_REFRESH_INTERVAL === 0) {
+      const adlQueueStats = await refreshAdlQueuesOnChain({
+        perpStorage,
+        riskManager,
+        adlEngine,
+        traderSigners,
+        ownerSigner: matcher,
+        marketId: defaultMarketId,
+      });
+
+      if (!options.headless || step === 0) {
+        console.log(
+          `[ADL QUEUE] step=${step} long=${adlQueueStats.longQueued}/${adlQueueStats.longCandidates} short=${adlQueueStats.shortQueued}/${adlQueueStats.shortCandidates} eligibleScores(long=${adlQueueStats.longEligibleScores},short=${adlQueueStats.shortEligibleScores})`,
+        );
+      }
+    }
+
     const liquidatablePositions = await findLiquidatablePositions(perpStorage, riskManager, traderSigners);
     let stepLiquidations = 0;
     let stepLiquidatorOrders = 0;
+    let stepAdlEvents = 0;
+    let stepProactiveAdlEvents = 0;
 
     for (const pos of liquidatablePositions) {
       stepLiquidatorOrders++;
@@ -382,6 +452,21 @@ export async function runSimulation(options: SimulationOptions) {
         cumulative.liquidationInsuranceInflow += result.insuranceInflow;
       }
 
+      if (result.adlEvents > 0) {
+        cumulative.adlEvents += result.adlEvents;
+        cumulative.adlRequested += result.adlRequested;
+        cumulative.adlCovered += result.adlCovered;
+        cumulative.adlRemaining += result.adlRemaining;
+        stepAdlEvents += result.adlEvents;
+      }
+
+      if (result.proactiveAdlEvents > 0) {
+        cumulative.proactiveAdlEvents += result.proactiveAdlEvents;
+        cumulative.proactiveAdlSoftEvents += result.proactiveAdlSoftEvents;
+        cumulative.proactiveAdlHardEvents += result.proactiveAdlHardEvents;
+        stepProactiveAdlEvents += result.proactiveAdlEvents;
+      }
+
       cumulative.marginReturned += result.marginReturned;
 
       const liquidatorProfile = traderProfileByAddress.get(liquidator.address) ?? getDefaultTraderProfile();
@@ -396,6 +481,24 @@ export async function runSimulation(options: SimulationOptions) {
         leverage: 1,
         reason: `position:${pos.positionId.toString()}`,
       });
+    }
+
+    const adlInvariantFailures = evaluateAdlInvariantFailures({
+      step,
+      cumulativeRequested: cumulative.adlRequested,
+      cumulativeCovered: cumulative.adlCovered,
+      cumulativeRemaining: cumulative.adlRemaining,
+      cumulativeProactive: cumulative.proactiveAdlEvents,
+      cumulativeProactiveSoft: cumulative.proactiveAdlSoftEvents,
+      cumulativeProactiveHard: cumulative.proactiveAdlHardEvents,
+    });
+
+    if (adlInvariantFailures.length > 0) {
+      const adlMessage = `[ADL INVARIANTS] step ${step}: ${adlInvariantFailures.join(" | ")}`;
+      if (isStressScenario) {
+        throw new Error(adlMessage);
+      }
+      console.warn(adlMessage);
     }
 
     const [insuranceBalance, feePool, badDebt, nextFunding, longOiRaw, shortOiRaw] = await Promise.all([
@@ -462,6 +565,15 @@ export async function runSimulation(options: SimulationOptions) {
       liquidatorRewardsPaid: cumulative.liquidatorRewards,
       liquidationPenaltyCollected: cumulative.liquidationPenalty,
       marginReturnedFromLiquidation: cumulative.marginReturned,
+      adlRequestedNotional: cumulative.adlRequested,
+      adlCoveredNotional: cumulative.adlCovered,
+      adlRemainingDeficit: cumulative.adlRemaining,
+      adlEvents: cumulative.adlEvents,
+      proactiveAdlEvents: cumulative.proactiveAdlEvents,
+      proactiveAdlSoftEvents: cumulative.proactiveAdlSoftEvents,
+      proactiveAdlHardEvents: cumulative.proactiveAdlHardEvents,
+      stepAdlEvents,
+      stepProactiveAdlEvents,
       stepVolume,
       trades: stepTradeCount,
       uniqueTraders: positionStats.uniqueTraders,
@@ -621,6 +733,107 @@ async function findLiquidatablePositions(
   }
 
   return positions;
+}
+
+async function refreshAdlQueuesOnChain(params: {
+  perpStorage: Contract;
+  riskManager: Contract;
+  adlEngine: Contract;
+  traderSigners: Signer[];
+  ownerSigner: Signer;
+  marketId: string;
+}): Promise<{
+  longCandidates: number;
+  shortCandidates: number;
+  longEligibleScores: number;
+  shortEligibleScores: number;
+  longQueued: number;
+  shortQueued: number;
+}> {
+  const {
+    perpStorage,
+    riskManager,
+    adlEngine,
+    traderSigners,
+    ownerSigner,
+    marketId,
+  } = params;
+
+  const longRanks: Array<{ positionId: bigint; score: bigint }> = [];
+  const shortRanks: Array<{ positionId: bigint; score: bigint }> = [];
+  const zeroMarketId = "0x" + "0".repeat(64);
+  const markPrice = await riskManager.getMarkPriceForMarket(marketId);
+
+  let longCandidates = 0;
+  let shortCandidates = 0;
+  let longEligibleScores = 0;
+  let shortEligibleScores = 0;
+
+  for (const trader of traderSigners) {
+    const ids: bigint[] = await perpStorage.getTraderPositions(trader.address);
+
+    for (const id of ids) {
+      try {
+        const position = await perpStorage.getPosition(id);
+        if (!position.active) continue;
+
+        const positionMarketId = String(position.marketId);
+        const resolvedMarketId = positionMarketId === zeroMarketId ? marketId : positionMarketId;
+        if (resolvedMarketId.toLowerCase() !== marketId.toLowerCase()) continue;
+
+        const isLong = Number(position.side) === 0;
+        if (isLong) {
+          longCandidates += 1;
+        } else {
+          shortCandidates += 1;
+        }
+
+        const scoreRaw = await adlEngine.calculateScore(id, markPrice);
+        const score = BigInt(scoreRaw);
+        if (score <= 0n) continue;
+
+        if (isLong) {
+          longEligibleScores += 1;
+          longRanks.push({ positionId: BigInt(id), score });
+        } else {
+          shortEligibleScores += 1;
+          shortRanks.push({ positionId: BigInt(id), score });
+        }
+      } catch {
+        // Ignore stale/non-resolvable positions during queue refresh.
+      }
+    }
+  }
+
+  longRanks.sort((a, b) => {
+    if (a.score === b.score) return 0;
+    return a.score > b.score ? -1 : 1;
+  });
+  shortRanks.sort((a, b) => {
+    if (a.score === b.score) return 0;
+    return a.score > b.score ? -1 : 1;
+  });
+
+  const longQueuePayload = longRanks.map((entry) => ({
+    positionId: entry.positionId,
+    score: entry.score,
+  }));
+  const shortQueuePayload = shortRanks.map((entry) => ({
+    positionId: entry.positionId,
+    score: entry.score,
+  }));
+
+  await (await adlEngine.connect(ownerSigner).setQueue(marketId, true, longQueuePayload)).wait();
+  await (await adlEngine.connect(ownerSigner).setQueue(marketId, false, shortQueuePayload)).wait();
+
+  return {
+    longCandidates,
+    shortCandidates,
+    longEligibleScores,
+    shortEligibleScores,
+    longQueued: longQueuePayload.length,
+    shortQueued: shortQueuePayload.length,
+  };
 }
 
 function buildTraderProfileMap(agentAddressMap: Record<string, string[]>): Map<string, TraderProfile> {
@@ -817,7 +1030,21 @@ async function tryLiquidate(
   liquidationEngine: Contract,
   liquidator: Signer,
   positionId: bigint
-): Promise<{ ok: boolean; reward: bigint; coverAmount: bigint; insuranceInflow: bigint; penaltyCollected: bigint; marginReturned: bigint }> {
+): Promise<{
+  ok: boolean;
+  reward: bigint;
+  coverAmount: bigint;
+  insuranceInflow: bigint;
+  penaltyCollected: bigint;
+  marginReturned: bigint;
+  adlRequested: bigint;
+  adlCovered: bigint;
+  adlRemaining: bigint;
+  adlEvents: number;
+  proactiveAdlEvents: number;
+  proactiveAdlSoftEvents: number;
+  proactiveAdlHardEvents: number;
+}> {
   try {
     const tx = await liquidationEngine.connect(liquidator).liquidate(positionId);
     const receipt = await tx.wait();
@@ -826,6 +1053,13 @@ async function tryLiquidate(
     let insuranceInflow = 0n;
     let penaltyCollected = 0n;
     let marginReturned = 0n;
+    let adlRequested = 0n;
+    let adlCovered = 0n;
+    let adlRemaining = 0n;
+    let adlEvents = 0;
+    let proactiveAdlEvents = 0;
+    let proactiveAdlSoftEvents = 0;
+    let proactiveAdlHardEvents = 0;
 
     for (const log of receipt.logs) {
       try {
@@ -839,14 +1073,56 @@ async function tryLiquidate(
         if (parsed.name === "InsuranceFundUsed") {
           coverAmount = BigInt(parsed.args.amount);
         }
+        if (parsed.name === "ADLExecuted") {
+          adlEvents += 1;
+          adlRequested += BigInt(parsed.args.requestedDeficit ?? 0n);
+          adlCovered += BigInt(parsed.args.covered ?? 0n);
+          adlRemaining += BigInt(parsed.args.remainingDeficit ?? 0n);
+        }
+        if (parsed.name === "ADLProactiveTriggered") {
+          proactiveAdlEvents += 1;
+          if (Boolean(parsed.args.hardTrigger)) {
+            proactiveAdlHardEvents += 1;
+          } else {
+            proactiveAdlSoftEvents += 1;
+          }
+        }
       } catch {
         // Ignore unrelated logs.
       }
     }
 
-    return { ok: true, reward, coverAmount, insuranceInflow, penaltyCollected, marginReturned };
+    return {
+      ok: true,
+      reward,
+      coverAmount,
+      insuranceInflow,
+      penaltyCollected,
+      marginReturned,
+      adlRequested,
+      adlCovered,
+      adlRemaining,
+      adlEvents,
+      proactiveAdlEvents,
+      proactiveAdlSoftEvents,
+      proactiveAdlHardEvents,
+    };
   } catch {
-    return { ok: false, reward: 0n, coverAmount: 0n, insuranceInflow: 0n, penaltyCollected: 0n, marginReturned: 0n };
+    return {
+      ok: false,
+      reward: 0n,
+      coverAmount: 0n,
+      insuranceInflow: 0n,
+      penaltyCollected: 0n,
+      marginReturned: 0n,
+      adlRequested: 0n,
+      adlCovered: 0n,
+      adlRemaining: 0n,
+      adlEvents: 0,
+      proactiveAdlEvents: 0,
+      proactiveAdlSoftEvents: 0,
+      proactiveAdlHardEvents: 0,
+    };
   }
 }
 

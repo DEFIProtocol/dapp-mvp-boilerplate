@@ -32,6 +32,15 @@ export interface SimulatorStepState {
   liquidatorRewardsPaid: bigint;
   liquidationPenaltyCollected: bigint;
   marginReturnedFromLiquidation: bigint;
+  adlRequestedNotional: bigint;
+  adlCoveredNotional: bigint;
+  adlRemainingDeficit: bigint;
+  adlEvents: number;
+  proactiveAdlEvents: number;
+  proactiveAdlSoftEvents: number;
+  proactiveAdlHardEvents: number;
+  stepAdlEvents: number;
+  stepProactiveAdlEvents: number;
   stepVolume: bigint;
   trades: number;
   uniqueTraders: number;
@@ -83,6 +92,15 @@ export interface ProtocolMetrics {
   liquidatorRewardsPaid: bigint;
   liquidationPenaltyCollected: bigint;
   marginReturnedFromLiquidation: bigint;
+  adlRequestedNotional: bigint;
+  adlCoveredNotional: bigint;
+  adlRemainingDeficit: bigint;
+  adlEvents: number;
+  proactiveAdlEvents: number;
+  proactiveAdlSoftEvents: number;
+  proactiveAdlHardEvents: number;
+  stepAdlEvents: number;
+  stepProactiveAdlEvents: number;
   volume24h: bigint;
   tradeCount: number;
   uniqueTraders: number;
@@ -235,6 +253,15 @@ export class MetricsCollector {
       liquidatorRewardsPaid: state.liquidatorRewardsPaid,
       liquidationPenaltyCollected: state.liquidationPenaltyCollected,
       marginReturnedFromLiquidation: state.marginReturnedFromLiquidation,
+      adlRequestedNotional: state.adlRequestedNotional,
+      adlCoveredNotional: state.adlCoveredNotional,
+      adlRemainingDeficit: state.adlRemainingDeficit,
+      adlEvents: state.adlEvents,
+      proactiveAdlEvents: state.proactiveAdlEvents,
+      proactiveAdlSoftEvents: state.proactiveAdlSoftEvents,
+      proactiveAdlHardEvents: state.proactiveAdlHardEvents,
+      stepAdlEvents: state.stepAdlEvents,
+      stepProactiveAdlEvents: state.stepProactiveAdlEvents,
       volume24h: rollingVolume,
       tradeCount: state.trades,
       uniqueTraders: state.uniqueTraders,
@@ -324,6 +351,13 @@ export class MetricsCollector {
     const totalMarginReturned = latest.marginReturnedFromLiquidation;
     const totalInsuranceInflow = latest.insuranceFundInflow;
     const totalInsuranceOutflow = latest.insuranceFundOutflow;
+    const totalAdlRequestedNotional = latest.adlRequestedNotional;
+    const totalAdlCoveredNotional = latest.adlCoveredNotional;
+    const totalAdlRemainingDeficit = latest.adlRemainingDeficit;
+    const totalAdlEvents = latest.adlEvents;
+    const totalProactiveAdlEvents = latest.proactiveAdlEvents;
+    const totalProactiveAdlSoftEvents = latest.proactiveAdlSoftEvents;
+    const totalProactiveAdlHardEvents = latest.proactiveAdlHardEvents;
 
     const cumulativeVolume = this.stepVolumeHistory.reduce((sum, v) => sum + v, 0n);
 
@@ -383,6 +417,15 @@ export class MetricsCollector {
       insuranceFlow: {
         inflow: formatUnits(totalInsuranceInflow, 6),
         outflow: formatUnits(totalInsuranceOutflow, 6),
+      },
+      adl: {
+        events: totalAdlEvents,
+        proactiveEvents: totalProactiveAdlEvents,
+        proactiveSoftEvents: totalProactiveAdlSoftEvents,
+        proactiveHardEvents: totalProactiveAdlHardEvents,
+        requestedNotional: formatUnits(totalAdlRequestedNotional, 6),
+        coveredNotional: formatUnits(totalAdlCoveredNotional, 6),
+        remainingDeficit: formatUnits(totalAdlRemainingDeficit, 6),
       },
       marketQuality: {
         avgSpreadBps: (this.metricsHistory.reduce((sum, m) => sum + m.spreadBps, 0) / this.metricsHistory.length).toFixed(2),

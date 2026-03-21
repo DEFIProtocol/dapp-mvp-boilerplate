@@ -33,6 +33,15 @@ export interface SimulationMetrics {
   liquidatorRewardsPaid: number;
   liquidationPenaltyCollected: number;
   marginReturnedFromLiquidation: number;
+  adlRequestedNotional: number;
+  adlCoveredNotional: number;
+  adlRemainingDeficit: number;
+  adlEvents: number;
+  proactiveAdlEvents: number;
+  proactiveAdlSoftEvents: number;
+  proactiveAdlHardEvents: number;
+  stepAdlEvents: number;
+  stepProactiveAdlEvents: number;
   positionsAtRisk: number;
   trades: number;
   uniqueTraders: number;

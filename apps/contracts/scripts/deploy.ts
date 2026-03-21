@@ -21,6 +21,7 @@ type ModuleAddresses = {
   positionManager: string;
   riskManager: string;
   liquidationEngine: string;
+  adlEngine: string;
   settlementEngine: string;
   fundingEngine: string;
 };
@@ -31,8 +32,10 @@ type PerpEngineContract = BaseContract & {
   positionManager(): Promise<string>;
   riskManager(): Promise<string>;
   liquidationEngine(): Promise<string>;
+  adlEngine(): Promise<string>;
   settlementEngine(): Promise<string>;
   fundingEngine(): Promise<string>;
+  setAdlEngine(newAdlEngine: string): Promise<any>;
 };
 
 function requiredEnv(name: string): string {
@@ -124,6 +127,7 @@ async function getModuleAddresses(perpEngine: PerpEngineContract): Promise<Modul
     positionManager: await perpEngine.positionManager(),
     riskManager: await perpEngine.riskManager(),
     liquidationEngine: await perpEngine.liquidationEngine(),
+    adlEngine: await perpEngine.adlEngine(),
     settlementEngine: await perpEngine.settlementEngine(),
     fundingEngine: await perpEngine.fundingEngine(),
   };
@@ -233,6 +237,15 @@ async function verifyContracts(
         modules.riskManager,
       ],
     },
+    {
+      name: "ADLEngine",
+      address: modules.adlEngine,
+      constructorArguments: [
+        modules.perpStorage,
+        modules.riskManager,
+        modules.positionManager,
+      ],
+    },
   ];
 
   for (const job of verifyJobs) {
@@ -298,6 +311,18 @@ async function main(): Promise<void> {
   console.log(`\nPerpEngine: ${perpEngineAddress}`);
   console.log(`Deploy tx:  ${deployTx.hash}`);
 
+  const ADLEngineFactory = await ethers.getContractFactory("ADLEngine");
+  const adlEngine = await ADLEngineFactory.deploy(
+    await perpEngine.perpStorage(),
+    await perpEngine.riskManager(),
+    await perpEngine.positionManager(),
+  );
+  await adlEngine.waitForDeployment();
+  const adlEngineAddress = await adlEngine.getAddress();
+
+  const setAdlTx = await perpEngine.setAdlEngine(adlEngineAddress);
+  await setAdlTx.wait();
+
   const modules = await getModuleAddresses(perpEngine);
   await verifyCodeExists({ perpEngine: perpEngineAddress, ...modules }, ethers);
 
@@ -307,6 +332,7 @@ async function main(): Promise<void> {
   console.log(`  PositionManager:   ${modules.positionManager}`);
   console.log(`  RiskManager:       ${modules.riskManager}`);
   console.log(`  LiquidationEngine: ${modules.liquidationEngine}`);
+  console.log(`  ADLEngine:         ${modules.adlEngine}`);
   console.log(`  SettlementEngine:  ${modules.settlementEngine}`);
   console.log(`  FundingEngine:     ${modules.fundingEngine}`);
 

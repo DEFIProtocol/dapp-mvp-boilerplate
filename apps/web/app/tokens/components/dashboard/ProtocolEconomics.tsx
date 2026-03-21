@@ -55,7 +55,6 @@ interface FlowData {
 
 export const ProtocolEconomics: React.FC<Props> = ({ metrics, liquidations }) => {
   const [view, setView] = useState<'overview' | 'flows' | 'distribution' | 'projection'>('overview');
-  const [timeframe, setTimeframe] = useState<'1d' | '7d' | '30d' | 'all'>('all');
 
   if (!metrics) return null;
 
@@ -215,19 +214,6 @@ export const ProtocolEconomics: React.FC<Props> = ({ metrics, liquidations }) =>
             </button>
           </div>
 
-          {/* Timeframe Filter (for projections) */}
-          {view === 'projection' && (
-            <select
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as any)}
-              className="bg-gray-700 rounded-lg px-3 py-1 text-sm border border-gray-600"
-            >
-              <option value="1d">1 Day</option>
-              <option value="7d">7 Days</option>
-              <option value="30d">30 Days</option>
-              <option value="all">All Time</option>
-            </select>
-          )}
         </div>
       </div>
 
@@ -301,7 +287,7 @@ export const ProtocolEconomics: React.FC<Props> = ({ metrics, liquidations }) =>
                 outerRadius={80}
                 paddingAngle={5}
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${(((percent ?? 0) * 100)).toFixed(0)}%`}
                 labelLine={{ stroke: '#4b5563' }}
               >
                 {revenueStreams.map((entry, index) => (

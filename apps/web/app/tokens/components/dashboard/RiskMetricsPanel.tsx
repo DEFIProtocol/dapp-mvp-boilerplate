@@ -23,6 +23,19 @@ interface Props {
 export const RiskMetricsPanel: React.FC<Props> = ({ metrics, historicalMetrics }) => {
   if (!metrics) return null;
 
+  const solvencyBands = [
+    { label: 'Resilient', min: 20, classes: 'bg-green-500/20 border-green-400/40 text-green-300' },
+    { label: 'Caution', min: 10, classes: 'bg-yellow-500/20 border-yellow-400/40 text-yellow-300' },
+    { label: 'At-Risk', min: 5, classes: 'bg-orange-500/20 border-orange-400/40 text-orange-300' },
+    { label: 'Critical', min: 0, classes: 'bg-red-500/20 border-red-400/40 text-red-300' },
+  ];
+
+  const currentBand = solvencyBands.find((band, index) => {
+    const nextBand = solvencyBands[index - 1];
+    if (!nextBand) return metrics.solvencyBuffer >= band.min;
+    return metrics.solvencyBuffer >= band.min && metrics.solvencyBuffer < nextBand.min;
+  }) || solvencyBands[solvencyBands.length - 1];
+
   const finiteHistory = historicalMetrics.filter((metric) =>
     Number.isFinite(metric.step)
     && Number.isFinite(metric.solvencyBuffer)
@@ -170,6 +183,27 @@ export const RiskMetricsPanel: React.FC<Props> = ({ metrics, historicalMetrics }
             />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="mb-4 rounded-lg border border-gray-700 bg-gray-900/50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-gray-400 uppercase tracking-wider">Solvency Threshold Ladder</p>
+          <p className="text-xs text-cyan-300">Current: {metrics.solvencyBuffer.toFixed(2)}%</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {solvencyBands.map((band) => {
+            const active = currentBand.label === band.label;
+            return (
+              <div
+                key={band.label}
+                className={`rounded border px-2 py-2 text-xs ${band.classes} ${active ? 'ring-1 ring-cyan-300' : ''}`}
+              >
+                <p className="font-semibold">{band.label}</p>
+                <p className="opacity-80">{band.min}%+</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Risk Warnings */}

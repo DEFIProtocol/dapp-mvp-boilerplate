@@ -22,27 +22,50 @@ interface PriceStoreContextType {
 
 const PriceStoreContext = createContext<PriceStoreContextType | undefined>(undefined);
 
+const arePricesEqual = (left: PriceSource[], right: PriceSource[]) => {
+	if (left.length !== right.length) return false;
+	for (let index = 0; index < left.length; index += 1) {
+		const a = left[index];
+		const b = right[index];
+		if (
+			a.symbol !== b.symbol ||
+			a.price !== b.price ||
+			a.source !== b.source ||
+			a.timestamp !== b.timestamp ||
+			a.pair !== b.pair
+		) {
+			return false;
+		}
+	}
+	return true;
+};
+
 export function PriceStoreProvider({ children, pollInterval = 15000 }: { children: ReactNode; pollInterval?: number }) {
 	const [prices, setPrices] = useState<PriceSource[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	// Fetch prices from backend
-	const fetchPrices = useCallback(async () => {
-		setLoading(true);
+	const fetchPrices = useCallback(async (options?: { silent?: boolean }) => {
+		if (!options?.silent) {
+			setLoading(true);
+		}
 		setError(null);
 		try {
 			const res = await fetch("/api/prices");
 			const data = await res.json();
 			if (data.success) {
-				setPrices(data.data || []);
+				const nextPrices = (data.data || []) as PriceSource[];
+				setPrices((prev) => (arePricesEqual(prev, nextPrices) ? prev : nextPrices));
 			} else {
 				setError(data.error || "Failed to load prices");
 			}
 		} catch (err: any) {
 			setError(err.message || "Failed to load prices");
 		} finally {
-			setLoading(false);
+			if (!options?.silent) {
+				setLoading(false);
+			}
 		}
 	}, []);
 
@@ -50,7 +73,9 @@ export function PriceStoreProvider({ children, pollInterval = 15000 }: { childre
 	useEffect(() => {
 		fetchPrices();
 		if (pollInterval > 0) {
-			const interval = setInterval(fetchPrices, pollInterval);
+			const interval = setInterval(() => {
+				void fetchPrices({ silent: true });
+			}, pollInterval);
 			return () => clearInterval(interval);
 		}
 	}, [fetchPrices, pollInterval]);

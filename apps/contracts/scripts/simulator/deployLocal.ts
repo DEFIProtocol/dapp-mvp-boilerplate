@@ -13,6 +13,7 @@ interface DeployedAddresses {
   positionManager: string;
   riskManager: string;
   liquidationEngine: string;
+  adlEngine: string;
   settlementEngine: string;
   fundingEngine: string;
   insuranceFund: string;
@@ -135,6 +136,18 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await liquidationEngine.waitForDeployment();
   const liquidationEngineAddress = await liquidationEngine.getAddress();
   console.log(`LiquidationEngine: ${liquidationEngineAddress}`);
+
+  // 9.5 Deploy ADLEngine
+  console.log("\n📝 Deploying ADLEngine...");
+  const ADLEngine = await ethers.getContractFactory("ADLEngine");
+  const adlEngine = await ADLEngine.deploy(
+    perpStorageAddress,
+    riskManagerAddress,
+    positionManagerAddress
+  );
+  await adlEngine.waitForDeployment();
+  const adlEngineAddress = await adlEngine.getAddress();
+  console.log(`ADLEngine: ${adlEngineAddress}`);
   
   // 10. Initialize contracts (set storage params and module permissions)
   console.log("\n🔧 Initializing contracts...");
@@ -175,8 +188,11 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setAuthorizedModule(positionManagerAddress, true);
   await perpStorage.setAuthorizedModule(riskManagerAddress, true);
   await perpStorage.setAuthorizedModule(liquidationEngineAddress, true);
+  await perpStorage.setAuthorizedModule(adlEngineAddress, true);
   await perpStorage.setAuthorizedModule(settlementEngineAddress, true);
   await perpStorage.setAuthorizedModule(fundingEngineAddress, true);
+
+  await liquidationEngine.setAdlEngine(adlEngineAddress);
 
   // Authorize modules that move funds in/out of treasury.
   await insuranceTreasury.setAuthorizedModule(collateralManagerAddress, true);
@@ -247,6 +263,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     positionManager: positionManagerAddress,
     riskManager: riskManagerAddress,
     liquidationEngine: liquidationEngineAddress,
+    adlEngine: adlEngineAddress,
     settlementEngine: settlementEngineAddress,
     fundingEngine: fundingEngineAddress,
     insuranceFund: insuranceFundAddress,

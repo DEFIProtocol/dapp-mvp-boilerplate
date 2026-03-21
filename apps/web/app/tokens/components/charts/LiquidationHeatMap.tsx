@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,
+  Cell,
   Line,
   Scatter,
   XAxis,
@@ -13,7 +14,7 @@ import {
   Legend,
   ReferenceArea,
 } from 'recharts';
-import { Flame, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Flame, AlertTriangle } from 'lucide-react';
 import type { SimulationMetrics, LiquidationActivity } from '../../types/simulation';
 
 interface Props {
@@ -206,14 +207,16 @@ export const LiquidationHeatMap: React.FC<Props> = ({
               yAxisId="right"
               dataKey="liquidationVolume"
               name="Liquidation Volume"
-              onClick={(data) => onStepSelect?.(data.step)}
+              onClick={(_, index) => {
+                const point = heatMapData[index];
+                if (point) onStepSelect?.(point.step);
+              }}
             >
               {heatMapData.map((entry, index) => (
-                <rect
+                <Cell
                   key={`bar-${index}`}
                   fill={getIntensityColor(entry.intensity)}
                   cursor="pointer"
-                  className="transition-opacity hover:opacity-80"
                 />
               ))}
             </Bar>

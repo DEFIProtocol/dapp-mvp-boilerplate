@@ -51,7 +51,7 @@ export const SystemHealthOverview: React.FC<Props> = ({ metrics }) => {
       delta: metrics.protocolRevenueDelta,
     },
     {
-      title: 'Active Traders',
+      title: 'Active Accounts',
       value: metrics.uniqueTraders,
       format: 'number',
       icon: Users,

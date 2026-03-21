@@ -13,7 +13,7 @@ import {
   Check,
   Info,
 } from 'lucide-react';
-import { SimulationApi } from '../../services/simulationApi';
+import { SimulationApi } from '../services/simulationApi';
 
 interface Props {
   currentScenario: string;
