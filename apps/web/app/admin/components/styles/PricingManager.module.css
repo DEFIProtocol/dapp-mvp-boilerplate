@@ -3,7 +3,7 @@
 /* Main container */
 .pricingManager {
     padding: 2rem;
-    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    background: var(--accent-gradient-surface);
     min-height: 100%;
 }
 
@@ -16,14 +16,14 @@
 }
 
 .statCard {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-contrast);
     backdrop-filter: blur(10px);
 }
 
@@ -34,26 +34,26 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: var(--accent-gradient-line);
 }
 
 .statCard:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+    box-shadow: var(--shadow-accent);
 }
 
 .statLabel {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #666;
+    color: var(--text-muted-strong);
     margin-bottom: 0.5rem;
 }
 
 .statValue {
     font-size: 2.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--accent-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.2;
@@ -66,14 +66,14 @@
     gap: 1rem;
     margin: 2rem 0;
     padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--surface);
     backdrop-filter: blur(10px);
     border-radius: 60px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-soft);
 }
 
 .viewTab {
@@ -88,7 +88,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     background: transparent;
-    color: #666;
+    color: var(--text-strong);
     position: relative;
     overflow: hidden;
 }
@@ -101,7 +101,7 @@
     width: 0;
     height: 0;
     border-radius: 50%;
-    background: rgba(102, 126, 234, 0.1);
+    background: var(--accent-ring);
     transform: translate(-50%, -50%);
     transition: width 0.6s, height 0.6s;
 }
@@ -111,31 +111,35 @@
     height: 300px;
 }
 
+.viewTab:hover {
+    color: var(--accent);
+}
+
 .viewTab.active {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .viewTab.active:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 8px 25px var(--accent-shadow-strong);
 }
 
 /* Source Stats Section */
 .sourceStats {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 2rem;
     margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-contrast);
 }
 
 .sourceStats h3 {
     margin: 0 0 1.5rem 0;
     font-size: 1.3rem;
-    color: #333;
+    color: var(--text-strong);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -145,7 +149,7 @@
     content: '';
     flex: 1;
     height: 2px;
-    background: linear-gradient(90deg, #667eea, transparent);
+    background: linear-gradient(90deg, var(--accent), transparent);
 }
 
 .sourceBars {
@@ -166,7 +170,7 @@
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    color: #555;
+    color: var(--text-muted-strong);
 }
 
 .sourceDot {
@@ -177,24 +181,24 @@
 }
 
 .sourceDot.binance {
-    background: #f0b90b;
-    box-shadow: 0 0 10px rgba(240, 185, 11, 0.3);
+    background: var(--binance);
+    box-shadow: 0 0 10px var(--binance-glow);
 }
 
 .sourceDot.coinbase {
-    background: #0052ff;
-    box-shadow: 0 0 10px rgba(0, 82, 255, 0.3);
+    background: var(--coinbase);
+    box-shadow: 0 0 10px var(--coinbase-glow);
 }
 
 .sourceDot.coinranking {
-    background: #2d9cdb;
-    box-shadow: 0 0 10px rgba(45, 156, 219, 0.3);
+    background: var(--coinranking);
+    box-shadow: 0 0 10px var(--coinranking-glow);
 }
 
 .barContainer {
     flex: 1;
     height: 12px;
-    background: #f0f0f0;
+    background: var(--surface-3);
     border-radius: 20px;
     overflow: hidden;
     position: relative;
@@ -239,24 +243,24 @@
 .sourceCount {
     min-width: 100px;
     text-align: right;
-    color: #666;
+    color: var(--text-muted-strong);
     font-weight: 500;
     font-size: 0.9rem;
 }
 
 /* Sections */
 .section {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 1.5rem;
     margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-contrast);
     transition: all 0.3s ease;
 }
 
 .section:hover {
-    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+    box-shadow: var(--shadow-accent);
 }
 
 .sectionHeader {
@@ -265,13 +269,13 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-soft);
 }
 
 .sectionHeader h3 {
     margin: 0;
     font-size: 1.2rem;
-    color: #333;
+    color: var(--text-strong);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -289,23 +293,23 @@
     border-radius: 50px;
     font-size: 0.8rem;
     font-weight: 600;
-    color: white;
+    color: var(--text-inverse);
     transition: all 0.3s ease;
 }
 
 .badge.binance {
-    background: linear-gradient(135deg, #f0b90b, #fbbf24);
-    box-shadow: 0 2px 10px rgba(240, 185, 11, 0.3);
+    background: var(--binance-gradient);
+    box-shadow: 0 2px 10px var(--binance-glow);
 }
 
 .badge.coinbase {
-    background: linear-gradient(135deg, #0052ff, #3b82f6);
-    box-shadow: 0 2px 10px rgba(0, 82, 255, 0.3);
+    background: var(--coinbase-gradient);
+    box-shadow: 0 2px 10px var(--coinbase-glow);
 }
 
 .badge.coinranking {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
-    box-shadow: 0 2px 10px rgba(45, 156, 219, 0.3);
+    background: var(--coinranking-gradient);
+    box-shadow: 0 2px 10px var(--coinranking-glow);
 }
 
 /* Tables Grid */
@@ -321,7 +325,7 @@
 
 .sourceNote {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--text-subtle);
     margin-top: -0.5rem;
     margin-bottom: 1rem;
     font-style: italic;
@@ -331,8 +335,8 @@
 .noData {
     padding: 3rem;
     text-align: center;
-    color: #999;
-    background: linear-gradient(135deg, #f9f9f9, #f0f0f0);
+    color: var(--text-subtle);
+    background: linear-gradient(135deg, var(--surface-muted), var(--surface-3));
     border-radius: 12px;
     font-weight: 500;
 }
@@ -344,7 +348,7 @@
     align-items: center;
     justify-content: center;
     min-height: 400px;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--surface-glass-strong);
     border-radius: 20px;
     padding: 2rem;
 }
@@ -352,8 +356,8 @@
 .loadingSpinner {
     width: 50px;
     height: 50px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    border: 4px solid var(--surface-3);
+    border-top: 4px solid var(--accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
@@ -361,7 +365,7 @@
 
 .loadingText {
     font-size: 1.1rem;
-    color: #666;
+    color: var(--text-muted-strong);
     font-weight: 500;
 }
 
@@ -369,28 +373,28 @@
 .errorState {
     text-align: center;
     padding: 3rem;
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     max-width: 500px;
     margin: 2rem auto;
 }
 
 .errorState h3 {
-    color: #ef4444;
+    color: var(--danger);
     margin-bottom: 1rem;
     font-size: 1.5rem;
 }
 
 .errorState p {
-    color: #666;
+    color: var(--text-muted-strong);
     margin-bottom: 1rem;
     line-height: 1.6;
 }
 
 .errorState code {
     display: inline-block;
-    background: #f3f4f6;
+    background: var(--surface-muted);
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-family: monospace;
@@ -398,20 +402,20 @@
 }
 
 .retryButton {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     border: none;
     padding: 0.8rem 2rem;
     border-radius: 50px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .retryButton:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: var(--shadow-accent-lg);
 }
 
 /* Responsive Design */
@@ -515,12 +519,12 @@
 }
 
 .tableContainer::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--surface-3);
     border-radius: 10px;
 }
 
 .tableContainer::-webkit-scrollbar-thumb {
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: var(--accent-gradient-line);
     border-radius: 10px;
 }
 
@@ -532,30 +536,30 @@
 }
 
 .table th {
-    background: linear-gradient(135deg, #667eea15, #764ba215);
+    background: var(--accent-gradient-soft-strong);
     padding: 1rem;
     text-align: left;
     font-weight: 600;
-    color: #444;
+    color: var(--text-strong);
 }
 
 .table td {
     padding: 0.8rem 1rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .table tr:hover {
-    background: #f9f9f9;
+    background: var(--surface-muted);
 }
 
 /* Price change indicators */
 .priceUp {
-    color: #10b981;
+    color: var(--success);
     font-weight: 600;
 }
 
 .priceDown {
-    color: #ef4444;
+    color: var(--danger);
     font-weight: 600;
 }
 /* Add to PricingManager.module.css */
@@ -569,18 +573,18 @@
 }
 
 .chartCard {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-contrast);
     transition: all 0.3s ease;
     animation: slideIn 0.5s ease;
 }
 
 .chartCard:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+    box-shadow: var(--shadow-accent);
 }
 
 .chartHeader {
@@ -589,13 +593,17 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-soft);
 }
 
 .chartHeader h3 {
     margin: 0;
     font-size: 1.2rem;
-    color: #333;
+    color: var(--accent);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -603,11 +611,12 @@
 
 .chartSubtitle {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--text-muted);
     font-weight: 500;
-    background: #f5f5f5;
+    background: var(--surface-muted);
     padding: 0.3rem 0.8rem;
     border-radius: 20px;
+    border: 1px solid var(--border-soft);
 }
 
 .chartBars {
@@ -627,14 +636,14 @@
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
-    color: #555;
+    color: var(--text-muted-strong);
     font-size: 0.9rem;
 }
 
 .chartBarContainer {
     width: 100%;
     height: 32px;
-    background: #f0f0f0;
+    background: var(--surface-3);
     border-radius: 16px;
     overflow: hidden;
     position: relative;
@@ -654,22 +663,22 @@
 }
 
 .chartBar.binance {
-    background: linear-gradient(90deg, #f0b90b, #fbbf24);
-    box-shadow: 0 2px 8px rgba(240, 185, 11, 0.3);
+    background: linear-gradient(90deg, var(--binance), var(--binance-2));
+    box-shadow: 0 2px 8px var(--binance-glow);
 }
 
 .chartBar.coinbase {
-    background: linear-gradient(90deg, #0052ff, #3b82f6);
-    box-shadow: 0 2px 8px rgba(0, 82, 255, 0.3);
+    background: linear-gradient(90deg, var(--coinbase), var(--coinbase-2));
+    box-shadow: 0 2px 8px var(--coinbase-glow);
 }
 
 .chartBar.coinranking {
-    background: linear-gradient(90deg, #2d9cdb, #60a5fa);
-    box-shadow: 0 2px 8px rgba(45, 156, 219, 0.3);
+    background: linear-gradient(90deg, var(--coinranking), var(--coinranking-2));
+    box-shadow: 0 2px 8px var(--coinranking-glow);
 }
 
 .chartBarValue {
-    color: white;
+    color: var(--text-inverse);
     font-size: 0.8rem;
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -678,7 +687,7 @@
 
 .chartBarCount {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-muted-strong);
     margin-left: 0.5rem;
     font-weight: 500;
 }
@@ -731,7 +740,7 @@
 
 /* Stats card update for coverage average */
 .statCard:last-child .statValue {
-    background: linear-gradient(135deg, #10b981, #34d399);
+    background: linear-gradient(135deg, var(--success), var(--success-hover));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -771,7 +780,8 @@
     overflow-x: auto;
     border-radius: 12px;
     margin-top: 1rem;
-    background: white;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
 }
 
 .compareTable {
@@ -782,11 +792,11 @@
 }
 
 .compareTable th {
-    background: linear-gradient(135deg, #667eea15, #764ba215);
+    background: var(--accent-gradient-soft-strong);
     padding: 1rem;
     text-align: left;
     font-weight: 600;
-    color: #444;
+    color: var(--text-strong);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -798,7 +808,7 @@
 }
 
 .sortableHeader:hover {
-    background: linear-gradient(135deg, #667eea30, #764ba230);
+    background: var(--accent-gradient-soft-strong);
 }
 
 .headerContent {
@@ -814,20 +824,20 @@
 
 .compareTable td {
     padding: 1rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-soft);
     vertical-align: middle;
 }
 
 .evenRow {
-    background: white;
+    background: var(--surface);
 }
 
 .oddRow {
-    background: #fafafa;
+    background: var(--surface);
 }
 
-.compareTable tr:hover {
-    background: linear-gradient(135deg, #667eea08, #764ba208);
+.compareTable tbody tr:hover {
+    background: var(--accent-gradient-soft);
 }
 
 /* Token Cell */
@@ -844,12 +854,12 @@
 .tokenSymbol {
     font-weight: 700;
     font-size: 1.1rem;
-    color: #333;
+    color: var(--text-strong);
 }
 
 .tokenName {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted-strong);
     font-weight: normal;
 }
 
@@ -861,7 +871,7 @@
 
 .priceValue {
     font-weight: 600;
-    color: #333;
+    color: var(--text-strong);
 }
 
 .priceChangeCell {
@@ -870,11 +880,11 @@
 }
 
 .priceUp {
-    color: #10b981;
+    color: var(--success);
 }
 
 .priceDown {
-    color: #ef4444;
+    color: var(--danger);
 }
 
 /* Difference Cell */
@@ -884,24 +894,24 @@
 }
 
 .differenceLow {
-    color: #10b981;
-    background: #d1fae5;
+    color: var(--success);
+    background: var(--success-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 20px;
     display: inline-block;
 }
 
 .differenceMedium {
-    color: #f59e0b;
-    background: #fef3c7;
+    color: var(--warning-text);
+    background: var(--warning-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 20px;
     display: inline-block;
 }
 
 .differenceHigh {
-    color: #ef4444;
-    background: #fee2e2;
+    color: var(--danger);
+    background: var(--danger-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 20px;
     display: inline-block;
@@ -910,7 +920,7 @@
 /* Market Cap Cell */
 .marketCapCell {
     font-weight: 600;
-    color: #333;
+    color: var(--text-strong);
     min-width: 100px;
 }
 
@@ -934,31 +944,31 @@
     justify-content: center;
     font-size: 0.7rem;
     font-weight: 700;
-    color: white;
+    color: var(--text-inverse);
     cursor: help;
 }
 
 .sourceDot.binance {
-    background: linear-gradient(135deg, #f0b90b, #fbbf24);
+    background: var(--binance-gradient);
 }
 
 .sourceDot.coinbase {
-    background: linear-gradient(135deg, #0052ff, #3b82f6);
+    background: var(--coinbase-gradient);
 }
 
 .sourceDot.coinranking {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
+    background: var(--coinranking-gradient);
 }
 
 .sourceBadge {
     display: inline-block;
     margin-left: 0.5rem;
     padding: 0.1rem 0.3rem;
-    background: #f0f0f0;
+    background: var(--surface-3);
     border-radius: 4px;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #666;
+    color: var(--text-muted-strong);
 }
 
 /* Responsive */

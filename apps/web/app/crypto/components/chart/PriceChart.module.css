@@ -33,7 +33,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #667eea15, #764ba215);
+  background: var(--accent-gradient-soft-strong);
   padding: 0.4rem 0.8rem;
   border-radius: 30px;
   border: 1px solid rgba(102, 126, 234, 0.3);
@@ -42,12 +42,12 @@
 .symbolIcon {
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: var(--accent-gradient);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-inverse);
   font-size: 0.9rem;
   font-weight: bold;
   box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
@@ -60,12 +60,12 @@
 }
 
 .exchangeBadge {
-  background: #f1f5f9;
+  background: var(--surface-3);
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-muted-strong);
   border: 1px solid #e2e8f0;
 }
 
@@ -81,7 +81,7 @@
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--text-muted);
   display: block;
   margin-bottom: 0.1rem;
 }
@@ -108,12 +108,12 @@
 }
 
 .priceChange.positive {
-  background: #d1fae5;
+  background: var(--success-bg);
   color: #059669;
 }
 
 .priceChange.negative {
-  background: #fee2e2;
+  background: var(--danger-bg);
   color: #dc2626;
 }
 
@@ -145,8 +145,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: white;
-  color: #475569;
+  background: var(--surface);
+  color: var(--text-muted-strong);
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
@@ -154,12 +154,12 @@
 .indicatorPill:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-  border-color: #667eea40;
+  border-color: var(--accent-border);
 }
 
 .indicatorPill.active {
   background: linear-gradient(135deg, #667eea10, #764ba210);
-  border-color: #667eea;
+  border-color: var(--accent);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
@@ -177,7 +177,7 @@
 .indicatorValues {
   font-family: 'Roboto Mono', monospace;
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-left: 0.2rem;
 }
 
@@ -192,18 +192,18 @@
   padding: 0.4rem 1.2rem;
   border: none;
   border-radius: 30px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: var(--accent-gradient);
+  color: var(--text-inverse);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .menuButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-accent-lg);
 }
 
 .menuIcon {
@@ -216,10 +216,10 @@
   right: 0;
   z-index: 20;
   min-width: 160px;
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   padding: 0.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   border: 1px solid #e2e8f0;
   animation: slideDown 0.2s ease;
 }
@@ -244,7 +244,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #475569;
+  color: var(--text-muted-strong);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -253,12 +253,12 @@
 }
 
 .menuItem:hover {
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .menuItemActive {
   background: linear-gradient(135deg, #667eea10, #764ba210);
-  color: #667eea;
+  color: var(--accent);
 }
 
 .menuItemDot {

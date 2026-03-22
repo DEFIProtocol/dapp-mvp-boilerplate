@@ -1,32 +1,37 @@
-/* components/Admin/AdminAccess.css */
+﻿/* components/Admin/AdminAccess.css */
 .admin-login-container {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--accent-gradient);
     padding: 20px;
 }
 
 .admin-login-card {
-    background: white;
+    background: var(--surface);
     border-radius: 16px;
     padding: 40px;
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-contrast);
 }
 
 .admin-login-card h1 {
     margin: 0 0 10px 0;
-    color: #333;
+    color: var(--accent);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     font-size: 2rem;
     text-align: center;
 }
 
 .subtitle {
     text-align: center;
-    color: #666;
+    color: var(--text-muted-strong);
     margin-bottom: 30px;
 }
 
@@ -37,46 +42,53 @@
 .password-input {
     width: 100%;
     padding: 12px 16px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-soft);
     border-radius: 8px;
     font-size: 1rem;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    background: var(--surface-muted);
+    color: var(--text);
 }
 
 .password-input:focus {
     outline: none;
-    border-color: #4facfe;
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+    background: var(--surface);
 }
 
 .error-message {
-    background: #fee2e2;
-    color: #dc2626;
+    background: var(--danger-bg);
+    color: var(--danger-text);
     padding: 10px;
     border-radius: 8px;
     margin-bottom: 20px;
     text-align: center;
+    border: 1px solid var(--danger-border);
 }
 
 .login-button {
     width: 100%;
     padding: 12px;
-    background: #4facfe;
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     border: none;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .login-button:hover {
-    background: #3b9eff;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-accent-lg);
 }
 
 .hint {
     margin-top: 20px;
     text-align: center;
-    color: #999;
+    color: var(--text-subtle);
     font-size: 0.8rem;
 }

@@ -1,10 +1,10 @@
-/* app/admin/components/perps/PerpsTable.module.css */
+﻿/* app/admin/components/perps/PerpsTable.module.css */
 
 .tableWrapper {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
-  background: white;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
 }
 
 .perpsTable {
@@ -17,17 +17,17 @@
 .perpsTable th {
   text-align: left;
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea08, #764ba208);
-  border-bottom: 2px solid #f0f0f0;
+  background: var(--accent-gradient-soft);
+  border-bottom: 2px solid var(--border-soft);
   font-weight: 600;
-  color: #444;
+  color: var(--text-strong);
   white-space: nowrap;
 }
 
 .perpsTable td {
   padding: 1rem;
-  border-bottom: 1px solid #f0f0f0;
-  color: #4a5568;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-muted-strong);
   vertical-align: middle;
 }
 
@@ -43,14 +43,14 @@
   background: transparent;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
   transition: all 0.2s;
   border-radius: 4px;
 }
 
 .expandBtn:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--surface-3);
+  color: var(--text-strong);
 }
 
 /* Token Rows */
@@ -60,27 +60,27 @@
 }
 
 .tokenRow:hover {
-  background: linear-gradient(135deg, #667eea08, #764ba208);
+  background: var(--accent-gradient-soft);
 }
 
 .tokenRow.inactive {
   opacity: 0.7;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .tokenRow.inactive td {
-  color: #94a3b8;
+  color: var(--text-subtle);
 }
 
 .symbolCell {
   font-weight: 700;
-  color: #333;
+  color: var(--text-strong);
   font-size: 1rem;
 }
 
 .uuidCell {
   font-family: 'Roboto Mono', monospace;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -96,14 +96,14 @@
 }
 
 .statusBadge.active {
-  background: linear-gradient(135deg, #10b98120, #34d39920);
-  color: #047857;
-  border: 1px solid #10b98140;
+  background: var(--success-gradient-soft);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
 }
 
 .statusBadge.inactive {
   background: linear-gradient(135deg, #94a3b820, #cbd5e020);
-  color: #475569;
+  color: var(--text-muted-strong);
   border: 1px solid #94a3b840;
 }
 
@@ -130,9 +130,9 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
-  border: 2px solid #f0f0f0;
-  color: #4a5568;
+  background: var(--surface);
+  border: 2px solid var(--border-soft);
+  color: var(--text-muted-strong);
 }
 
 .actionBtn.small {
@@ -152,28 +152,28 @@
 }
 
 .actionBtn.info {
-  background: #3b82f6;
-  color: white;
+  background: var(--info);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.info:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--info-hover);
 }
 
 .actionBtn.success {
-  background: #10b981;
-  color: white;
+  background: var(--success);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.success:hover:not(:disabled) {
-  background: #0e9f6e;
+  background: var(--success-hover);
 }
 
 .actionBtn.warning {
   background: #f59e0b;
-  color: white;
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
@@ -182,27 +182,27 @@
 }
 
 .actionBtn.danger {
-  background: #ef4444;
-  color: white;
+  background: var(--danger);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.danger:hover:not(:disabled) {
-  background: #dc2626;
+  background: var(--danger-hover);
 }
 
 /* Details Row */
 .detailsRow td {
   padding: 1.5rem;
-  background: #f8fafc;
-  border-top: 2px solid #f0f0f0;
+  background: var(--surface-muted);
+  border-top: 2px solid var(--border-soft);
 }
 
 .tokenDetails {
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .detailsGrid {
@@ -222,12 +222,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .detailValue {
   font-size: 0.9rem;
-  color: #333;
+  color: var(--text-strong);
   word-break: break-word;
   font-family: 'Roboto Mono', monospace;
 }
@@ -243,10 +243,10 @@
 .noResults {
   text-align: center;
   padding: 3rem !important;
-  color: #94a3b8;
+  color: var(--text-subtle);
   font-size: 0.95rem;
   font-style: italic;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 /* Responsive */

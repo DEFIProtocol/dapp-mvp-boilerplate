@@ -6,8 +6,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 2rem;
-  background: var(--surface, #181a20);
-  border-bottom: 1px solid var(--border, #23262f);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   position: sticky;
   top: 0;
@@ -24,12 +24,12 @@
   font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: 1px;
-  color: var(--accent, #99c800);
+  color: var(--accent);
   cursor: pointer;
   transition: color 0.2s;
 }
 .logo:hover {
-  color: var(--accent-contrast, #fff);
+  color: var(--accent-contrast);
 }
 
 .desktopNav {
@@ -38,7 +38,7 @@
 }
 
 .navLink {
-  color: var(--text, #fff);
+  color: var(--text);
   font-size: 1rem;
   font-weight: 500;
   padding: 0.5rem 1rem;
@@ -47,8 +47,8 @@
   text-decoration: none;
 }
 .navLink:hover, .navLink.active {
-  background: var(--accent, #99c800);
-  color: var(--accent-contrast, #181a20);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 /* Mobile menu */
@@ -57,7 +57,7 @@
   background: none;
   border: none;
   font-size: 2rem;
-  color: var(--text, #fff);
+  color: var(--text);
   cursor: pointer;
   margin-right: 1rem;
 }
@@ -75,7 +75,7 @@
 .mobileNavOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(24,26,32,0.95);
+  background: var(--overlay-strong);
   z-index: 2000;
   display: flex;
   align-items: flex-start;
@@ -84,7 +84,7 @@
 .mobileNavWindow {
   width: 80vw;
   max-width: 320px;
-  background: var(--surface, #181a20);
+  background: var(--surface);
   height: 100vh;
   box-shadow: -2px 0 16px rgba(0,0,0,0.12);
   display: flex;
@@ -100,13 +100,13 @@
 .mobileNavTitle {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--accent, #99c800);
+  color: var(--accent);
 }
 .mobileNavClose {
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: var(--text, #fff);
+  color: var(--text);
   cursor: pointer;
 }
 .mobileNavLinks {
@@ -115,7 +115,7 @@
   gap: 1rem;
 }
 .mobileNavLink {
-  color: var(--text, #fff);
+  color: var(--text);
   font-size: 1.1rem;
   font-weight: 500;
   padding: 0.75rem 1rem;
@@ -124,8 +124,8 @@
   transition: background 0.2s, color 0.2s;
 }
 .mobileNavLink:hover, .mobileNavLink.active {
-  background: var(--accent, #99c800);
-  color: var(--accent-contrast, #181a20);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 /* Right section */
@@ -136,9 +136,9 @@
 }
 
 .themeToggle {
-  background: var(--surface-2, #23262f);
-  border: 1px solid var(--border, #23262f);
-  color: var(--text, #fff);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
   border-radius: 8px;
   padding: 0.5rem 1rem;
   font-size: 1rem;
@@ -150,8 +150,8 @@
   transition: background 0.2s, color 0.2s;
 }
 .themeToggle:hover {
-  background: var(--accent, #99c800);
-  color: var(--accent-contrast, #181a20);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 .themeIcon {
   font-size: 1.2rem;
@@ -161,33 +161,33 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--surface-2, #23262f);
-  border: 1px solid var(--border, #23262f);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem 1rem;
 }
 .chainIcon {
   font-size: 1.1rem;
-  color: var(--accent, #99c800);
+  color: var(--accent);
 }
 .chainSelect {
   background: transparent;
   border: none;
-  color: var(--text, #fff);
+  color: var(--text);
   font-size: 1rem;
   font-weight: 500;
   outline: none;
   margin-left: 0.5rem;
 }
 .chainLabel {
-  color: var(--text-muted, #aaa);
+  color: var(--text-muted);
   font-size: 1rem;
   margin-left: 0.5rem;
 }
 
 .connectButton {
-  background: var(--accent, #99c800);
-  color: var(--accent-contrast, #181a20);
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   border-radius: 8px;
   padding: 0.5rem 1.25rem;
@@ -195,12 +195,12 @@
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(153,200,0,0.08);
+  box-shadow: 0 2px 8px var(--accent-shadow-soft);
 }
 .connectButton:hover {
-  background: var(--accent-contrast, #181a20);
-  color: var(--accent, #99c800);
-  box-shadow: 0 4px 16px rgba(153,200,0,0.15);
+  background: var(--accent-contrast);
+  color: var(--accent);
+  box-shadow: 0 4px 16px var(--accent-shadow-soft);
 }
 
 @media (max-width: 760px) {

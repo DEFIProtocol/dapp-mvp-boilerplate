@@ -135,8 +135,6 @@ production oracle stack.
   `maintenanceMarginBps=75` (0.75%) in `PerpStorage`. Adjust that value in `deployLocal.ts`
   if you want a different buffer. No logic change needed — just a knob.
 
-- **Global styling (blue-purple admin theme)**: frontend work, not contracts.
-  (`apps/web` + `apps/mobile` global styles)
 
 - **Chain-aware pages + cross-chain swap UI**: frontend/infrastructure work.
   Add chain selector + bridge call button to each page. Not a contract change.

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { usePerps } from "@/contexts/PerpsContext";
 import { usePerpsCrud } from "@/hooks/usePerpsCrud";
 import { useOracleRound } from "@/hooks/useOracleRound";
@@ -12,6 +13,11 @@ import AddPerpModal from "./perps/AddPerpModal";
 import PriceCard from "./perps/PriceCard";
 import styles from "./styles/PerpsManager.module.css";
 import type { PerpsToken, PerpsTokenFormData } from "@/types/perps";
+
+const SimulatorDashboard = dynamic(
+    () => import("./simData/components/dashboard/DashboardLayout").then((mod) => mod.DashboardLayout),
+    { ssr: false }
+);
 
 interface StatusMessage {
     type: 'success' | 'error' | '';
@@ -37,6 +43,7 @@ export default function PerpsManager() {
     const [editingToken, setEditingToken] = useState<PerpsToken | null>(null);
     const [status, setStatus] = useState<StatusMessage>({ type: '', message: '' });
     const [selectedPriceCard, setSelectedPriceCard] = useState<string | null>(null);
+    const [showSimulator, setShowSimulator] = useState<boolean>(false);
 
     // Use your hooks for each token
     const btcOracle = useOracleRound('ethereum', 'btc', 15000);
@@ -261,6 +268,32 @@ const linkPrice = usePythPrice('ethereum', 'link/usd', 1000);
                         );
                     })}
                 </div>
+            </div>
+
+            <div className={styles.simulatorSection}>
+                <div className={styles.sectionHeader}>
+                    <h3>
+                        <span className={styles.headerIcon}>🧪</span>
+                        Simulation Manager
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={() => setShowSimulator((prev) => !prev)}
+                        className={styles.simulatorToggle}
+                    >
+                        {showSimulator ? "Hide Simulator" : "Open Simulator"}
+                    </button>
+                </div>
+
+                {showSimulator ? (
+                    <div className={styles.simulatorFrame}>
+                        <SimulatorDashboard />
+                    </div>
+                ) : (
+                    <p className={styles.simulatorHint}>
+                        Open the simulator to inspect protocol health, scenarios, diagnostics, and timeline playback.
+                    </p>
+                )}
             </div>
 
             {/* Add Modal */}

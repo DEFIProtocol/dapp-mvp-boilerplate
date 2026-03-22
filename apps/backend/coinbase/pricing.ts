@@ -124,7 +124,7 @@ export const initializeTokenPrices = async (): Promise<void> => {
 
     // Fetch ticker for each product (in batches to avoid rate limits)
     const batchSize = 10;
-    const allPrices: Array<{ symbol: string; price: number }> = [];
+    const allPrices: Array<{ symbol: string; price: number; change24h?: number }> = [];
     
     for (let i = 0; i < usdPairs.length; i += batchSize) {
       const batch = usdPairs.slice(i, i + batchSize);
@@ -155,7 +155,11 @@ export const initializeTokenPrices = async (): Promise<void> => {
           priceCache.set(baseSymbol, price, 'coinbase');
           
           // Add to batch for global store
-          allPrices.push({ symbol: baseSymbol, price });
+          allPrices.push({
+            symbol: baseSymbol,
+            price,
+            change24h: Number(calculate24hChange(tickerResponse.data))
+          });
           
         } catch (error) {
           // Skip failed fetches
@@ -234,7 +238,14 @@ const setupCoinbaseWebSocket = (): void => {
         // 🔥 Send REAL-TIME update to global store
         globalPriceStore.updateFromCoinbase([{
           symbol,
-          price
+          price,
+          change24h: Number(calculateWs24hChange(message, existing || {
+            symbol,
+            price,
+            source: 'coinbase-ws',
+            lastUpdated: Date.now(),
+            pair: `${symbol}-USD`,
+          }))
         }]);
       }
     } catch (error) {
@@ -274,7 +285,7 @@ export const startPeriodicRefresh = (intervalMs: number = 15 * 60 * 1000): void 
     
     const tokens = Array.from(tokenPriceStore.values());
     const batchSize = 5;
-    const refreshedPrices: Array<{ symbol: string; price: number }> = [];
+    const refreshedPrices: Array<{ symbol: string; price: number; change24h?: number }> = [];
     
     for (let i = 0; i < tokens.length; i += batchSize) {
       const batch = tokens.slice(i, i + batchSize);
@@ -302,7 +313,11 @@ export const startPeriodicRefresh = (intervalMs: number = 15 * 60 * 1000): void 
             priceCache.set(token.symbol, price, 'coinbase-refresh');
             
             // Add to refreshed prices for global store
-            refreshedPrices.push({ symbol: token.symbol, price });
+            refreshedPrices.push({
+              symbol: token.symbol,
+              price,
+              change24h: Number(calculate24hChange(response.data))
+            });
           }
         } catch (error) {
           // Skip failed refreshes

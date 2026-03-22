@@ -21,7 +21,7 @@
 }
 
 .modal {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     width: 90%;
     max-width: 600px;
@@ -47,16 +47,16 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-soft);
     position: sticky;
     top: 0;
-    background: white;
+    background: var(--surface);
     z-index: 10;
 }
 
 .modalHeader h2 {
     margin: 0;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1.3rem;
 }
 
@@ -64,7 +64,7 @@
     width: 32px;
     height: 32px;
     border: none;
-    background: #f0f0f0;
+    background: var(--surface-3);
     border-radius: 50%;
     font-size: 1.2rem;
     cursor: pointer;
@@ -75,7 +75,7 @@
 }
 
 .closeBtn:hover {
-    background: #e0e0e0;
+    background: var(--border-strong);
     transform: rotate(90deg);
 }
 
@@ -90,7 +90,7 @@
 .formGroup label {
     display: block;
     margin-bottom: 0.4rem;
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -101,7 +101,7 @@
 .formGroup select {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 10px;
     font-size: 0.95rem;
     transition: all 0.2s;
@@ -110,25 +110,25 @@
 .formGroup input:focus,
 .formGroup select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
 }
 
 .formGroup input::placeholder {
-    color: #94a3b8;
+    color: var(--text-subtle);
 }
 
 .chainSection {
     margin: 1.5rem 0;
     padding: 1.2rem;
-    background: #f8fafc;
+    background: var(--surface-muted);
     border-radius: 12px;
     border: 2px dashed #f0f0f0;
 }
 
 .chainSection h3 {
     margin: 0 0 1rem 0;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1rem;
 }
 
@@ -140,16 +140,16 @@
 
 .chainSelect {
     padding: 0.6rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 8px;
-    background: white;
+    background: var(--surface);
     min-width: 120px;
 }
 
 .addressInput {
     flex: 1;
     padding: 0.6rem 1rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 8px;
     font-family: 'Roboto Mono', monospace;
     font-size: 0.85rem;
@@ -157,8 +157,8 @@
 
 .addChainBtn {
     padding: 0.6rem 1.2rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     border: none;
     border-radius: 8px;
     font-weight: 600;
@@ -169,7 +169,7 @@
 
 .addChainBtn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .chainList {
@@ -185,8 +185,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem;
-    background: white;
-    border: 1px solid #f0f0f0;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
     border-radius: 6px;
     animation: slideIn 0.2s ease;
 }
@@ -204,7 +204,7 @@
 
 .chainName {
     font-weight: 600;
-    color: #667eea;
+    color: var(--accent);
     min-width: 80px;
     font-size: 0.85rem;
 }
@@ -213,15 +213,15 @@
     flex: 1;
     font-family: 'Roboto Mono', monospace;
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .removeChainBtn {
     width: 24px;
     height: 24px;
     border: none;
-    background: #fee2e2;
-    color: #ef4444;
+    background: var(--danger-bg);
+    color: var(--danger);
     border-radius: 4px;
     cursor: pointer;
     display: flex;
@@ -232,16 +232,16 @@
 }
 
 .removeChainBtn:hover {
-    background: #ef4444;
-    color: white;
+    background: var(--danger);
+    color: var(--text-inverse);
 }
 
 .noChains {
     padding: 1rem;
     text-align: center;
-    color: #94a3b8;
+    color: var(--text-subtle);
     font-style: italic;
-    background: white;
+    background: var(--surface);
     border-radius: 6px;
     border: 1px dashed #f0f0f0;
 }
@@ -249,19 +249,19 @@
 .pricePreview {
     margin: 1.5rem 0;
     padding: 1rem;
-    background: linear-gradient(135deg, #667eea08, #764ba208);
+    background: var(--accent-gradient-soft);
     border-radius: 8px;
-    border: 1px solid #667eea40;
+    border: 1px solid var(--accent-border);
 }
 
 .pricePreview h4 {
     margin: 0 0 0.5rem 0;
-    color: #333;
+    color: var(--text-strong);
     font-size: 0.9rem;
 }
 
 .pricePreview div {
-    color: #4a5568;
+    color: var(--text-muted-strong);
     font-size: 0.9rem;
     padding: 0.25rem 0;
 }
@@ -272,13 +272,13 @@
     justify-content: flex-end;
     margin-top: 2rem;
     padding-top: 1rem;
-    border-top: 2px solid #f0f0f0;
+    border-top: 2px solid var(--border-soft);
 }
 
 .cancelBtn {
     padding: 0.75rem 1.5rem;
-    background: white;
-    border: 2px solid #f0f0f0;
+    background: var(--surface);
+    border: 2px solid var(--border-soft);
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
@@ -286,14 +286,14 @@
 }
 
 .cancelBtn:hover {
-    background: #f8fafc;
+    background: var(--surface-muted);
     border-color: #cbd5e0;
 }
 
 .submitBtn {
     padding: 0.75rem 1.5rem;
     background: linear-gradient(135deg, #10b981, #34d399);
-    color: white;
+    color: var(--text-inverse);
     border: none;
     border-radius: 8px;
     font-weight: 600;

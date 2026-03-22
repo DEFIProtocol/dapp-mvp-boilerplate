@@ -1,18 +1,18 @@
 /* components/trading/PerpetualCard.module.css */
 
 .card {
-  background: white;
+  background: var(--surface);
   border-radius: 20px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-soft);
   transition: all 0.3s ease;
   width: 100%;
   max-width: 500px;
 }
 
 .card:hover {
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+  box-shadow: var(--shadow-accent);
 }
 
 /* Header */
@@ -22,7 +22,7 @@
   align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-soft);
 }
 
 .symbolInfo {
@@ -34,26 +34,26 @@
 .tokenIcon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea15, #764ba215);
+  background: var(--accent-gradient-soft-strong);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 1.2rem;
-  color: #667eea;
+  color: var(--accent);
 }
 
 .symbol {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-strong);
 }
 
 .maxLeverage {
   font-size: 0.7rem;
-  color: #667eea;
+  color: var(--accent);
   background: #667eea15;
   padding: 0.2rem 0.5rem;
   border-radius: 12px;
@@ -68,22 +68,22 @@
 .price {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-strong);
   font-family: 'Roboto Mono', monospace;
 }
 
 .fundingRate {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 0.25rem;
 }
 
 .positive {
-  color: #10b981;
+  color: var(--success);
 }
 
 .negative {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 /* Stats Grid */
@@ -93,7 +93,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: #f8fafc;
+  background: var(--surface-muted);
   border-radius: 12px;
 }
 
@@ -105,7 +105,7 @@
 
 .statLabel {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -113,12 +113,12 @@
 .statValue {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-strong);
 }
 
 /* Trading Section */
 .tradingSection {
-  background: #f8fafc;
+  background: var(--surface-muted);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -137,30 +137,30 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
-  color: #4a5568;
-  border: 2px solid #f0f0f0;
+  background: var(--surface);
+  color: var(--text-muted-strong);
+  border: 2px solid var(--border-soft);
 }
 
 .longActive {
-  background: #10b981;
-  color: white;
-  border-color: #10b981;
+  background: var(--success);
+  color: var(--text-inverse);
+  border-color: var(--success);
 }
 
 .shortActive {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
+  background: var(--danger);
+  color: var(--text-inverse);
+  border-color: var(--danger);
 }
 
 /* Leverage Container - NEW VERSION */
 .leverageContainer {
   margin-bottom: 1.5rem;
   padding: 0.35rem;
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .leverageHeader {
@@ -172,7 +172,7 @@
 
 .leverageLabel {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -181,16 +181,16 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: #f8fafc;
+  background: var(--surface-muted);
   padding: 0.1rem 0.2rem 0.1rem 0.5rem;
   border-radius: 24px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .leverageValue {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #667eea;
+  color: var(--accent);
 }
 
 .editButton {
@@ -203,15 +203,15 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
-  color: #64748b;
+  background: var(--surface);
+  color: var(--text-muted);
   font-size: 0.9rem;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .editButton:hover {
-  background: #667eea;
-  color: white;
+  background: var(--accent);
+  color: var(--text-inverse);
   transform: scale(1.05);
 }
 
@@ -220,11 +220,11 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: white;
+  background: var(--surface);
   border-radius: 30px;
   padding: 0.1rem;
-  border: 1px solid #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-tint);
 }
 
 .leverageInput {
@@ -234,13 +234,13 @@
   border-radius: 30px 0 0 30px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #667eea;
+  color: var(--accent);
   outline: none;
 }
 
 .leverageX {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .lockButton {
@@ -253,14 +253,14 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #10b981;
-  color: white;
+  background: var(--success);
+  color: var(--text-inverse);
   font-size: 0.8rem;
   margin-left: 0.1rem;
 }
 
 .lockButton:hover {
-  background: #0e9f6e;
+  background: var(--success-hover);
   transform: scale(1.05);
 }
 
@@ -269,7 +269,7 @@
   width: 100%;
   height: 3px;
   border-radius: 2px;
-  background: #f0f0f0;
+  background: var(--surface-3);
   outline: none;
   -webkit-appearance: none;
   margin-bottom: 0.5rem;
@@ -280,9 +280,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #667eea;
+  background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 /* Firefox support */
@@ -291,9 +291,9 @@
   height: 18px;
   border: none;
   border-radius: 50%;
-  background: #667eea;
+  background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 /* For the track fill effect (optional) */
@@ -302,7 +302,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--text-subtle);
   padding: 0 0.25rem;
 }
 
@@ -315,19 +315,19 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
 .balance {
-  color: #10b981;
+  color: var(--success);
   font-weight: 600;
 }
 
 .sizeInput {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--border-soft);
   border-radius: 8px;
   font-size: 0.9rem;
   transition: all 0.2s;
@@ -335,18 +335,18 @@
 
 .sizeInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .sizeInput::placeholder {
-  color: #cbd5e0;
+  color: var(--text-subtle);
   font-style: italic;
 }
 
 /* Order Info - Collapsible */
 .orderInfo {
-  background: white;
+  background: var(--surface);
   border-radius: 8px;
   padding: 0.75rem;
   margin-bottom: 1rem;
@@ -375,8 +375,8 @@
   justify-content: space-between;
   padding: 0.4rem 0;
   font-size: 0.8rem;
-  color: #64748b;
-  border-bottom: 1px dashed #f0f0f0;
+  color: var(--text-muted);
+  border-bottom: 1px dashed var(--border-soft);
 }
 
 .infoRow:last-child {
@@ -384,7 +384,7 @@
 }
 
 .liquidation {
-  color: #ef4444;
+  color: var(--danger);
   font-weight: 600;
 }
 
@@ -392,7 +392,7 @@
   font-weight: 600;
   margin-top: 0.25rem;
   padding-top: 0.5rem;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--border-soft);
 }
 
 /* Action Buttons */
@@ -409,37 +409,37 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .buyBtn {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background: linear-gradient(135deg, var(--success), var(--success-hover));
 }
 
 .buyBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: var(--shadow-success-sm);
 }
 
 .sellBtn {
-  background: linear-gradient(135deg, #ef4444, #f87171);
+  background: linear-gradient(135deg, var(--danger), var(--danger-hover));
 }
 
 .sellBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  box-shadow: var(--shadow-danger-sm);
 }
 
 /* Risk Warning */
 .riskWarning {
   margin-top: 1rem;
   padding: 0.75rem;
-  background: #fff3cd;
-  color: #856404;
+  background: var(--warning-bg);
+  color: var(--warning-text);
   border-radius: 8px;
   font-size: 0.75rem;
   text-align: center;
-  border: 1px solid #ffeeba;
+  border: 1px solid var(--warning-border);
   animation: slideUp 0.3s ease;
 }
 
@@ -507,9 +507,9 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #667eea;
+  background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
   margin-top: -7px; /* Half of thumb height minus half of track height (10px - 3px = 7px) */
   position: relative;
   z-index: 3;
@@ -520,9 +520,9 @@
   height: 20px;
   border: none;
   border-radius: 50%;
-  background: #667eea;
+  background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
   position: relative;
   z-index: 3;
 }
@@ -542,14 +542,14 @@
 
 /* Focus state for better accessibility */
 .leverageSlider:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px var(--accent-shadow);
 }
 
 .sliderMarkers {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--text-subtle);
   padding: 0 0.25rem;
   margin-top: 0.25rem; /* Add space between slider and markers */
   position: relative;
@@ -559,10 +559,10 @@
 
 /* Funding Badge - New */
 .fundingBadge {
-  background: linear-gradient(135deg, #667eea15, #764ba215);
+  background: var(--accent-gradient-soft-strong);
   padding: 0.4rem 1rem;
   border-radius: 30px;
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  border: 1px solid var(--accent-border);
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -572,10 +572,10 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
-  background: white;
+  background: var(--surface);
   padding: 0.25rem;
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .orderTypeBtn {
@@ -588,41 +588,41 @@
   cursor: pointer;
   transition: all 0.2s;
   background: transparent;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .orderTypeBtn.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+  background: var(--accent-gradient);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 /* Limit Price Input - New */
 .limitPrice {
   margin-bottom: 1rem;
   padding: 0.5rem;
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
 }
 
 .limitHeader {
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
 .marketPrice {
-  color: #667eea;
+  color: var(--accent);
   font-weight: 500;
 }
 
 .limitInput {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--border-soft);
   border-radius: 8px;
   font-size: 0.9rem;
   transition: all 0.2s;
@@ -630,8 +630,8 @@
 
 .limitInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .limitInput::placeholder {
@@ -641,13 +641,13 @@
 
 .contractMeta {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 0.2rem;
 }
 
 .contractAddress {
   font-size: 0.72rem;
-  color: #475569;
+  color: var(--text-muted-strong);
   font-family: 'Roboto Mono', monospace;
   margin-top: 0.1rem;
 }
@@ -660,7 +660,7 @@
 .errorText {
   margin-top: 0.75rem;
   color: #b91c1c;
-  background: #fee2e2;
+  background: var(--danger-bg);
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
@@ -682,7 +682,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 0.9rem;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .positionsHeader {
@@ -703,14 +703,14 @@
 }
 
 .emptyText {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.82rem;
   padding: 0.6rem 0;
 }
 
 .positionRow {
   border: 1px solid #e2e8f0;
-  background: white;
+  background: var(--surface);
   border-radius: 10px;
   padding: 0.6rem;
   margin-bottom: 0.5rem;
@@ -721,7 +721,7 @@
   justify-content: space-between;
   margin-bottom: 0.35rem;
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--text-muted-strong);
 }
 
 .positionGrid {
@@ -740,7 +740,7 @@
 
 .pendingTitle {
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--text-muted-strong);
   margin-bottom: 0.35rem;
 }
 
@@ -750,7 +750,7 @@
   gap: 0.4rem;
   font-size: 0.76rem;
   color: #334155;
-  background: #f1f5f9;
+  background: var(--surface-3);
   border-radius: 6px;
   padding: 0.35rem 0.45rem;
   margin-bottom: 0.25rem;

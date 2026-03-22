@@ -1,16 +1,16 @@
 /* ===== TABLE CONTAINER ===== */
 .tableContainer {
-    background: white;
+    background: var(--surface);
     border-radius: 16px;
     padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
     margin-bottom: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-contrast);
     transition: all 0.3s ease;
 }
 
 .tableContainer:hover {
-    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+    box-shadow: var(--shadow-accent);
 }
 
 /* ===== TABLE CONTROLS ===== */
@@ -25,26 +25,26 @@
 
 .searchInputSmall {
     padding: 0.6rem 1rem 0.6rem 2.5rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 50px;
     font-size: 0.9rem;
     width: 250px;
     transition: all 0.2s;
-    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
 }
 
 .searchInputSmall:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
 }
 
 /* ===== TABLE WRAPPER ===== */
 .tableWrapper {
     overflow-x: auto;
     border-radius: 12px;
-    border: 1px solid #f0f0f0;
-    background: white;
+    border: 1px solid var(--border-soft);
+    background: var(--surface);
 }
 
 /* ===== COMPACT TABLE ===== */
@@ -58,17 +58,17 @@
 .compactTable th {
     text-align: left;
     padding: 1rem;
-    background: linear-gradient(135deg, #667eea08, #764ba208);
-    border-bottom: 2px solid #f0f0f0;
+    background: var(--accent-gradient-soft);
+    border-bottom: 2px solid var(--border-soft);
     font-weight: 600;
-    color: #444;
+    color: var(--text-strong);
     white-space: nowrap;
 }
 
 .compactTable td {
     padding: 1rem;
-    border-bottom: 1px solid #f0f0f0;
-    color: #4a5568;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-muted-strong);
 }
 
 .compactTable tbody tr {
@@ -76,7 +76,7 @@
 }
 
 .compactTable tbody tr:hover {
-    background: linear-gradient(135deg, #667eea08, #764ba208);
+    background: var(--accent-gradient-soft);
 }
 
 /* ===== SORTABLE HEADERS ===== */
@@ -88,25 +88,25 @@
 }
 
 .sortable:hover {
-    background: linear-gradient(135deg, #667eea15, #764ba215) !important;
+    background: var(--accent-gradient-soft-strong) !important;
 }
 
 /* ===== CELL TYPES ===== */
 .symbolCell {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1rem;
 }
 
 .priceCell {
     font-family: 'Roboto Mono', monospace;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--text-strong);
 }
 
 /* ===== PRICE CHANGES ===== */
 .positive {
-    color: #10b981;
+    color: var(--success);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -114,7 +114,7 @@
 }
 
 .negative {
-    color: #ef4444;
+    color: var(--danger);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -126,40 +126,41 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    background: #f8fafc;
+    background: var(--surface-muted);
     padding: 0.4rem;
     border-radius: 50px;
+    border: 1px solid var(--border-soft);
 }
 
 .paginationSmall button {
     padding: 0.4rem 1rem;
-    border: none;
-    background: white;
+    border: 1px solid var(--border-soft);
+    background: var(--surface);
     border-radius: 50px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--text-muted-strong);
     min-width: 60px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
     transition: all 0.2s;
 }
 
 .paginationSmall button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .paginationSmall button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #f1f5f9;
+    background: var(--surface-3);
 }
 
 .paginationSmall span {
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 500;
     font-size: 0.9rem;
     padding: 0 0.5rem;
@@ -173,7 +174,7 @@
 }
 
 .resultsInfo {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
 }
@@ -182,7 +183,7 @@
 
 /* Binance */
 .binanceRow:hover {
-    background: linear-gradient(135deg, #f0b90b08, #fbbf2408) !important;
+    background: var(--binance-gradient-soft) !important;
 }
 
 .binanceRow td:first-child {
@@ -196,7 +197,7 @@
     top: 10%;
     height: 80%;
     width: 3px;
-    background: linear-gradient(135deg, #f0b90b, #fbbf24);
+    background: var(--binance-gradient);
     border-radius: 0 3px 3px 0;
     opacity: 0;
     transition: opacity 0.2s;
@@ -208,20 +209,20 @@
 
 /* Coinbase */
 .coinbaseRow:hover {
-    background: linear-gradient(135deg, #0052ff08, #3b82f608) !important;
+    background: var(--coinbase-gradient-soft) !important;
 }
 
 .coinbaseRow td:first-child::before {
-    background: linear-gradient(135deg, #0052ff, #3b82f6);
+    background: var(--coinbase-gradient);
 }
 
 /* Coinranking */
 .coinrankingRow:hover {
-    background: linear-gradient(135deg, #2d9cdb08, #60a5fa08) !important;
+    background: var(--coinranking-gradient-soft) !important;
 }
 
 .coinrankingRow td:first-child::before {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
+    background: var(--coinranking-gradient);
 }
 
 /* ===== BADGES ===== */
@@ -236,21 +237,21 @@
 }
 
 .badge.binance {
-    background: linear-gradient(135deg, #f0b90b20, #fbbf2420);
-    color: #b45309;
-    border: 1px solid #f0b90b40;
+    background: linear-gradient(135deg, var(--binance-soft), var(--binance-soft-alt));
+    color: var(--binance-text);
+    border: 1px solid var(--binance-border);
 }
 
 .badge.coinbase {
-    background: linear-gradient(135deg, #0052ff20, #3b82f620);
-    color: #1e40af;
-    border: 1px solid #0052ff40;
+    background: linear-gradient(135deg, var(--coinbase-soft), var(--coinbase-soft-alt));
+    color: var(--info-text);
+    border: 1px solid var(--coinbase-border);
 }
 
 .badge.coinranking {
-    background: linear-gradient(135deg, #2d9cdb20, #60a5fa20);
-    color: #1e3a8a;
-    border: 1px solid #2d9cdb40;
+    background: linear-gradient(135deg, var(--coinranking-soft), var(--coinranking-soft-alt));
+    color: var(--coinranking-text);
+    border: 1px solid var(--coinranking-border);
 }
 
 /* ===== STATS SECTIONS ===== */
@@ -259,22 +260,22 @@
     gap: 2rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid #f0f0f0;
+    box-shadow: var(--shadow-xs);
+    border: 1px solid var(--border-soft);
 }
 
 .binanceStats {
-    border-left: 4px solid #f0b90b;
+    border-left: 4px solid var(--binance);
 }
 
 .coinbaseStats {
-    border-left: 4px solid #0052ff;
+    border-left: 4px solid var(--coinbase);
 }
 
 .coinrankingStats {
-    border-left: 4px solid #2d9cdb;
+    border-left: 4px solid var(--coinranking);
 }
 
 .binanceStatItem, .coinbaseStatItem, .coinrankingStatItem {
@@ -284,14 +285,14 @@
 }
 
 .binanceStatLabel, .coinbaseStatLabel, .coinrankingStatLabel {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
 }
 
 .binanceStatValue, .coinbaseStatValue, .coinrankingStatValue {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1.1rem;
 }
 
@@ -306,12 +307,12 @@
 }
 
 .wsIndicator.connected {
-    background: #10b981;
+    background: var(--success);
     animation: pulse 2s infinite;
 }
 
 .wsIndicator.disconnected {
-    background: #ef4444;
+    background: var(--danger);
 }
 
 @keyframes pulse {
@@ -330,10 +331,10 @@
 .noResults {
     text-align: center;
     padding: 3rem !important;
-    color: #94a3b8;
+    color: var(--text-subtle);
     font-size: 0.95rem;
     font-style: italic;
-    background: #f8fafc;
+    background: var(--surface-muted);
 }
 
 /* ===== RESPONSIVE ===== */
@@ -394,11 +395,11 @@
 .searchInput {
     width: 100%;
     padding: 0.6rem 1rem 0.6rem 2.5rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 50px;
     font-size: 0.9rem;
     transition: all 0.2s;
-    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
 }
 
 .searchInput:focus {
@@ -419,24 +420,24 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1.2rem;
-    border: 2px solid #f0f0f0;
-    background: white;
+    border: 2px solid var(--border-soft);
+    background: var(--surface);
     border-radius: 50px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
     transition: all 0.2s;
-    color: #4a5568;
+    color: var(--text-muted-strong);
 }
 
 .toggleBtn:hover {
-    background: #f8fafc;
+    background: var(--surface-muted);
     border-color: #cbd5e0;
 }
 
 .toggleBtn.active {
-    background: #0052ff;
-    color: white;
+    background: var(--coinbase);
+    color: var(--text-inverse);
     border-color: #0052ff;
 }
 
@@ -449,40 +450,41 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    background: #f8fafc;
+    background: var(--surface-muted);
     padding: 0.3rem;
     border-radius: 50px;
+    border: 1px solid var(--border-soft);
 }
 
 .pagination button {
     padding: 0.4rem 1rem;
-    border: none;
-    background: white;
+    border: 1px solid var(--border-soft);
+    background: var(--surface);
     border-radius: 50px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--text-muted-strong);
     min-width: 40px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
     transition: all 0.2s;
 }
 
 .pagination button:hover:not(:disabled) {
-    background: #0052ff;
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 82, 255, 0.3);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .pagination button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #f1f5f9;
+    background: var(--surface-3);
 }
 
 .pageInfo {
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 500;
     font-size: 0.9rem;
     padding: 0 0.5rem;
@@ -499,17 +501,17 @@
 .pricingTable th {
     text-align: left;
     padding: 1rem;
-    background: linear-gradient(135deg, #667eea08, #764ba208);
-    border-bottom: 2px solid #f0f0f0;
+    background: var(--accent-gradient-soft);
+    border-bottom: 2px solid var(--border-soft);
     font-weight: 600;
-    color: #444;
+    color: var(--text-strong);
     white-space: nowrap;
 }
 
 .pricingTable td {
     padding: 1rem;
-    border-bottom: 1px solid #f0f0f0;
-    color: #4a5568;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-muted-strong);
 }
 
 .pricingTable tbody tr {
@@ -518,12 +520,12 @@
 
 /* ===== COINBASE SPECIFIC TABLE ===== */
 .coinbaseTable th {
-    background: linear-gradient(135deg, #0052ff08, #3b82f608);
+    background: var(--coinbase-gradient-soft);
     border-bottom-color: #0052ff40;
 }
 
 .coinbaseTable tbody tr:hover {
-    background: linear-gradient(135deg, #0052ff08, #3b82f608) !important;
+    background: var(--coinbase-gradient-soft) !important;
 }
 
 .coinbaseRow td:first-child {
@@ -537,7 +539,7 @@
     top: 10%;
     height: 80%;
     width: 3px;
-    background: linear-gradient(135deg, #0052ff, #3b82f6);
+    background: var(--coinbase-gradient);
     border-radius: 0 3px 3px 0;
     opacity: 0;
     transition: opacity 0.2s;
@@ -550,14 +552,14 @@
 /* ===== CELL TYPES ===== */
 .symbolCell {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1rem;
 }
 
 .priceCell {
     font-family: 'Roboto Mono', monospace;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--text-strong);
 }
 
 .pairCell {
@@ -568,12 +570,12 @@
 
 .volumeCell {
     font-family: 'Roboto Mono', monospace;
-    color: #2c3e50;
+    color: var(--text-strong);
 }
 
 /* ===== PRICE CHANGES ===== */
 .positive {
-    color: #10b981;
+    color: var(--success);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -581,7 +583,7 @@
 }
 
 .negative {
-    color: #ef4444;
+    color: var(--danger);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -602,30 +604,30 @@
 }
 
 .sourceDot.ws {
-    background: #10b981;
+    background: var(--success);
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
     animation: pulse 2s infinite;
 }
 
 .sourceDot.rest {
-    background: #94a3b8;
+    background: var(--scrollbar-thumb-hover);
 }
 
 .wsText {
-    color: #10b981;
+    color: var(--success);
     font-weight: 600;
     font-size: 0.85rem;
 }
 
 .restText {
-    color: #64748b;
+    color: var(--text-muted);
     font-weight: 500;
     font-size: 0.85rem;
 }
 
 .liveBadge {
-    background: #10b981;
-    color: white;
+    background: var(--success);
+    color: var(--text-inverse);
     font-size: 0.7rem;
     font-weight: 700;
     padding: 0.2rem 0.5rem;
@@ -641,11 +643,11 @@
     gap: 2rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid #f0f0f0;
-    border-left: 4px solid #0052ff;
+    box-shadow: var(--shadow-xs);
+    border: 1px solid var(--border-soft);
+    border-left: 4px solid var(--coinbase);
 }
 
 .coinbaseStatItem {
@@ -655,14 +657,14 @@
 }
 
 .coinbaseStatLabel {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
 }
 
 .coinbaseStatValue {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1.1rem;
 }
 
@@ -677,12 +679,12 @@
 }
 
 .wsIndicator.connected {
-    background: #10b981;
+    background: var(--success);
     animation: pulse 2s infinite;
 }
 
 .wsIndicator.disconnected {
-    background: #ef4444;
+    background: var(--danger);
 }
 
 @keyframes pulse {
@@ -701,10 +703,10 @@
 .noResults {
     text-align: center;
     padding: 3rem !important;
-    color: #94a3b8;
+    color: var(--text-subtle);
     font-size: 0.95rem;
     font-style: italic;
-    background: #f8fafc;
+    background: var(--surface-muted);
 }
 
 /* ===== RESPONSIVE ===== */
@@ -752,12 +754,12 @@
 
 /* ===== COINRANKING SPECIFIC ===== */
 .coinrankingTable th {
-    background: linear-gradient(135deg, #2d9cdb08, #60a5fa08);
+    background: var(--coinranking-gradient-soft);
     border-bottom-color: #2d9cdb40;
 }
 
 .coinrankingTable tbody tr:hover {
-    background: linear-gradient(135deg, #2d9cdb08, #60a5fa08) !important;
+    background: var(--coinranking-gradient-soft) !important;
 }
 
 .coinrankingRow td:first-child {
@@ -771,7 +773,7 @@
     top: 10%;
     height: 80%;
     width: 3px;
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
+    background: var(--coinranking-gradient);
     border-radius: 0 3px 3px 0;
     opacity: 0;
     transition: opacity 0.2s;
@@ -787,11 +789,11 @@
     gap: 2rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid #f0f0f0;
-    border-left: 4px solid #2d9cdb;
+    box-shadow: var(--shadow-xs);
+    border: 1px solid var(--border-soft);
+    border-left: 4px solid var(--coinranking);
     flex-wrap: wrap;
 }
 
@@ -802,14 +804,14 @@
 }
 
 .coinrankingStatLabel {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
 }
 
 .coinrankingStatValue {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1.1rem;
 }
 
@@ -825,7 +827,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #f8fafc;
+    background: var(--surface-muted);
     padding: 0.25rem;
     border-radius: 50px;
 }
@@ -833,7 +835,7 @@
 .priceInput {
     width: 100px;
     padding: 0.5rem 1rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 50px;
     font-size: 0.85rem;
     transition: all 0.2s;
@@ -846,7 +848,7 @@
 }
 
 .priceSeparator {
-    color: #94a3b8;
+    color: var(--text-subtle);
     font-weight: 500;
 }
 
@@ -858,7 +860,7 @@
 /* ===== RANK CELL ===== */
 .rankCell {
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     font-family: 'Roboto Mono', monospace;
     width: 60px;
 }
@@ -867,7 +869,7 @@
 .marketCapCell {
     font-family: 'Roboto Mono', monospace;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--text-strong);
 }
 
 /* ===== PAGINATION CONTAINER ===== */
@@ -877,33 +879,34 @@
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+    padding-top: 0.5rem;
 }
 
 .pageNav {
     padding: 0.5rem 1rem;
-    border: 2px solid #f0f0f0;
-    background: white;
+    border: 2px solid var(--border-soft);
+    background: var(--surface);
     border-radius: 50px;
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--text-muted-strong);
     min-width: 80px;
     transition: all 0.2s;
 }
 
 .pageNav:hover:not(:disabled) {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     border-color: transparent;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(45, 156, 219, 0.3);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .pageNav:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #f1f5f9;
+    background: var(--surface-3);
 }
 
 .pageNumbers {
@@ -915,8 +918,8 @@
 .pageNumber {
     width: 40px;
     height: 40px;
-    border: 2px solid #f0f0f0;
-    background: white;
+    border: 2px solid var(--border-soft);
+    background: var(--surface);
     border-radius: 50%;
     cursor: pointer;
     font-size: 0.85rem;
@@ -924,18 +927,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4a5568;
+    color: var(--text-muted-strong);
     transition: all 0.2s;
 }
 
 .pageNumber:hover {
-    background: #f8fafc;
+    background: var(--surface-muted);
     border-color: #2d9cdb;
 }
 
 .pageNumber.active {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
-    color: white;
+    background: var(--coinranking-gradient);
+    color: var(--text-inverse);
     border-color: transparent;
     box-shadow: 0 4px 8px rgba(45, 156, 219, 0.3);
 }
@@ -1017,10 +1020,10 @@
     gap: 2rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid #f0f0f0;
+    box-shadow: var(--shadow-xs);
+    border: 1px solid var(--border-soft);
     border-left: 4px solid linear-gradient(135deg, #f0b90b, #0052ff, #2d9cdb);
     flex-wrap: wrap;
 }
@@ -1032,14 +1035,14 @@
 }
 
 .unifiedStatLabel {
-    color: #64748b;
+    color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
 }
 
 .unifiedStatValue {
     font-weight: 700;
-    color: #333;
+    color: var(--text-strong);
     font-size: 1.1rem;
 }
 
@@ -1055,21 +1058,21 @@
 }
 
 .sourceBadge.binance {
-    background: linear-gradient(135deg, #f0b90b20, #fbbf2420);
-    color: #b45309;
-    border: 1px solid #f0b90b40;
+    background: linear-gradient(135deg, var(--binance-soft), var(--binance-soft-alt));
+    color: var(--binance-text);
+    border: 1px solid var(--binance-border);
 }
 
 .sourceBadge.coinbase {
-    background: linear-gradient(135deg, #0052ff20, #3b82f620);
-    color: #1e40af;
-    border: 1px solid #0052ff40;
+    background: linear-gradient(135deg, var(--coinbase-soft), var(--coinbase-soft-alt));
+    color: var(--info-text);
+    border: 1px solid var(--coinbase-border);
 }
 
 .sourceBadge.coinranking {
-    background: linear-gradient(135deg, #2d9cdb20, #60a5fa20);
-    color: #1e3a8a;
-    border: 1px solid #2d9cdb40;
+    background: linear-gradient(135deg, var(--coinranking-soft), var(--coinranking-soft-alt));
+    color: var(--coinranking-text);
+    border: 1px solid var(--coinranking-border);
 }
 
 /* ===== SOURCE DOTS (for stats) ===== */
@@ -1081,17 +1084,17 @@
 }
 
 .sourceDot.binance {
-    background: #f0b90b;
+    background: var(--binance);
     box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.2);
 }
 
 .sourceDot.coinbase {
-    background: #0052ff;
+    background: var(--coinbase);
     box-shadow: 0 0 0 2px rgba(0, 82, 255, 0.2);
 }
 
 .sourceDot.coinranking {
-    background: #2d9cdb;
+    background: var(--coinranking);
     box-shadow: 0 0 0 2px rgba(45, 156, 219, 0.2);
 }
 
@@ -1112,7 +1115,7 @@
     top: 10%;
     height: 80%;
     width: 3px;
-    background: linear-gradient(135deg, #f0b90b, #fbbf24);
+    background: var(--binance-gradient);
     border-radius: 0 3px 3px 0;
     opacity: 0;
     transition: opacity 0.2s;
@@ -1123,12 +1126,12 @@
 }
 
 .binanceRow:hover {
-    background: linear-gradient(135deg, #f0b90b08, #fbbf2408) !important;
+    background: var(--binance-gradient-soft) !important;
 }
 
 /* Coinbase - Blue theme */
 .coinbaseRow td:first-child::before {
-    background: linear-gradient(135deg, #0052ff, #3b82f6);
+    background: var(--coinbase-gradient);
 }
 
 .coinbaseRow:hover td:first-child::before {
@@ -1136,12 +1139,12 @@
 }
 
 .coinbaseRow:hover {
-    background: linear-gradient(135deg, #0052ff08, #3b82f608) !important;
+    background: var(--coinbase-gradient-soft) !important;
 }
 
 /* Coinranking - Light Blue/Purple theme */
 .coinrankingRow td:first-child::before {
-    background: linear-gradient(135deg, #2d9cdb, #60a5fa);
+    background: var(--coinranking-gradient);
 }
 
 .coinrankingRow:hover td:first-child::before {
@@ -1149,7 +1152,7 @@
 }
 
 .coinrankingRow:hover {
-    background: linear-gradient(135deg, #2d9cdb08, #60a5fa08) !important;
+    background: var(--coinranking-gradient-soft) !important;
 }
 
 /* ===== RESPONSIVE UPDATES ===== */
@@ -1187,7 +1190,7 @@
 }
 
 .higherPrice .priceValue {
-    color: #10b981;
+    color: var(--success);
     font-weight: 700;
 }
 
@@ -1202,12 +1205,12 @@
 }
 
 .higherSource::after {
-    content: '↑';
+    content: 'â†‘';
     position: absolute;
     top: -8px;
     right: -8px;
     font-size: 10px;
-    color: #10b981;
+    color: var(--success);
     font-weight: bold;
 }
 
@@ -1222,7 +1225,7 @@
 .higherIndicator {
     font-size: 0.7rem;
     font-weight: 600;
-    color: #10b981;
+    color: var(--success);
     background: rgba(16, 185, 129, 0.1);
     padding: 0.2rem 0.4rem;
     border-radius: 12px;
@@ -1231,8 +1234,8 @@
 
 /* Difference color levels */
 .differenceLow {
-    color: #10b981;
-    background: #d1fae5;
+    color: var(--success);
+    background: var(--success-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 20px;
     display: inline-block;
@@ -1249,8 +1252,8 @@
 }
 
 .differenceHigh {
-    color: #ef4444;
-    background: #fee2e2;
+    color: var(--danger);
+    background: var(--danger-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 20px;
     display: inline-block;

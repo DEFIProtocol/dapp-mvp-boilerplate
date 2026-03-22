@@ -22,9 +22,9 @@ export default function PerpetualCard({
   fundingRate = 0.001, // 0.1% = 0.001
 }: PerpetualCardProps) {
   const { address } = useAccount();
-  const [leverage, setLeverage] = useState(1);
+  const [leverage, setLeverage] = useState(10);
   const [isEditingLeverage, setIsEditingLeverage] = useState(false);
-  const [leverageInput, setLeverageInput] = useState('1');
+  const [leverageInput, setLeverageInput] = useState('10');
   const [positionSize, setPositionSize] = useState<number | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('limit');
   const [limitPrice, setLimitPrice] = useState<number | null>(null);
@@ -243,10 +243,7 @@ export default function PerpetualCard({
         <div 
           className={styles.sliderWrapper}
           style={{
-            background: `linear-gradient(to right, #667eea, #667eea)`,
-            backgroundSize: `${trackFillPercentage}% 100%`,
-            backgroundRepeat: 'no-repeat',
-            backgroundColor: '#f0f0f0'
+            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${trackFillPercentage}%, var(--surface-3) ${trackFillPercentage}%, var(--surface-3) 100%)`
           }}
         >
           <input 

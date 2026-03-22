@@ -2,7 +2,7 @@
 
 .perpsManager {
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  background: var(--accent-gradient-surface);
   min-height: 100%;
 }
 
@@ -15,19 +15,19 @@
 }
 
 .statCard {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-contrast);
   position: relative;
   overflow: hidden;
 }
 
 .statCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+  box-shadow: var(--shadow-accent);
 }
 
 .statCard::before {
@@ -37,21 +37,21 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: var(--accent-gradient-line);
 }
 
 .statLabel {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
 .statValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-strong);
   line-height: 1.2;
 }
 
@@ -67,15 +67,15 @@
 }
 
 .statusMessage.success {
-  background: #d1fae5;
-  color: #065f46;
-  border-left: 4px solid #10b981;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-left: 4px solid var(--success);
 }
 
 .statusMessage.error {
-  background: #fee2e2;
-  color: #991b1b;
-  border-left: 4px solid #ef4444;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-left: 4px solid var(--danger);
 }
 
 @keyframes slideIn {
@@ -107,17 +107,17 @@
 .searchInput {
   width: 100%;
   padding: 0.6rem 1rem 0.6rem 2.5rem;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--border-soft);
   border-radius: 50px;
   font-size: 0.9rem;
   transition: all 0.2s;
-  background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 0.8rem center;
 }
 
 .searchInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .actionButtons {
@@ -136,17 +136,17 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .actionBtn.primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: var(--accent-gradient);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .actionBtn.primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-accent-lg);
 }
 
 .btnIcon {
@@ -155,11 +155,11 @@
 
 /* Table Section */
 .tableSection {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-contrast);
 }
 
 /* Loading State */
@@ -169,7 +169,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 2rem;
 }
@@ -186,7 +186,7 @@
 
 .loadingText {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-muted-strong);
   font-weight: 500;
 }
 
@@ -194,39 +194,39 @@
 .errorState {
   text-align: center;
   padding: 3rem;
-  background: white;
+  background: var(--surface);
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   max-width: 500px;
   margin: 2rem auto;
 }
 
 .errorState h3 {
-  color: #ef4444;
+  color: var(--danger);
   margin-bottom: 1rem;
   font-size: 1.5rem;
 }
 
 .errorState p {
-  color: #666;
+  color: var(--text-muted-strong);
   margin-bottom: 1.5rem;
 }
 
 .retryButton {
   padding: 0.6rem 1.5rem;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: var(--accent-gradient);
+  color: var(--text-inverse);
   border: none;
   border-radius: 50px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-sm);
 }
 
 .retryButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-accent-lg);
 }
 
 @keyframes spin {
@@ -276,12 +276,12 @@
 
 /* Oracle Section */
 .oracleSection {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 1.5rem;
     margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-contrast);
 }
 
 .sectionHeader {
@@ -290,13 +290,13 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-soft);
 }
 
 .sectionHeader h3 {
     margin: 0;
     font-size: 1.2rem;
-    color: #333;
+    color: var(--text-strong);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -307,8 +307,8 @@
 }
 
 .updateBadge {
-    background: linear-gradient(135deg, #667eea15, #764ba215);
-    color: #667eea;
+    background: var(--accent-gradient-soft-strong);
+    color: var(--accent);
     padding: 0.4rem 1rem;
     border-radius: 50px;
     font-size: 0.8rem;
@@ -345,17 +345,55 @@
 
 .fundingBadge.positive {
     background: rgba(16, 185, 129, 0.9);
-    color: white;
+    color: var(--text-inverse);
 }
 
 .fundingBadge.negative {
     background: rgba(239, 68, 68, 0.9);
-    color: white;
+    color: var(--text-inverse);
 }
 
 .fundingLabel {
     opacity: 0.9;
     font-size: 0.7rem;
+}
+
+.simulatorSection {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-contrast);
+}
+
+.simulatorToggle {
+  border: 1px solid var(--border-contrast);
+  background: var(--accent-gradient-soft);
+  color: var(--text-strong);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.simulatorToggle:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.simulatorHint {
+  margin: 0;
+  color: var(--text-muted-strong);
+  font-size: 0.92rem;
+}
+
+.simulatorFrame {
+  border: 1px solid var(--border-contrast);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .fundingValue {
@@ -372,15 +410,15 @@
 }
 
 .statusMessage.success {
-    background: #d1fae5;
-    color: #065f46;
-    border-left: 4px solid #10b981;
+    background: var(--success-bg);
+    color: var(--success-text);
+    border-left: 4px solid var(--success);
 }
 
 .statusMessage.error {
-    background: #fee2e2;
-    color: #991b1b;
-    border-left: 4px solid #ef4444;
+    background: var(--danger-bg);
+    color: var(--danger-text);
+    border-left: 4px solid var(--danger);
 }
 
 /* Action Bar */
@@ -400,17 +438,17 @@
 .searchInput {
     width: 100%;
     padding: 0.8rem 1.2rem;
-    border: 2px solid #f0f0f0;
+    border: 2px solid var(--border-soft);
     border-radius: 12px;
     font-size: 0.95rem;
     transition: all 0.3s ease;
-    background: white;
+    background: var(--surface);
 }
 
 .searchInput:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
 }
 
 .actionButtons {
@@ -432,8 +470,8 @@
 }
 
 .actionBtn.primary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--accent-gradient);
+    color: var(--text-inverse);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
@@ -448,10 +486,10 @@
 
 /* Table Section */
 .tableSection {
-    background: white;
+    background: var(--surface);
     border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     overflow-x: auto;
 }
 

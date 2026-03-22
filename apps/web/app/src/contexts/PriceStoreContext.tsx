@@ -9,6 +9,9 @@ export interface PriceSource {
 	source: string;
 	timestamp: number;
 	pair?: string;
+	marketCap?: number;
+	change24h?: number;
+	uuid?: string;
 }
 
 interface PriceStoreContextType {
@@ -32,7 +35,10 @@ const arePricesEqual = (left: PriceSource[], right: PriceSource[]) => {
 			a.price !== b.price ||
 			a.source !== b.source ||
 			a.timestamp !== b.timestamp ||
-			a.pair !== b.pair
+			a.pair !== b.pair ||
+			a.marketCap !== b.marketCap ||
+			a.change24h !== b.change24h ||
+			a.uuid !== b.uuid
 		) {
 			return false;
 		}
@@ -55,7 +61,38 @@ export function PriceStoreProvider({ children, pollInterval = 15000 }: { childre
 			const res = await fetch("/api/prices");
 			const data = await res.json();
 			if (data.success) {
-				const nextPrices = (data.data || []) as PriceSource[];
+					const nextPrices = ((data.data || []) as Array<Record<string, unknown>>).map((entry) => {
+						const symbol = String(entry.symbol || "").toUpperCase();
+						const rawPrice = typeof entry.price === "number" ? entry.price : Number(entry.price || 0);
+						const timestamp = typeof entry.timestamp === "number" ? entry.timestamp : Date.now();
+						const source = String(entry.priceSource || entry.source || "unknown");
+
+						const marketCapRaw = entry.marketCap;
+						const changeRaw = entry.change24h;
+
+						const marketCap = typeof marketCapRaw === "number"
+							? marketCapRaw
+							: typeof marketCapRaw === "string"
+								? Number(marketCapRaw)
+								: undefined;
+
+						const change24h = typeof changeRaw === "number"
+							? changeRaw
+							: typeof changeRaw === "string"
+								? Number(changeRaw)
+								: undefined;
+
+						return {
+							symbol,
+							price: Number.isFinite(rawPrice) ? rawPrice : 0,
+							source,
+							timestamp,
+							pair: typeof entry.pair === "string" ? entry.pair : undefined,
+							marketCap: Number.isFinite(marketCap ?? NaN) ? marketCap : undefined,
+							change24h: Number.isFinite(change24h ?? NaN) ? change24h : undefined,
+							uuid: typeof entry.uuid === "string" ? entry.uuid : undefined,
+						} satisfies PriceSource;
+					});
 				setPrices((prev) => (arePricesEqual(prev, nextPrices) ? prev : nextPrices));
 			} else {
 				setError(data.error || "Failed to load prices");

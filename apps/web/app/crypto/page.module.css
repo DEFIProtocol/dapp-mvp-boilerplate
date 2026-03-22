@@ -1,17 +1,17 @@
 /* app/crypto/page.module.css */
 .dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  background: var(--accent-gradient-surface);
   /* Remove padding from here if it's affecting the header */
   padding: 0; /* Changed from 2rem to 0 */
 }
 
 .title {
   font-size: 2rem;
-  color: #333;
+  color: var(--text-strong);
   margin: 2rem 2rem 2rem 2rem; /* Add margin instead of padding on container */
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -34,19 +34,19 @@
   gap: 0.5rem;
   padding: 0.6rem 1.2rem;
   margin: 0 2rem 1.5rem 2rem; /* Add margin instead of relying on container */
-  background: white;
-  border: 2px solid #f0f0f0;
+  background: var(--surface);
+  border: 2px solid var(--border-soft);
   border-radius: 50px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #4a5568;
+  color: var(--text-muted-strong);
   cursor: pointer;
   transition: all 0.2s;
 }
 .backButton:hover {
-  background: #f8fafc;
-  border-color: #667eea;
-  color: #667eea;
+  background: var(--surface-muted);
+  border-color: var(--accent);
+  color: var(--accent);
   transform: translateX(-4px);
 }
 

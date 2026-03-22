@@ -1,10 +1,10 @@
-/* user/UserTable.module.css */
+﻿/* user/UserTable.module.css */
 
 .tableWrapper {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
-  background: white;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
 }
 
 .userTable {
@@ -17,17 +17,17 @@
 .userTable th {
   text-align: left;
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea08, #764ba208);
-  border-bottom: 2px solid #f0f0f0;
+  background: var(--accent-gradient-soft);
+  border-bottom: 2px solid var(--border-soft);
   font-weight: 600;
-  color: #444;
+  color: var(--text-strong);
   white-space: nowrap;
 }
 
 .userTable td {
   padding: 1rem;
-  border-bottom: 1px solid #f0f0f0;
-  color: #4a5568;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-muted-strong);
   vertical-align: middle;
 }
 
@@ -38,7 +38,7 @@
 }
 
 .sortable:hover {
-  background: linear-gradient(135deg, #667eea15, #764ba215) !important;
+  background: var(--accent-gradient-soft-strong) !important;
 }
 
 .checkboxCol {
@@ -50,7 +50,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--accent);
 }
 
 .actionsCol {
@@ -61,10 +61,10 @@
 .noResults {
   text-align: center;
   padding: 3rem !important;
-  color: #94a3b8;
+  color: var(--text-subtle);
   font-size: 0.95rem;
   font-style: italic;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 @media (max-width: 768px) {
@@ -85,11 +85,11 @@
 }
 
 .userRow:hover {
-  background: linear-gradient(135deg, #667eea08, #764ba208);
+  background: var(--accent-gradient-soft);
 }
 
 .userRow.selected {
-  background: linear-gradient(135deg, #667eea15, #764ba215);
+  background: var(--accent-gradient-soft-strong);
 }
 
 .checkboxCol {
@@ -101,7 +101,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--accent);
 }
 
 .emailCell,
@@ -115,23 +115,23 @@
 .walletCell {
   font-family: 'Roboto Mono', monospace;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .placeholder {
-  color: #94a3b8;
+  color: var(--text-subtle);
   font-style: italic;
 }
 
 .chainBadge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
-  background: linear-gradient(135deg, #667eea15, #764ba215);
-  color: #4c51bf;
+  background: var(--accent-gradient-soft-strong);
+  color: var(--accent-2);
   border-radius: 30px;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 1px solid #667eea40;
+  border: 1px solid var(--accent-border);
 }
 
 .verifiedBadge {
@@ -148,17 +148,17 @@
 .editInput {
   width: 100%;
   padding: 0.4rem 0.6rem;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--border-soft);
   border-radius: 6px;
   font-size: 0.85rem;
   transition: all 0.2s;
-  background: white;
+  background: var(--surface);
 }
 
 .editInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .actionsCell {
@@ -178,9 +178,9 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
-  border: 2px solid #f0f0f0;
-  color: #4a5568;
+  background: var(--surface);
+  border: 2px solid var(--border-soft);
+  color: var(--text-muted-strong);
 }
 
 .actionBtn.small {
@@ -195,43 +195,43 @@
 }
 
 .actionBtn.primary {
-  background: #667eea;
-  color: white;
+  background: var(--accent);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.primary:hover {
-  background: #5a67d8;
+  background: var(--accent-hover);
 }
 
 .actionBtn.success {
-  background: #10b981;
-  color: white;
+  background: var(--success);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.success:hover {
-  background: #0e9f6e;
+  background: var(--success-hover);
 }
 
 .actionBtn.info {
-  background: #3b82f6;
-  color: white;
+  background: var(--info);
+  color: var(--text-inverse);
   border-color: transparent;
 }
 
 .actionBtn.info:hover {
-  background: #2563eb;
+  background: var(--info-hover);
 }
 
 .actionBtn.secondary {
-  background: #f0f0f0;
-  color: #4a5568;
-  border-color: #e0e0e0;
+  background: var(--surface-3);
+  color: var(--text-muted-strong);
+  border-color: var(--border-strong);
 }
 
 .actionBtn.secondary:hover {
-  background: #e0e0e0;
+  background: var(--border-strong);
 }
 
 @media (max-width: 768px) {
@@ -264,29 +264,29 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .actionBtn.info {
-  background: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: var(--info);
+  box-shadow: var(--shadow-info-sm);
 }
 
 .actionBtn.info:hover {
-  background: #2563eb;
+  background: var(--info-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  box-shadow: var(--shadow-info-lg);
 }
 
 .actionBtn.danger {
-  background: #ef4444;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: var(--danger);
+  box-shadow: var(--shadow-danger-sm);
 }
 
 .actionBtn.danger:hover {
-  background: #dc2626;
+  background: var(--danger-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  box-shadow: var(--shadow-danger-lg);
 }
 
 .btnIcon {
@@ -313,19 +313,19 @@
 }
 
 .statCard {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-contrast);
   position: relative;
   overflow: hidden;
 }
 
 .statCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.12);
+  box-shadow: var(--shadow-accent);
 }
 
 .statCard::before {
@@ -335,21 +335,21 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: var(--accent-gradient-line);
 }
 
 .statLabel {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
 
 .statValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-strong);
   line-height: 1.2;
 }
 

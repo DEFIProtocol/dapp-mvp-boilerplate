@@ -1,4 +1,4 @@
-/* app/crypto/components/styles/TradingView.module.css */
+﻿/* app/crypto/components/styles/TradingView.module.css */
 .tradingView {
   width: 100%;
   min-height: 100vh;
@@ -22,11 +22,11 @@
 }
 
 .chartColumn {
-  background: white;
+  background: var(--surface);
   border-radius: 24px;
   padding: 1.5rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-soft);
   min-width: 0; /* Prevents chart overflow */
 }
 
