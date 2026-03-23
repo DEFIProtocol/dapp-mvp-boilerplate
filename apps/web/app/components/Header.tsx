@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
@@ -32,7 +32,7 @@ export function Header() {
   useEffect(() => {
     if (!user || !address) return;
     
-    const chainLabel = getChainLabel?.(selectedChain) || "Ethereum";
+    const chainLabel = getChainLabel?.(selectedChain) || "Base";
     
     if (selectedChain === 1 || chainLabel === "Ethereum") {
       // Update wallet_address if needed
@@ -59,6 +59,7 @@ export function Header() {
   const [chainSwitched, setChainSwitched] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const previousChainRef = useRef<number | null>(null);
 
   const { switchChain, isPending } = useSwitchChain();
 
@@ -74,6 +75,22 @@ export function Header() {
     if (screenSize && screenSize < 760) setActiveMenu(false);
     else setActiveMenu(true);
   }, [screenSize]);
+
+  useEffect(() => {
+    if (previousChainRef.current === null) {
+      previousChainRef.current = selectedChain;
+      return;
+    }
+
+    if (previousChainRef.current !== selectedChain) {
+      const label = getChainLabel?.(selectedChain) || `Chain ${selectedChain}`;
+      setChainSwitched(label);
+      setToastMessage(`Switched to ${label}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      previousChainRef.current = selectedChain;
+    }
+  }, [selectedChain, getChainLabel]);
 
   return (
     <header className={styles.header}>

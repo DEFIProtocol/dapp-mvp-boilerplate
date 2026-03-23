@@ -1,12 +1,13 @@
 "use client";
 
 import { WagmiProvider, createConfig, http } from "wagmi";
-import { mainnet, polygon, arbitrum, bsc, avalanche } from "wagmi/chains";
+import { mainnet, base, polygon, arbitrum, bsc, avalanche } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const config = createConfig({
-  chains: [mainnet, polygon, arbitrum, bsc, avalanche],
+  chains: [base, mainnet, polygon, arbitrum, bsc, avalanche],
   transports: {
+    [base.id]: http(),
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [arbitrum.id]: http(),

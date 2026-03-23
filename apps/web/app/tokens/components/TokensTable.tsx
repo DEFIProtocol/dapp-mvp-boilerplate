@@ -24,6 +24,7 @@ interface MergedToken {
 const FALLBACK_TEXT = "—";
 
 const CHAIN_KEY_MAP: Record<string, string[]> = {
+  "8453": ["base"],
   "1": ["ethereum"],
   "56": ["bnb", "bsc"],
   "137": ["polygon"],
@@ -67,7 +68,7 @@ const normalizeChains = (rawChains: unknown): Record<string, unknown> => {
 export default function TokensTable() {
   const { tokens, loading: tokensLoading } = useTokens();
   const { priceMap, loading: pricesLoading, error: pricesError } = usePriceStore();
-  const { selectedChain } = useChainContext();
+  const { selectedChain, getChainSlug } = useChainContext();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("marketCap");
@@ -308,7 +309,7 @@ export default function TokensTable() {
                       </div>
                       <div className={styles.tokenDetails}>
                         {token.uuid ? (
-                          <Link href={`/tokens/${token.uuid}`} className={styles.tokenName}>
+                          <Link href={`/market/${getChainSlug(selectedChain)}/${token.uuid}`} className={styles.tokenName}>
                             {token.name || token.symbol || FALLBACK_TEXT}
                           </Link>
                         ) : (

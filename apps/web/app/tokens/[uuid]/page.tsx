@@ -61,10 +61,11 @@ export default function TokenDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const uuid = params.uuid as string;
+  const chainFromRoute = typeof params.chain === "string" ? params.chain : undefined;
   
   const { tokens, loading: tokensLoading } = useTokens();
   const { priceMap } = usePriceStore();
-  const { selectedChain, getChainLabel } = useChainContext();
+  const { selectedChain, getChainSlug } = useChainContext();
   const { isInWatchlist, toggleWatchlistToken } = useUserContext();
   
   const [timePeriod, setTimePeriod] = useState('24h');
@@ -125,6 +126,7 @@ export default function TokenDetailsPage() {
   const percentChange = combinedData?.change24h || 0;
   const isPositiveChange = percentChange >= 0;
   const isWatchlisted = combinedData ? isInWatchlist(combinedData) : false;
+  const marketsRoute = chainFromRoute ? `/market/${chainFromRoute}` : `/market/${getChainSlug(selectedChain)}`;
 
   const handleCopy = async (text: string, type: string) => {
     await navigator.clipboard.writeText(text);
@@ -159,8 +161,8 @@ export default function TokenDetailsPage() {
         <main className={styles.main}>
           <div className={styles.errorContainer}>
             <p>Unable to load token details</p>
-            <button onClick={() => router.push('/tokens')} className={styles.backButton}>
-              ← Back to Tokens
+            <button onClick={() => router.push(marketsRoute)} className={styles.backButton}>
+              ← Back to Markets
             </button>
           </div>
         </main>
@@ -173,9 +175,9 @@ export default function TokenDetailsPage() {
       <div className={styles.gradientBg} />
       <main className={styles.main}>
         {/* Back Button */}
-        <button onClick={() => router.push('/tokens')} className={styles.backButton}>
+        <button onClick={() => router.push(marketsRoute)} className={styles.backButton}>
           <ArrowLeft size={18} />
-          <span>Back to Tokens</span>
+          <span>Back to Markets</span>
         </button>
 
         {/* Token Header */}
