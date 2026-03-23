@@ -1,21 +1,8 @@
 /* app/tokens/[uuid]/TokenDetails.module.css */
 
-:root {
-  --glow-primary: rgba(0, 255, 255, 0.4);
-  --glow-secondary: rgba(255, 0, 255, 0.3);
-  --glass-bg: rgba(10, 10, 20, 0.7);
-  --glass-border: rgba(0, 255, 255, 0.2);
-  --neon-cyan: #00ffff;
-  --neon-pink: #ff00ff;
-  --dark-bg: #0a0a14;
-  --card-bg: rgba(20, 20, 40, 0.6);
-  --success: #00ff88;
-  --danger: #ff4444;
-}
-
 .page {
   min-height: 100vh;
-  background: var(--dark-bg);
+  background: var(--bg);
   position: relative;
   overflow-x: hidden;
 }
@@ -26,10 +13,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
-    linear-gradient(135deg, #0a0a14 0%, #14142a 100%);
+  background: var(--cyber-gradient-bg);
   pointer-events: none;
   z-index: 0;
 }
@@ -47,8 +31,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -58,8 +42,9 @@
 }
 
 .backButton:hover {
-  background: rgba(0, 255, 255, 0.2);
+  background: var(--card-bg);
   transform: translateX(-4px);
+  box-shadow: 0 0 12px var(--glow-primary);
 }
 
 /* Token Header */
@@ -70,6 +55,11 @@
   border-radius: 24px;
   padding: 2rem;
   margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.tokenHeader:hover {
+  border-color: var(--neon-cyan);
 }
 
 .tokenHero {
@@ -82,12 +72,12 @@
 .tokenIconWrapper {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+  background: linear-gradient(135deg, var(--glow-base), var(--glow-secondary-base));
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  border: 1px solid var(--glass-border);
 }
 
 .tokenIcon {
@@ -125,7 +115,7 @@
 .tokenName {
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #fff, var(--neon-cyan));
+  background: linear-gradient(135deg, var(--text-strong), var(--neon-cyan));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -134,16 +124,17 @@
 
 .tokenSymbol {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .tokenRank {
-  background: rgba(0, 255, 255, 0.1);
+  background: var(--glow-base);
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.75rem;
   color: var(--neon-cyan);
+  border: 1px solid var(--glass-border);
 }
 
 .priceSection {
@@ -161,7 +152,7 @@
 
 .priceLabel {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -169,7 +160,7 @@
 .priceValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .changeBadge {
@@ -180,15 +171,15 @@
 }
 
 .positive .changeBadge {
-  background: rgba(0, 255, 136, 0.1);
+  background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  border: 1px solid var(--success-border);
 }
 
 .negative .changeBadge {
-  background: rgba(255, 68, 68, 0.1);
+  background: var(--danger-soft);
   color: var(--danger);
-  border: 1px solid rgba(255, 68, 68, 0.3);
+  border: 1px solid var(--danger-border);
 }
 
 .tokenActions {
@@ -211,26 +202,26 @@
 }
 
 .watchlistButton {
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
 }
 
 .watchlistButton.added {
-  background: rgba(0, 255, 136, 0.1);
-  border-color: rgba(0, 255, 136, 0.3);
+  background: var(--success-soft);
+  border-color: var(--success-border);
   color: var(--success);
 }
 
 .refreshButton {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--surface-glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
 }
 
 .websiteButton {
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
   text-decoration: none;
 }
@@ -259,13 +250,14 @@
 }
 
 .statCard:hover {
-  border-color: rgba(0, 255, 255, 0.4);
+  border-color: var(--neon-cyan);
   transform: translateY(-2px);
+  box-shadow: 0 0 16px var(--glow-primary);
 }
 
 .statCard label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
   display: block;
@@ -275,14 +267,14 @@
 .statValue {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-strong);
   display: block;
   margin-bottom: 0.25rem;
 }
 
 .statUnit {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-subtle);
 }
 
 .positiveText {
@@ -307,6 +299,11 @@
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.chartPanel:hover {
+  border-color: var(--neon-cyan);
 }
 
 .orderPanel {
@@ -315,12 +312,17 @@
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.orderPanel:hover {
+  border-color: var(--neon-cyan);
 }
 
 .orderPanelTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-strong);
   margin-bottom: 1rem;
 }
 
@@ -348,7 +350,7 @@
 }
 
 .chartExchange {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -360,7 +362,7 @@
 .timeframeButton {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -421,14 +423,14 @@
 
 .chainSelector label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .chainSelect {
-  background: rgba(10, 10, 20, 0.6);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  color: #fff;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
   padding: 0.5rem;
   border-radius: 8px;
   cursor: pointer;
@@ -444,7 +446,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-muted-strong);
   font-size: 0.875rem;
   cursor: pointer;
 }
@@ -459,7 +461,7 @@
 
 .settingsButton {
   background: transparent;
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
   padding: 0.5rem;
   border-radius: 8px;
@@ -468,7 +470,8 @@
 }
 
 .settingsButton:hover {
-  background: rgba(0, 255, 255, 0.1);
+  background: var(--glow-base);
+  box-shadow: 0 0 8px var(--glow-primary);
 }
 
 .settingsDropdown {
@@ -478,11 +481,12 @@
   margin-top: 0.5rem;
   background: var(--card-bg);
   backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  border: 2px solid var(--neon-cyan);
   border-radius: 12px;
   padding: 1rem;
   min-width: 200px;
   z-index: 10;
+  box-shadow: 0 0 16px var(--glow-primary);
 }
 
 .slippageSection {
@@ -491,7 +495,7 @@
 
 .slippageSection label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   display: block;
   margin-bottom: 0.5rem;
 }
@@ -502,9 +506,9 @@
 }
 
 .slippageOption {
-  background: rgba(10, 10, 20, 0.6);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  color: #fff;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -514,16 +518,17 @@
 
 .slippageOption:hover,
 .slippageOption.active {
-  background: rgba(0, 255, 255, 0.2);
+  background: var(--glow-base);
   border-color: var(--neon-cyan);
+  box-shadow: 0 0 8px var(--glow-primary);
 }
 
 .refreshPricesButton {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
   padding: 0.5rem;
   border-radius: 8px;
@@ -531,19 +536,25 @@
   font-size: 0.75rem;
   width: 100%;
   justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.refreshPricesButton:hover {
+  box-shadow: 0 0 8px var(--glow-primary);
 }
 
 .priceInfo {
-  background: rgba(10, 10, 20, 0.4);
+  background: var(--glass-bg);
   border-radius: 8px;
   padding: 0.75rem;
+  border: 1px solid var(--glass-border);
 }
 
 .priceInfoRow {
   display: flex;
   justify-content: space-between;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted-strong);
   margin-bottom: 0.5rem;
 }
 
@@ -552,17 +563,20 @@
 }
 
 .amountInput {
-  background: rgba(10, 10, 20, 0.6);
-  border: 1px solid rgba(0, 255, 255, 0.2);
-  color: #fff;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
   padding: 0.75rem;
   border-radius: 8px;
   font-size: 1rem;
+  transition: all 0.2s ease;
 }
 
 .amountInput:focus {
   outline: none;
   border-color: var(--neon-cyan);
+  box-shadow: 0 0 8px var(--glow-primary);
+  background: var(--card-bg);
 }
 
 .orderButtons {
@@ -581,14 +595,14 @@
 }
 
 .buyButton {
-  background: rgba(0, 255, 136, 0.1);
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
   color: var(--success);
 }
 
 .sellButton {
-  background: rgba(255, 68, 68, 0.1);
-  border: 1px solid rgba(255, 68, 68, 0.3);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-border);
   color: var(--danger);
 }
 
@@ -611,6 +625,11 @@
   border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.descriptionCard:hover {
+  border-color: var(--neon-cyan);
 }
 
 .descriptionCard h3 {
@@ -621,7 +640,7 @@
 }
 
 .descriptionText {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted-strong);
   line-height: 1.6;
 }
 
@@ -632,6 +651,11 @@
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.addressesCard:hover {
+  border-color: var(--neon-cyan);
 }
 
 .addressesCard h3 {
@@ -652,9 +676,14 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  background: rgba(10, 10, 20, 0.4);
+  background: var(--glass-bg);
   border-radius: 8px;
-  border: 1px solid rgba(0, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+}
+
+.addressItem:hover {
+  border-color: var(--neon-cyan);
 }
 
 .networkLabel {
@@ -668,7 +697,7 @@
   flex: 1;
   font-family: monospace;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -676,7 +705,7 @@
 
 .copyButton {
   background: transparent;
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  border: 1px solid var(--glass-border);
   color: var(--neon-cyan);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -685,7 +714,8 @@
 }
 
 .copyButton:hover {
-  background: rgba(0, 255, 255, 0.1);
+  background: var(--glow-base);
+  box-shadow: 0 0 8px var(--glow-primary);
 }
 
 /* Loading States */
@@ -701,7 +731,7 @@
 .loadingSpinner {
   width: 50px;
   height: 50px;
-  border: 3px solid rgba(0, 255, 255, 0.1);
+  border: 3px solid var(--glow-base);
   border-top-color: var(--neon-cyan);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -710,7 +740,7 @@
 .loadingSpinnerSmall {
   width: 30px;
   height: 30px;
-  border: 2px solid rgba(0, 255, 255, 0.1);
+  border: 2px solid var(--glow-base);
   border-top-color: var(--neon-cyan);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -729,8 +759,9 @@
   padding: 3rem;
   background: var(--card-bg);
   border-radius: 16px;
-  border: 1px solid rgba(255, 68, 68, 0.3);
+  border: 2px solid var(--danger);
   color: var(--danger);
+  box-shadow: 0 0 16px var(--danger-soft);
 }
 
 /* Responsive */

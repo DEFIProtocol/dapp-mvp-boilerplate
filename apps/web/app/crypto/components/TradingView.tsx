@@ -3,7 +3,7 @@
 import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { usePythPriceWithConfidence } from "@/hooks/pyth/usePythPriceWithConfidence";
 import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
-import PriceChart from "./chart/PriceChart";
+import { UnifiedPriceChart } from "@/components/charts/UnifiedPriceChart";
 import PerpetualCard from "./PerpetualCard";
 import MarketHeader from "./MarketHeader";
 import styles from "./styles/TradingView.module.css";
@@ -38,6 +38,8 @@ const timeframeMap = {
   '4h': '4h',
   '1d': '1d'
 };
+
+const PERP_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"];
 
 export default function TradingView({ 
   selectedToken,
@@ -74,13 +76,15 @@ export default function TradingView({
       <div className={styles.tradingView}>
         <div className={styles.topRow}>
           <div className={styles.chartColumn}>
-            <PriceChart 
+            <UnifiedPriceChart 
               candles={candles}
               symbol={selectedSymbol}
               exchange={exchange || "Loading"}
               onTimeframeChange={onTimeframeChange}
               selectedTimeframe={selectedTimeframe}
               isLoading={chartLoading}
+              timeframeOptions={PERP_TIMEFRAMES}
+              height={420}
             />
           </div>
           

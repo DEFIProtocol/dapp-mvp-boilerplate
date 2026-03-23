@@ -18,7 +18,7 @@ export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) 
 
   if (watchlistTokens.length === 0) {
     return (
-      <div className="rounded-xl p-6 bg-[var(--surface)] border border-[var(--border)]">
+      <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
         <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
           Watchlist
         </h2>
@@ -30,7 +30,7 @@ export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) 
   }
 
   return (
-    <div className="rounded-xl p-6 bg-[var(--surface)] border border-[var(--border)]">
+    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
       <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
         Watchlist
       </h2>
@@ -39,7 +39,7 @@ export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) 
         {watchlistTokens.map((token) => (
           <div
             key={token.uuid || token.symbol}
-            className="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] hover:bg-[var(--surface)] transition cursor-pointer"
+            className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-glass)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition cursor-pointer"
             onClick={() => {
               router.push(`/${token.name}/${token.uuid}?chain=${selectedChain}`);
             }}

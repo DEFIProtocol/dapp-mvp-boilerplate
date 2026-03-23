@@ -45,7 +45,7 @@ export function Holdings({
 
   if (!holdings.length && !loading) {
     return (
-      <div className="rounded-xl p-6 bg-[var(--surface)] border border-[var(--border)]">
+      <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
         <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
           Token Holdings
         </h2>
@@ -55,7 +55,7 @@ export function Holdings({
   }
 
   return (
-    <div className="rounded-xl p-6 bg-[var(--surface)] border border-[var(--border)]">
+    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
       <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
         Token Holdings
       </h2>
@@ -72,7 +72,7 @@ export function Holdings({
         {enrichedHoldings.map((item) => (
           <div
             key={item.address}
-            className="flex items-center justify-between p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] hover:bg-[var(--surface)] transition cursor-pointer"
+            className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-glass)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition cursor-pointer"
             onClick={() => {
               if (item.token?.uuid) {
                 router.push(`/${item.token.name}/${item.token.uuid}?chain=${selectedChain}`);

@@ -65,11 +65,11 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 py-8">
+    <div className="relative z-10 flex flex-col gap-6 max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-2xl px-5 py-4 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
         <div>
-          <h1 className="text-3xl font-semibold text-[var(--text)]">Account</h1>
+          <h1 className="text-3xl font-semibold text-gradient text-[var(--text)]">Account</h1>
           <p className="text-[var(--text-muted)] text-sm mt-1">
             Connected to {getChainLabel(selectedChain)}
           </p>
@@ -77,7 +77,7 @@ export default function AccountPage() {
 
         <button
           onClick={() => router.push("/account/settings")}
-          className="p-3 rounded-lg bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface)] transition"
+          className="p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] text-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition"
           aria-label="Account settings"
         >
           <Settings size={20} />

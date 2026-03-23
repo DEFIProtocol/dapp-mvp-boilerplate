@@ -11,7 +11,7 @@ import { useUserContext } from "@/contexts/UserContext";
 import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { Check, Plus, Star, ArrowLeft, ExternalLink, Copy, RefreshCw } from "lucide-react";
 import styles from "./TokenDetails.module.css";
-import UnifiedPriceChart from "@/components/charts/UnifiedPriceChart";
+import { UnifiedPriceChart } from "../../src/components/charts/UnifiedPriceChart";
 import MarketOrder from "./components/MarketOrder";
 
 // Format large numbers
@@ -94,8 +94,8 @@ export default function TokenDetailsPage() {
       description: tokenData.description,
       iconUrl: tokenData.image,
       price: priceData?.price ?? tokenData.price ?? null,
-      marketCap: priceData?.marketCap ?? tokenData.marketCap ?? tokenData.market_cap ?? null,
-      volume24h: tokenData.volume24h ?? tokenData.volume_24h ?? null,
+      marketCap: priceData?.marketCap ?? tokenData.marketCap ?? null,
+      volume24h: tokenData.volume24h ?? null,
       change24h: priceData?.change24h ?? tokenData.change ?? null,
       rank: tokenData.rank ?? null,
       website: tokenData.website,
@@ -283,6 +283,7 @@ export default function TokenDetailsPage() {
               onTimeframeChange={setTimePeriod}
               selectedTimeframe={timePeriod}
               isLoading={chartLoading}
+              height={450}
             />
           </div>
           <div className={styles.orderPanel}>

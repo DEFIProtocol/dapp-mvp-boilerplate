@@ -108,6 +108,25 @@
     box-shadow: var(--shadow-lg);
 }
 
+[data-theme="light"] .adminTabs {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+}
+
+[data-theme="light"] .tabButton {
+    color: var(--text-strong);
+}
+
+[data-theme="light"] .tabButton::before {
+    background: var(--accent-ring);
+}
+
+[data-theme="light"] .tabButton.active {
+    background: var(--surface-2);
+    color: var(--accent);
+    border: 1px solid var(--border-soft);
+}
+
 /* Content area */
 .adminContent {
     width: 95vw;

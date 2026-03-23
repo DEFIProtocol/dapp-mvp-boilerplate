@@ -14,7 +14,7 @@ export function WalletBalance({
   chainLabel 
 }: WalletBalanceProps) {
   return (
-    <div className="rounded-xl p-6 bg-[var(--surface)] border border-[var(--border)]">
+    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
       <h2 className="text-lg font-medium text-[var(--text-muted)] mb-2">
         Wallet Address
       </h2>
