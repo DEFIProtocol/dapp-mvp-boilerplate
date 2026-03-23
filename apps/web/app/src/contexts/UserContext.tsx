@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { getUserByWallet, createUser, User } from "../lib/api/users";
+import { getUserByWallet, createUser, User, addToWatchlist, removeFromWatchlist } from "../lib/api/users";
 
 interface UserContextType {
   user: User | null;
@@ -10,6 +10,8 @@ interface UserContextType {
   watchlist: string[];
   refreshUser: () => Promise<void>;
   createUser: () => Promise<void>;
+  isInWatchlist: (token: { symbol?: string } | string) => boolean;
+  toggleWatchlistToken: (token: { symbol?: string } | string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -76,6 +78,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [address, isConnected]);
 
+  const isInWatchlist = useCallback((token: { symbol?: string } | string) => {
+    const symbol = typeof token === "string" ? token : token?.symbol;
+    if (!symbol) return false;
+    return (user?.watchlist || []).some((item) => String(item).toUpperCase() === String(symbol).toUpperCase());
+  }, [user?.watchlist]);
+
+  const toggleWatchlistToken = useCallback(async (token: { symbol?: string } | string) => {
+    if (!address || !isConnected) return;
+    const symbol = (typeof token === "string" ? token : token?.symbol || "").toUpperCase();
+    if (!symbol) return;
+
+    try {
+      if (isInWatchlist(symbol)) {
+        await removeFromWatchlist(address, symbol);
+      } else {
+        await addToWatchlist(address, symbol);
+      }
+      await refreshUser();
+    } catch (error) {
+      console.error("Error toggling watchlist token:", error);
+    }
+  }, [address, isConnected, isInWatchlist, refreshUser]);
+
   return (
     <UserContext.Provider
       value={{
@@ -84,6 +109,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         watchlist: user?.watchlist || [],
         refreshUser,
         createUser: handleCreateUser,
+        isInWatchlist,
+        toggleWatchlistToken,
       }}
     >
       {children}
@@ -97,4 +124,8 @@ export function useUser() {
     throw new Error("useUser must be used within a UserProvider");
   }
   return context;
+}
+
+export function useUserContext() {
+  return useUser();
 }

@@ -6,7 +6,13 @@ export interface Token {
   name: string;
   price?: number;
   market_cap?: number;
+  marketCap?: number;
   volume_24h?: number;
+  volume24h?: number;
+  change?: number;
+  rank?: number;
+  website?: string;
+  description?: string;
   decimals?: number;
   type?: string;
   image?: string;

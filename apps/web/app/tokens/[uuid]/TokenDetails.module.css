@@ -1,0 +1,783 @@
+/* app/tokens/[uuid]/TokenDetails.module.css */
+
+:root {
+  --glow-primary: rgba(0, 255, 255, 0.4);
+  --glow-secondary: rgba(255, 0, 255, 0.3);
+  --glass-bg: rgba(10, 10, 20, 0.7);
+  --glass-border: rgba(0, 255, 255, 0.2);
+  --neon-cyan: #00ffff;
+  --neon-pink: #ff00ff;
+  --dark-bg: #0a0a14;
+  --card-bg: rgba(20, 20, 40, 0.6);
+  --success: #00ff88;
+  --danger: #ff4444;
+}
+
+.page {
+  min-height: 100vh;
+  background: var(--dark-bg);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.gradientBg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, #0a0a14 0%, #14142a 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.main {
+  position: relative;
+  z-index: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Back Button */
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.backButton:hover {
+  background: rgba(0, 255, 255, 0.2);
+  transform: translateX(-4px);
+}
+
+/* Token Header */
+.tokenHeader {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.tokenHero {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.tokenIconWrapper {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.tokenIcon {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.tokenIconFallback {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tokenInfo {
+  flex: 1;
+}
+
+.tokenTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.tokenName {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff, var(--neon-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0;
+}
+
+.tokenSymbol {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+}
+
+.tokenRank {
+  background: rgba(0, 255, 255, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: var(--neon-cyan);
+}
+
+.priceSection {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.currentPrice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.priceLabel {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.priceValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.changeBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.positive .changeBadge {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.negative .changeBadge {
+  background: rgba(255, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+}
+
+.tokenActions {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.watchlistButton,
+.refreshButton,
+.websiteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+}
+
+.watchlistButton {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+}
+
+.watchlistButton.added {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: rgba(0, 255, 136, 0.3);
+  color: var(--success);
+}
+
+.refreshButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.websiteButton {
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+  text-decoration: none;
+}
+
+.watchlistButton:hover,
+.refreshButton:hover,
+.websiteButton:hover {
+  transform: translateY(-2px);
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.statCard:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.statCard label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.statUnit {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.positiveText {
+  color: var(--success);
+}
+
+.negativeText {
+  color: var(--danger);
+}
+
+/* Chart + Order Grid */
+.chartOrderGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chartPanel {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.orderPanel {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.orderPanelTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+/* Chart Container */
+.chartContainer {
+  width: 100%;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.chartInfo {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chartSymbol {
+  font-weight: 600;
+  color: var(--neon-cyan);
+}
+
+.chartExchange {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+.timeframeButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.timeframeButton {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.timeframeButton:hover {
+  color: var(--neon-cyan);
+}
+
+.timeframeButton.active {
+  background: rgba(0, 255, 255, 0.2);
+  color: var(--neon-cyan);
+}
+
+.chartWrapper {
+  position: relative;
+  height: 450px;
+}
+
+.chartCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+.chartLoading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 20, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Order Container */
+.orderContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.orderControls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+}
+
+.chainSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chainSelector label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+}
+
+.chainSelect {
+  background: rgba(10, 10, 20, 0.6);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pricingOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.radioLabel input {
+  cursor: pointer;
+}
+
+.settingsWrapper {
+  position: relative;
+}
+
+.settingsButton {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.settingsButton:hover {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.settingsDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 200px;
+  z-index: 10;
+}
+
+.slippageSection {
+  margin-bottom: 1rem;
+}
+
+.slippageSection label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.slippageOptions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.slippageOption {
+  background: rgba(10, 10, 20, 0.6);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.slippageOption:hover,
+.slippageOption.active {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: var(--neon-cyan);
+}
+
+.refreshPricesButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.priceInfo {
+  background: rgba(10, 10, 20, 0.4);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.priceInfoRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.priceInfoRow:last-child {
+  margin-bottom: 0;
+}
+
+.amountInput {
+  background: rgba(10, 10, 20, 0.6);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.amountInput:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+}
+
+.orderButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.buyButton,
+.sellButton {
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.buyButton {
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--success);
+}
+
+.sellButton {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: var(--danger);
+}
+
+.buyButton:hover:not(:disabled),
+.sellButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.buyButton:disabled,
+.sellButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Description Card */
+.descriptionCard {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.descriptionCard h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 1rem;
+}
+
+.descriptionText {
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+/* Addresses Card */
+.addressesCard {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.addressesCard h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 1rem;
+}
+
+.addressesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.addressItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(10, 10, 20, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.networkLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  min-width: 80px;
+}
+
+.addressValue {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyButton {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--neon-cyan);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.copyButton:hover {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+/* Loading States */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 255, 255, 0.1);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loadingSpinnerSmall {
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(0, 255, 255, 0.1);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.errorContainer {
+  text-align: center;
+  padding: 3rem;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: var(--danger);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .chartOrderGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tokenHero {
+    flex-direction: column;
+  }
+  
+  .tokenActions {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 1rem;
+  }
+  
+  .tokenName {
+    font-size: 1.5rem;
+  }
+  
+  .priceValue {
+    font-size: 1.5rem;
+  }
+  
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tokenTitle {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .addressItem {
+    flex-wrap: wrap;
+  }
+  
+  .addressValue {
+    width: 100%;
+    order: 3;
+    white-space: normal;
+    word-break: break-all;
+  }
+}
