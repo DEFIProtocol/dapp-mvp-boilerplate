@@ -1,46 +1,67 @@
+// components/Header/Header.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-
+import { usePathname } from "next/navigation";
 import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
-import { useUser } from "../src/contexts/UserContext";
-import { updateUserByWallet } from "../src/lib/api/users";
+import { useUser } from "@/contexts/UserContext";
+import { updateUserByWallet } from "@/lib/api/users";
 import { NAV_ITEMS } from "@dapp/ui/navigation";
-
 import WalletModal from "./WalletModal";
-import {useChainContext} from "../src/contexts/ChainContext"; 
-import { useTheme } from "../src/contexts/ThemeContext";
+import WalletAction from "@/components/fundsManager/WalletAction";
+import { useChainContext } from "@/contexts/ChainContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Menu, X, ChevronDown, Zap, Sun, Moon, Globe } from "lucide-react";
 import styles from "./header.module.css";
 
+const NATIVE_SYMBOL_BY_CHAIN: Record<number, string> = {
+  1: "ETH",
+  8453: "ETH",
+  56: "BNB",
+  137: "MATIC",
+  42161: "ETH",
+  43114: "AVAX",
+  501: "SOL",
+};
+
 export function Header() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+  const pathname = usePathname();
   const { disconnect } = useDisconnect();
-
-  // User context - let it handle user creation automatically
-  const { user, refreshUser } = useUser(); // Remove createUser from here!
-
-  // Chain context
+  const { user, refreshUser } = useUser();
   const {
     selectedChain,
     setSelectedChain,
     availableChains,
     getChainLabel,
   } = useChainContext();
+  const { theme, toggleTheme } = useTheme();
 
-  // ONLY handle chain switching updates, NOT user creation
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [chainLoading, setChainLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
+  const chainDropdownRef = useRef<HTMLDivElement>(null);
+  const previousChainRef = useRef<number | null>(null);
+
+  const { switchChain, isPending } = useSwitchChain();
+  const showWalletAction = pathname?.startsWith("/market") || pathname?.startsWith("/futures");
+  const chainSymbol = NATIVE_SYMBOL_BY_CHAIN[selectedChain] || "ETH";
+
+  // Handle chain switching updates
   useEffect(() => {
     if (!user || !address) return;
     
     const chainLabel = getChainLabel?.(selectedChain) || "Base";
     
     if (selectedChain === 1 || chainLabel === "Ethereum") {
-      // Update wallet_address if needed
       if (user.wallet_address !== address) {
         updateUserByWallet(address, { wallet_address: address }).then(refreshUser);
       }
     } else {
-      // Update chain_addresses if needed
       const prev = user.chain_addresses || {};
       if (prev[chainLabel] !== address) {
         const updated = { ...prev, [chainLabel]: address };
@@ -49,33 +70,18 @@ export function Header() {
     }
   }, [selectedChain, address, user, getChainLabel, refreshUser]);
 
-  // UI state and rendering (keep all the existing UI code below)
-  const { theme, toggleTheme } = useTheme();
-  const [activeMenu, setActiveMenu] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
-  const [screenSize, setScreenSize] = useState<number | null>(null);
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [chainLoading, setChainLoading] = useState(false);
-  const [chainSwitched, setChainSwitched] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const previousChainRef = useRef<number | null>(null);
-
-  const { switchChain, isPending } = useSwitchChain();
-
-  // Handle screen size
+  // Close chain dropdown when clicking outside
   useEffect(() => {
-    const handleResize = () => setScreenSize(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    return () => window.removeEventListener("resize", handleResize);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chainDropdownRef.current && !chainDropdownRef.current.contains(event.target as Node)) {
+        setIsChainDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (screenSize && screenSize < 760) setActiveMenu(false);
-    else setActiveMenu(true);
-  }, [screenSize]);
-
+  // Chain switch toast
   useEffect(() => {
     if (previousChainRef.current === null) {
       previousChainRef.current = selectedChain;
@@ -84,7 +90,6 @@ export function Header() {
 
     if (previousChainRef.current !== selectedChain) {
       const label = getChainLabel?.(selectedChain) || `Chain ${selectedChain}`;
-      setChainSwitched(label);
       setToastMessage(`Switched to ${label}`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
@@ -92,146 +97,218 @@ export function Header() {
     }
   }, [selectedChain, getChainLabel]);
 
+  const handleChainSwitch = async (chainId: number) => {
+    setChainLoading(true);
+    setIsChainDropdownOpen(false);
+    setSelectedChain(chainId);
+    setToastMessage("Changing chain...");
+    setShowToast(true);
+    
+    try {
+      await switchChain({ chainId });
+      const label = getChainLabel?.(chainId) || `Chain ${chainId}`;
+      setToastMessage(`Switched to ${label}`);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      setToastMessage("Failed to switch chain");
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setChainLoading(false);
+    }
+  };
+
+  const getChainIcon = (chainLabel: string) => {
+    const icons: Record<string, string> = {
+      Ethereum: "⟠",
+      Base: "⛓️",
+      BNB: "🟡",
+      Polygon: "🔷",
+      Arbitrum: "🔵",
+      Avalanche: "❄️",
+      Solana: "◎",
+    };
+    return icons[chainLabel] || "⛓️";
+  };
+
+  const currentChainLabel = getChainLabel?.(selectedChain) || "Ethereum";
+  const currentChainIcon = getChainIcon(currentChainLabel);
+
   return (
-    <header className={styles.header}>
-      {/* ... keep all your existing JSX exactly the same ... */}
-      <div className={styles.leftSection}>
-        {!activeMenu && (
-          <button 
-            className={styles.menuButton}
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            ☰
-          </button>
-        )}
-
-        <Link href="/">
-          <div className={styles.logo}>My DApp</div>
-        </Link>
-
-        {!activeMenu && isOpen && (
-          <div
-            className={styles.mobileNavOverlay}
-            onClick={() => setIsOpen(false)}
-          >
-            <div
-              className={styles.mobileNavWindow}
-              onClick={(e) => e.stopPropagation()}
+    <>
+      <header className={styles.header}>
+        <div className={styles.container}>
+          {/* Left Section */}
+          <div className={styles.leftSection}>
+            {/* Mobile Menu Button */}
+            <button
+              className={styles.mobileMenuButton}
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open menu"
             >
-              <div className={styles.mobileNavHeader}>
-                <div className={styles.mobileNavTitle}>Menu</div>
-                <button 
-                  className={styles.mobileNavClose}
-                  onClick={() => setIsOpen(false)}
-                >
-                  ✕
-                </button>
-              </div>
+              <Menu size={20} />
+            </button>
 
-              <nav className={styles.mobileNavLinks}>
-                {NAV_ITEMS.map((item) => (
+            {/* Logo */}
+            <Link href="/" className={styles.logoLink}>
+              <div className={styles.logo}>
+                <Zap size={24} className={styles.logoIcon} />
+                <span className={styles.logoText}>DApp</span>
+              </div>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <nav className={styles.desktopNav}>
+              {NAV_ITEMS.map((item) => {
+                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={styles.mobileNavLink}
-                    onClick={() => setIsOpen(false)}
+                    className={`${styles.navLink} ${isActive ? styles.active : ""}`}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {isActive && <span className={styles.navIndicator} />}
                   </Link>
-                ))}
-              </nav>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Right Section */}
+          <div className={styles.rightSection}>
+            {/* Wallet Action Button (only on market/futures pages) */}
+            {showWalletAction && isConnected && (
+              <WalletAction
+                symbol={chainSymbol}
+                address={address || ""}
+              />
+            )}
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className={styles.themeToggle}
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+
+            {/* Chain Selector Dropdown */}
+            <div className={styles.chainSelector} ref={chainDropdownRef}>
+              <button
+                className={styles.chainButton}
+                onClick={() => setIsChainDropdownOpen(!isChainDropdownOpen)}
+                disabled={chainLoading || isPending}
+              >
+                <span className={styles.chainIcon}>{currentChainIcon}</span>
+                <span className={styles.chainLabel}>{currentChainLabel}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${styles.chainChevron} ${isChainDropdownOpen ? styles.rotated : ""}`}
+                />
+                {chainLoading && <span className={styles.chainSpinner} />}
+              </button>
+
+              {isChainDropdownOpen && (
+                <div className={styles.chainDropdown}>
+                  <div className={styles.chainDropdownHeader}>
+                    <Globe size={14} />
+                    <span>Switch Network</span>
+                  </div>
+                  {availableChains.map((chain) => (
+                    <button
+                      key={chain.id}
+                      className={`${styles.chainOption} ${selectedChain === chain.id ? styles.active : ""}`}
+                      onClick={() => handleChainSwitch(chain.id)}
+                    >
+                      <span className={styles.chainOptionIcon}>{getChainIcon(chain.label)}</span>
+                      <span className={styles.chainOptionLabel}>{chain.label}</span>
+                      {selectedChain === chain.id && (
+                        <span className={styles.chainOptionCheck}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Connect / Account Button */}
+            {!isConnected ? (
+              <button
+                onClick={() => setShowWalletModal(true)}
+                className={styles.connectButton}
+              >
+                <span className={styles.connectButtonText}>Connect Wallet</span>
+              </button>
+            ) : (
+              <div className={styles.accountMenu}>
+                <button
+                  onClick={() => disconnect()}
+                  className={styles.accountButton}
+                  aria-label="Disconnect"
+                >
+                  <span className={styles.accountAddress}>
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Navigation Modal */}
+      {isMobileMenuOpen && (
+        <div className={styles.mobileMenuOverlay} onClick={() => setIsMobileMenuOpen(false)}>
+          <div className={styles.mobileMenu} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.mobileMenuHeader}>
+              <div className={styles.mobileLogo}>
+                <Zap size={24} className={styles.logoIcon} />
+                <span>DApp</span>
+              </div>
+              <button
+                className={styles.mobileMenuClose}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <nav className={styles.mobileNav}>
+              {NAV_ITEMS.map((item) => {
+                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`${styles.mobileNavLink} ${isActive ? styles.active : ""}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <span>{item.label}</span>
+                    {isActive && <span className={styles.mobileNavIndicator} />}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className={styles.mobileFooter}>
+              <button onClick={toggleTheme} className={styles.mobileThemeToggle}>
+                {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+                <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+              </button>
             </div>
           </div>
-        )}
-
-        {activeMenu && (
-          <nav className={styles.desktopNav}>
-            {NAV_ITEMS.map((item) => (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={styles.navLink}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
-
-      <div className={styles.rightSection}>
-        <button
-          onClick={toggleTheme}
-          className={styles.themeToggle}
-        >
-          <span className={styles.themeIcon}>{theme === "light" ? "☀️" : "🌙"}</span>
-          <span>{theme === "light" ? "Light" : "Dark"}</span>
-        </button>
-
-        <div className={styles.chainSelector}>
-          <span className={styles.chainIcon}>⛓</span>
-          {activeMenu ? (
-            <select
-              className={styles.chainSelect}
-              value={selectedChain}
-              onChange={async (e) => {
-                const newChainId = Number(e.target.value);
-                setChainLoading(true);
-                setChainSwitched(null);
-                setSelectedChain(newChainId);
-                setToastMessage("Changing Chains...");
-                setShowToast(true);
-                try {
-                  await switchChain({ chainId: newChainId });
-                  const label = getChainLabel?.(newChainId) || `Chain ${newChainId}`;
-                  setChainSwitched(label);
-                  setToastMessage(`Switched to ${label}`);
-                  setTimeout(() => setShowToast(false), 5000);
-                } catch (err) {
-                  setChainSwitched("Failed to switch chain");
-                  setToastMessage("Failed to switch chain");
-                  setTimeout(() => setShowToast(false), 5000);
-                } finally {
-                  setChainLoading(false);
-                }
-              }}
-              disabled={chainLoading || isPending}
-            >
-              {availableChains.map((chain) => (
-                <option key={chain.id} value={chain.id}>
-                  {chain.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className={styles.chainLabel}>
-              {getChainLabel?.(selectedChain) || "Chain"}
-            </span>
-          )}
-          {chainLoading || isPending ? (
-            <span className={styles.chainStatus}>Switching Chains...</span>
-          ) : null}
-          {showToast && toastMessage && (
-            <div className="chain-toast">
-              {toastMessage}
-            </div>
-          )}
         </div>
+      )}
 
-        <button
-          onClick={
-            !isConnected
-              ? () => setShowWalletModal(true)
-              : () => disconnect()
-          }
-          className={styles.connectButton}
-        >
-          {address
-            ? `${address.slice(0, 5)}...${address.slice(-4)}`
-            : "Connect"}
-        </button>
-      </div>
+      {/* Toast Notification */}
+      {showToast && toastMessage && (
+        <div className={styles.toast}>
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
+      {/* Wallet Modal */}
       <WalletModal
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
@@ -239,6 +316,6 @@ export function Header() {
         selectedChain={selectedChain}
         setSelectedChain={setSelectedChain}
       />
-    </header>
+    </>
   );
 }

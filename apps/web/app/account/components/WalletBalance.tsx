@@ -1,4 +1,7 @@
+// app/account/components/WalletBalance.tsx
 "use client";
+
+import styles from "./styles/WalletBalance.module.css";
 
 interface WalletBalanceProps {
   address: string;
@@ -14,23 +17,16 @@ export function WalletBalance({
   chainLabel 
 }: WalletBalanceProps) {
   return (
-    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-      <h2 className="text-lg font-medium text-[var(--text-muted)] mb-2">
-        Wallet Address
-      </h2>
-      <p className="font-mono text-[var(--text)] break-all text-sm">
-        {address}
-      </p>
+    <div className={styles.walletBalanceCard}>
+      <h2 className={styles.sectionTitle}>Wallet Address</h2>
+      <p className={styles.addressValue}>{address}</p>
 
-      <div className="mt-6">
-        <h2 className="text-lg font-medium text-[var(--text-muted)] mb-1">
-          Native Balance on {chainLabel}
-        </h2>
-
+      <div className={styles.balanceSection}>
+        <h2 className={styles.balanceLabel}>Native Balance on {chainLabel}</h2>
         {loading ? (
-          <p className="text-[var(--text-muted)]">Loading...</p>
+          <p className={styles.balanceLoading}>Loading...</p>
         ) : (
-          <p className="text-2xl font-semibold text-[var(--text)]">
+          <p className={styles.balanceValue}>
             {nativeBalance ? `${nativeBalance} ETH` : "—"}
           </p>
         )}

@@ -1,0 +1,115 @@
+/* app/account/AccountPage.module.css */
+
+.pageContainer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Header Card */
+.headerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 1.5rem 2rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s ease;
+}
+
+.headerCard:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.headerLeft h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--cyber-text-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.headerLeft p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+.settingsButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  color: var(--neon-cyan);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: auto;
+  min-height: auto;
+}
+
+.settingsButton:hover {
+  border-color: var(--neon-cyan);
+  transform: scale(1.05);
+  box-shadow: 0 0 16px var(--glow-primary);
+}
+
+/* Connect Wallet State */
+.connectContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.connectTitle {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 1rem;
+}
+
+.connectDescription {
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 28rem;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .headerCard {
+    padding: 1rem 1.25rem;
+  }
+
+  .headerLeft h1 {
+    font-size: 1.5rem;
+  }
+
+  .settingsButton {
+    width: 38px;
+    height: 38px;
+  }
+}

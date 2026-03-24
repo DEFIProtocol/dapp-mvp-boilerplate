@@ -1,10 +1,12 @@
+// app/account/components/Watchlist.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import styles from "./styles/Watchlist.module.css";
 
 interface WatchlistProps {
-  watchlist: string[];
+  watchlist: any[];
   tokens: any[];
   selectedChain: number;
 }
@@ -12,61 +14,82 @@ interface WatchlistProps {
 export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) {
   const router = useRouter();
 
-  const watchlistTokens = tokens.filter(token => 
-    watchlist.includes(token.uuid || token.symbol)
-  );
+  const getTokenInfo = (symbol: string) => {
+    return tokens?.find(t => t.symbol?.toUpperCase() === symbol.toUpperCase());
+  };
 
-  if (watchlistTokens.length === 0) {
+  const getTokenIcon = (symbol: string) => {
+    const token = getTokenInfo(symbol);
+    if (token?.image) return token.image;
+    return null;
+  };
+
+  const handleTokenClick = (symbol: string) => {
+    const token = getTokenInfo(symbol);
+    if (token?.uuid) {
+      router.push(`/tokens/${token.uuid}`);
+    }
+  };
+
+  if (!watchlist?.length) {
     return (
-      <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-        <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
-          Watchlist
-        </h2>
-        <p className="text-[var(--text-muted)]">
-          No tokens in watchlist yet. Add tokens from the markets page.
-        </p>
+      <div className={styles.watchlistCard}>
+        <div className={styles.watchlistHeader}>
+          <h2>Watchlist</h2>
+          <span className={styles.watchlistCount}>0</span>
+        </div>
+        <div className={styles.emptyWatchlist}>
+          <div className={styles.emptyIcon}>⭐</div>
+          <p className={styles.emptyTitle}>No Watchlist Items</p>
+          <p className={styles.emptyHint}>Add tokens to your watchlist to track them here</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-      <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
-        Watchlist
-      </h2>
-
-      <div className="flex flex-col gap-3">
-        {watchlistTokens.map((token) => (
-          <div
-            key={token.uuid || token.symbol}
-            className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-glass)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition cursor-pointer"
-            onClick={() => {
-              router.push(`/${token.name}/${token.uuid}?chain=${selectedChain}`);
-            }}
-          >
-            <div className="flex items-center gap-3">
-              {token.image && (
-                <Image
-                  src={token.image}
-                  alt={token.symbol}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              )}
-              <div>
-                <p className="text-[var(--text)] font-medium">{token.name}</p>
-                <p className="text-[var(--text-muted)] text-sm">{token.symbol}</p>
+    <div className={styles.watchlistCard}>
+      <div className={styles.watchlistHeader}>
+        <h2>Watchlist</h2>
+        <span className={styles.watchlistCount}>{watchlist.length}</span>
+      </div>
+      <div className={styles.watchlistItems}>
+        {watchlist.map((item, index) => {
+          const tokenIcon = getTokenIcon(item.symbol);
+          const tokenInfo = getTokenInfo(item.symbol);
+          const price = tokenInfo?.price || 0;
+          const change = tokenInfo?.change24h || 0;
+          const isPositive = change >= 0;
+          
+          return (
+            <div
+              key={index}
+              className={styles.watchlistRow}
+              onClick={() => handleTokenClick(item.symbol)}
+            >
+              <div className={styles.tokenLeft}>
+                <div className={styles.tokenIcon}>
+                  {tokenIcon ? (
+                    <img src={tokenIcon} alt={item.symbol} />
+                  ) : (
+                    item.symbol?.charAt(0) || "?"
+                  )}
+                </div>
+                <div className={styles.tokenDetails}>
+                  <div className={styles.tokenSymbol}>{item.symbol}</div>
+                  <div className={styles.tokenName}>{tokenInfo?.name || item.symbol}</div>
+                </div>
+              </div>
+              <div className={styles.tokenStats}>
+                <div className={styles.tokenPrice}>${price.toFixed(2)}</div>
+                <div className={`${styles.tokenChange} ${isPositive ? styles.positive : styles.negative}`}>
+                  {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{isPositive ? '+' : ''}{change.toFixed(2)}%</span>
+                </div>
               </div>
             </div>
-
-            <div className="text-right">
-              <p className="text-[var(--text)] font-medium">
-                {token.price ? `$${token.price}` : '—'}
-              </p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

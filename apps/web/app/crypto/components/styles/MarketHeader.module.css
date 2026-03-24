@@ -1,26 +1,22 @@
 /* app/crypto/components/styles/MarketHeader.module.css */
-/*
-  The following centers the header but keeps it right-aligned relative to the viewport.
-  We use width: 96vw (almost full width), and float it right by shifting it left by (100vw - 96vw)/2 = 2vw.
-  This is equivalent to margin-left: 2vw; and width: 96vw; for a right-floated look.
-*/
-/* app/crypto/components/styles/MarketHeader.module.css */
 .header {
-    width: 100vw;
-    position: sticky;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background: var(--accent-gradient);
-    padding: 0.75rem 0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-   
-  margin-left: 0;
-  margin-right: 0;
-  /* Remove any transforms or calc */
-  transform: none;
+  width: 85vw;
+  position: sticky;
+  top: 0;
+  margin-left: calc(50% - 42.5vw);
+  z-index: 1000;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 0.75rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 16px 16px;
+  transition: background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+[data-theme="light"] .header {
+  background: linear-gradient(135deg, #dde3f0 0%, #c8d3ea 100%);
+  box-shadow: 0 4px 20px rgba(100, 120, 180, 0.18);
+  border-bottom: 1px solid rgba(100, 120, 180, 0.2);
 }
 
 .headerContent {
@@ -34,15 +30,21 @@
   color: var(--text-inverse);
 }
 
-/* Rest of your styles remain the same */
+[data-theme="light"] .headerContent {
+  color: #1a1a2e;
+}
 
 .header.scrolled {
   padding: 0.5rem 0;
   backdrop-filter: blur(10px);
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+[data-theme="light"] .header.scrolled {
+  background: linear-gradient(135deg, rgba(221, 227, 240, 0.97), rgba(200, 211, 234, 0.97));
+  box-shadow: 0 8px 32px rgba(100, 120, 180, 0.2);
+}
 
 /* Token Section */
 .tokenSection {
@@ -57,7 +59,14 @@
   border-radius: 50%;
   padding: 0.25rem;
   backdrop-filter: blur(4px);
-  border: 1px solid var(--border-contrast);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tokenIconWrapper:hover {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: rgba(0, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .tokenIcon {
@@ -72,6 +81,12 @@
   font-weight: bold;
   color: var(--accent);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.tokenIconWrapper:hover .tokenIcon {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
 }
 
 .tokenIconImg {
@@ -103,6 +118,10 @@
   white-space: nowrap;
 }
 
+[data-theme="light"] .tokenName {
+  color: #1a1a2e;
+}
+
 .tokenSymbol {
   font-size: 0.8rem;
   background: rgba(255, 255, 255, 0.2);
@@ -112,6 +131,12 @@
   letter-spacing: 0.5px;
   backdrop-filter: blur(4px);
   white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.tokenSymbol:hover {
+  background: rgba(0, 255, 255, 0.2);
+  color: var(--neon-cyan);
 }
 
 .maxLeverage {
@@ -123,16 +148,35 @@
   color: #1e1e1e;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
   white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.maxLeverage:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.confidence {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-mono);
 }
 
 /* Price Section */
 .priceSection {
-  background: var(--surface-glass);
+  background: rgba(255, 255, 255, 0.08);
   padding: 0.5rem 1rem;
   border-radius: 12px;
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   min-width: 160px;
+  transition: all 0.3s ease;
+}
+
+.priceSection:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 .priceContainer {
@@ -146,6 +190,10 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="light"] .priceLabel {
+  color: rgba(26, 26, 46, 0.65);
 }
 
 .priceRow {
@@ -162,6 +210,16 @@
   line-height: 1;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+[data-theme="light"] .price {
+  color: #1a1a2e;
+  text-shadow: 0 2px 4px rgba(100, 120, 180, 0.15);
+}
+
+.priceSection:hover .price {
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
 }
 
 .priceChange {
@@ -216,6 +274,15 @@
   gap: 0.15rem;
   min-width: 70px;
   text-align: right;
+  transition: all 0.3s ease;
+  cursor: default;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+}
+
+.statItem:hover {
+  background: rgba(0, 255, 255, 0.08);
+  transform: translateY(-1px);
 }
 
 .statLabel {
@@ -224,6 +291,15 @@
   letter-spacing: 0.5px;
   color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+[data-theme="light"] .statLabel {
+  color: rgba(26, 26, 46, 0.55);
+}
+
+.statItem:hover .statLabel {
+  color: rgba(0, 255, 255, 0.8);
 }
 
 .statValue {
@@ -233,6 +309,16 @@
   font-family: 'Roboto Mono', monospace;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+[data-theme="light"] .statValue {
+  color: #1a1a2e;
+  text-shadow: none;
+}
+
+.statItem:hover .statValue {
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
 .statValue.positive {
@@ -278,9 +364,9 @@
 
 @media (max-width: 768px) {
   .header {
-    width: 100vw;
-    margin-left: calc(-50vw + 50%);
-    border-radius: 0;
+    width: 95vw;
+    margin-left: calc(50% - 47.5vw);
+    border-radius: 0 0 12px 12px;
   }
 
   .headerContent {
@@ -325,16 +411,14 @@
   }
 }
 
-/* Animations */
+/* Subtle animations */
 @keyframes slideDown {
   from {
-    transform: translate(-50%, -100%);
+    transform: translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
-
-

@@ -1,107 +1,118 @@
+// app/account/components/Holdings.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-
-interface Holding {
-  address: string;
-  balance: string;
-  symbol?: string;
-  name?: string;
-}
+import styles from "./styles/Holdings.module.css";
 
 interface HoldingsProps {
-  holdings: Holding[];
+  holdings: any[];
   tokens: any[];
   loading: boolean;
-  error?: string | null;
+  error: string | null;
   selectedChain: number;
 }
 
-export function Holdings({ 
-  holdings, 
-  tokens, 
-  loading, 
-  error, 
-  selectedChain 
-}: HoldingsProps) {
+export function Holdings({ holdings, tokens, loading, error, selectedChain }: HoldingsProps) {
   const router = useRouter();
 
-  // Enrich holdings with token data
-  const enrichedHoldings = holdings.map((holding) => {
-    // Find matching token by address (simplified - you'll need better matching logic)
-    const token = tokens.find(t => 
-      t.addresses?.[String(selectedChain)]?.toLowerCase() === holding.address.toLowerCase()
-    );
-    
-    return {
-      ...holding,
-      token,
-      image: token?.image,
-      name: token?.name || holding.symbol || "Unknown",
-      symbol: token?.symbol || holding.symbol || "???",
-    };
-  });
+  const getTokenInfo = (symbol: string) => {
+    return tokens?.find(t => t.symbol?.toUpperCase() === symbol.toUpperCase());
+  };
 
-  if (!holdings.length && !loading) {
+  const getTokenIcon = (symbol: string) => {
+    const token = getTokenInfo(symbol);
+    if (token?.image) return token.image;
+    return null;
+  };
+
+  const handleTokenClick = (symbol: string) => {
+    const token = getTokenInfo(symbol);
+    if (token?.uuid) {
+      router.push(`/tokens/${token.uuid}`);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-        <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
-          Token Holdings
-        </h2>
-        <p className="text-[var(--text-muted)]">No tokens found</p>
+      <div className={styles.holdingsCard}>
+        <div className={styles.cardHeader}>
+          <h2>Holdings</h2>
+        </div>
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingSpinner} />
+          <p className={styles.loadingText}>Loading holdings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.holdingsCard}>
+        <div className={styles.cardHeader}>
+          <h2>Holdings</h2>
+        </div>
+        <div className={styles.errorContainer}>
+          <p className={styles.errorText}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!holdings.length) {
+    return (
+      <div className={styles.holdingsCard}>
+        <div className={styles.cardHeader}>
+          <h2>Holdings</h2>
+        </div>
+        <div className={styles.emptyContainer}>
+          <div className={styles.emptyIcon}>💰</div>
+          <p className={styles.emptyTitle}>No Holdings</p>
+          <p className={styles.emptyHint}>Your token holdings will appear here</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl p-6 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-      <h2 className="text-xl font-semibold text-[var(--text)] mb-4">
-        Token Holdings
-      </h2>
-
-      {error && (
-        <p className="text-red-400 mb-4">{error}</p>
-      )}
-
-      {loading && (
-        <p className="text-[var(--text-muted)]">Loading holdings...</p>
-      )}
-
-      <div className="flex flex-col gap-3">
-        {enrichedHoldings.map((item) => (
-          <div
-            key={item.address}
-            className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-glass)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition cursor-pointer"
-            onClick={() => {
-              if (item.token?.uuid) {
-                router.push(`/${item.token.name}/${item.token.uuid}?chain=${selectedChain}`);
-              }
-            }}
-          >
-            <div className="flex items-center gap-3">
-              {item.image && (
-                <Image
-                  src={item.image}
-                  alt={item.symbol}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              )}
-              <div>
-                <p className="text-[var(--text)] font-medium">{item.name}</p>
-                <p className="text-[var(--text-muted)] text-xs font-mono">
-                  {item.address.slice(0, 6)}...{item.address.slice(-4)}
-                </p>
+    <div className={styles.holdingsCard}>
+      <div className={styles.cardHeader}>
+        <h2>Holdings</h2>
+        <span className={styles.totalValue}>Total: $0.00</span>
+      </div>
+      <div className={styles.holdingsList}>
+        {holdings.map((holding, index) => {
+          const tokenIcon = getTokenIcon(holding.symbol);
+          const tokenInfo = getTokenInfo(holding.symbol);
+          
+          return (
+            <div
+              key={index}
+              className={styles.holdingRow}
+              onClick={() => handleTokenClick(holding.symbol)}
+            >
+              <div className={styles.holdingLeft}>
+                <div className={styles.tokenIcon}>
+                  {tokenIcon ? (
+                    <img src={tokenIcon} alt={holding.symbol} />
+                  ) : (
+                    holding.symbol?.charAt(0) || "?"
+                  )}
+                </div>
+                <div className={styles.tokenInfo}>
+                  <div className={styles.tokenSymbol}>{holding.symbol}</div>
+                  <div className={styles.tokenName}>{tokenInfo?.name || holding.symbol}</div>
+                </div>
+              </div>
+              <div className={styles.holdingRight}>
+                <div className={styles.tokenBalance}>
+                  {holding.balance} {holding.symbol}
+                </div>
+                <div className={styles.tokenValue}>≈ $0.00</div>
               </div>
             </div>
-
-            <p className="text-[var(--text)] font-semibold">
-              {Number(item.balance).toFixed(4)}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

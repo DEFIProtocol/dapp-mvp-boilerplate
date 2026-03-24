@@ -3,6 +3,7 @@
 import { usePerps } from "@/contexts/PerpsContext";
 import { usePriceStore } from "@/contexts/PriceStoreContext";
 import { useState, useMemo } from "react";
+import { Search, ArrowUp, ArrowDown, TrendingUp, TrendingDown } from "lucide-react";
 import styles from "./styles/TokenSelector.module.css";
 
 interface TokenSelectorProps {
@@ -19,7 +20,6 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
   const filteredAndSortedTokens = useMemo(() => {
     let filtered = activeTokens;
     
-    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(t => 
@@ -28,14 +28,13 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
       );
     }
 
-    // Apply sorting
     return [...filtered].sort((a, b) => {
       const aPrice = priceMap[a.symbol]?.price || 0;
       const bPrice = priceMap[b.symbol]?.price || 0;
-      const aChange = (priceMap[a.symbol] && 'change24h' in priceMap[a.symbol] ? (priceMap[a.symbol] as any).change24h : 0) || 0;
-      const bChange = (priceMap[b.symbol] && 'change24h' in priceMap[b.symbol] ? (priceMap[b.symbol] as any).change24h : 0) || 0;
-      const aCap = (priceMap[a.symbol] && 'marketCap' in priceMap[a.symbol] ? (priceMap[a.symbol] as any).marketCap : 0) || 0;
-      const bCap = (priceMap[b.symbol] && 'marketCap' in priceMap[b.symbol] ? (priceMap[b.symbol] as any).marketCap : 0) || 0;
+      const aChange = (priceMap[a.symbol] as any)?.change24h || 0;
+      const bChange = (priceMap[b.symbol] as any)?.change24h || 0;
+      const aCap = (priceMap[a.symbol] as any)?.marketCap || 0;
+      const bCap = (priceMap[b.symbol] as any)?.marketCap || 0;
 
       let aVal, bVal;
       switch(sortConfig.key) {
@@ -74,8 +73,23 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
   };
 
   const getSortIcon = (key: string) => {
-    if (sortConfig.key !== key) return '↕️';
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
+    if (sortConfig.key !== key) return <span className={styles.sortIconPlaceholder}>↕️</span>;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
+
+  const formatPrice = (price: number) => {
+    if (!price) return '$0.00';
+    if (price < 0.01) return `$${price.toFixed(6)}`;
+    if (price < 1) return `$${price.toFixed(4)}`;
+    return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatMarketCap = (marketCap: number) => {
+    if (!marketCap) return '—';
+    if (marketCap >= 1e9) return `$${(marketCap / 1e9).toFixed(2)}B`;
+    if (marketCap >= 1e6) return `$${(marketCap / 1e6).toFixed(2)}M`;
+    if (marketCap >= 1e3) return `$${(marketCap / 1e3).toFixed(2)}K`;
+    return `$${marketCap.toFixed(2)}`;
   };
 
   if (perpsLoading || priceLoading) {
@@ -101,9 +115,10 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
 
       {/* Search Bar */}
       <div className={styles.searchContainer}>
+        <Search size={16} className={styles.searchIcon} />
         <input
           type="text"
-          placeholder="🔍 Search by symbol or name..."
+          placeholder="Search by symbol or name..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className={styles.searchInput}
@@ -116,36 +131,37 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
           <thead>
             <tr>
               <th onClick={() => handleSort('symbol')} className={styles.sortable}>
-                Token {getSortIcon('symbol')}
+                <span className={styles.headerLabelWrap}>
+                  Futures {getSortIcon('symbol')}
+                </span>
               </th>
-              <th onClick={() => handleSort('price')} className={styles.sortable}>
-                Price {getSortIcon('price')}
+              <th onClick={() => handleSort('price')} className={`${styles.sortable} ${styles.rightHeader}`}>
+                <span className={`${styles.headerLabelWrap} ${styles.rightHeaderLabel}`}>
+                  Price {getSortIcon('price')}
+                </span>
               </th>
-              <th onClick={() => handleSort('change')} className={styles.sortable}>
-                24h Change {getSortIcon('change')}
+              <th onClick={() => handleSort('change')} className={`${styles.sortable} ${styles.rightHeader}`}>
+                <span className={`${styles.headerLabelWrap} ${styles.rightHeaderLabel}`}>
+                  24h Change {getSortIcon('change')}
+                </span>
               </th>
-              <th onClick={() => handleSort('marketCap')} className={styles.sortable}>
-                Market Cap {getSortIcon('marketCap')}
+              <th onClick={() => handleSort('marketCap')} className={`${styles.sortable} ${styles.rightHeader}`}>
+                <span className={`${styles.headerLabelWrap} ${styles.rightHeaderLabel}`}>
+                  Market Cap {getSortIcon('marketCap')}
+                </span>
               </th>
-              <th>Max Lev</th>
-              <th>Status</th>
+              <th className={styles.centerHeader}>Max Lev</th>
+              <th className={styles.centerHeader}>Status</th>
             </tr>
           </thead>
           <tbody>
             {filteredAndSortedTokens.map((token) => {
-              const priceData = priceMap[token.symbol];
+              const priceData = priceMap[token.symbol] as any;
               const price = priceData?.price || 0;
-              const change24h = (priceData && 'change24h' in priceData ? (priceData as any).change24h : 0) || 0;
-              const marketCap = (priceData && 'marketCap' in priceData ? (priceData as any).marketCap : 0) || 0;
+              const change24h = priceData?.change24h || 0;
+              const marketCap = priceData?.marketCap || 0;
               const isSelected = selectedSymbol === token.symbol;
-
-              // Format market cap
-              let marketCapStr = '—';
-              if (marketCap > 0) {
-                if (marketCap >= 1e9) marketCapStr = `$${(marketCap / 1e9).toFixed(2)}B`;
-                else if (marketCap >= 1e6) marketCapStr = `$${(marketCap / 1e6).toFixed(2)}M`;
-                else marketCapStr = `$${marketCap.toLocaleString()}`;
-              }
+              const isPositive = change24h >= 0;
 
               return (
                 <tr
@@ -153,6 +169,7 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
                   className={`${styles.tokenRow} ${isSelected ? styles.selected : ''}`}
                   onClick={() => onSelectToken(token)}
                 >
+                  {/* Token Column */}
                   <td className={styles.tokenCell}>
                     <div className={styles.tokenInfo}>
                       {token.icon_url ? (
@@ -168,20 +185,32 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
                       </div>
                     </div>
                   </td>
-                  <td className={styles.priceCell}>
-                    ${price.toFixed(price < 0.01 ? 6 : 2)}
+                  
+                  {/* Price Column */}
+                  <td className={`${styles.priceCell} ${styles.rightCell}`}>
+                    {formatPrice(price)}
                   </td>
-                  <td>
-                    <span className={`${styles.changeCell} ${change24h >= 0 ? styles.positive : styles.negative}`}>
-                      {change24h > 0 ? '▲' : change24h < 0 ? '▼' : ''}
-                      {change24h !== 0 ? ` ${Math.abs(change24h).toFixed(2)}%` : '0.00%'}
-                    </span>
+                  
+                  {/* Change Column */}
+                  <td className={styles.rightCell}>
+                    <div className={`${styles.changeBadge} ${isPositive ? styles.positive : styles.negative}`}>
+                      {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                      {isPositive ? '+' : ''}{change24h.toFixed(2)}%
+                    </div>
                   </td>
-                  <td className={styles.marketCapCell}>{marketCapStr}</td>
-                  <td>
+                  
+                  {/* Market Cap Column */}
+                  <td className={`${styles.marketCapCell} ${styles.rightCell}`}>
+                    {formatMarketCap(marketCap)}
+                  </td>
+                  
+                  {/* Max Leverage Column */}
+                  <td className={styles.centerCell}>
                     <span className={styles.leverageBadge}>{token.max_leverage}x</span>
                   </td>
-                  <td>
+                  
+                  {/* Status Column */}
+                  <td className={styles.centerCell}>
                     <span className={`${styles.statusBadge} ${token.is_active ? styles.active : ''}`}>
                       {token.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -200,7 +229,7 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
         </table>
       </div>
 
-      {/* Footer with count */}
+      {/* Footer */}
       <div className={styles.footer}>
         <span>Showing {filteredAndSortedTokens.length} of {activeTokens.length} markets</span>
       </div>

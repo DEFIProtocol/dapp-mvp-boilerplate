@@ -1,24 +1,25 @@
+// app/account/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
-
-import { fetchHoldings } from "../src/lib/api/holdings"; // Adjust based on your actual import path
+import { fetchHoldings } from "../src/lib/api/holdings";
 import { useChainContext } from "../src/contexts/ChainContext";
-import { useUser } from "../src/contexts/UserContext"; // Note: useUser, not UserProvider here
+import { useUser } from "../src/contexts/UserContext";
 import { useTokens } from "../src/contexts/TokenContext";
 import { WalletBalance } from "./components/WalletBalance";
 import { Holdings } from "./components/Holdings";
 import { Watchlist } from "./components/Watchlist";
+import styles from "./page.module.css";
 
 export default function AccountPage() {
   const { address } = useAccount();
   const router = useRouter();
   const { selectedChain, getChainLabel } = useChainContext();
-  const { user, watchlist } = useUser(); // Get user data
-  const { tokens } = useTokens(); // Get token data
+  const { user, watchlist } = useUser();
+  const { tokens } = useTokens();
   
   const [loading, setLoading] = useState(false);
   const [nativeBalance, setNativeBalance] = useState<string | null>(null);
@@ -26,7 +27,6 @@ export default function AccountPage() {
   const [error, setError] = useState<string | null>(null);
   const [totalValue, setTotalValue] = useState<string>("0.00");
 
-  // Fetch holdings
   useEffect(() => {
     if (!address) return;
 
@@ -38,9 +38,6 @@ export default function AccountPage() {
         const data = await fetchHoldings(address, selectedChain);
         setNativeBalance(data.nativeBalance?.balance || null);
         setHoldings(data.holdings || []);
-        
-        // Calculate total value if we have prices
-        // This will be enhanced when you add price data
       } catch (err: any) {
         setError(err.message || "Failed to load holdings");
       } finally {
@@ -53,11 +50,9 @@ export default function AccountPage() {
 
   if (!address) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <h1 className="text-2xl font-semibold text-[var(--text)] mb-4">
-          Connect Your Wallet
-        </h1>
-        <p className="text-[var(--text-muted)] text-center max-w-md">
+      <div className={styles.connectContainer}>
+        <h1 className={styles.connectTitle}>Connect Your Wallet</h1>
+        <p className={styles.connectDescription}>
           Please connect your wallet to view your account details and token holdings.
         </p>
       </div>
@@ -65,19 +60,16 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="relative z-10 flex flex-col gap-6 max-w-4xl mx-auto px-4 py-8">
+    <div className={styles.pageContainer}>
       {/* Header */}
-      <div className="flex items-center justify-between rounded-2xl px-5 py-4 bg-[var(--card-bg)] backdrop-blur-[20px] border border-[var(--glass-border)] shadow-[var(--card-shadow)]">
-        <div>
-          <h1 className="text-3xl font-semibold text-gradient text-[var(--text)]">Account</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
-            Connected to {getChainLabel(selectedChain)}
-          </p>
+      <div className={styles.headerCard}>
+        <div className={styles.headerLeft}>
+          <h1>Account</h1>
+          <p>Connected to {getChainLabel(selectedChain)}</p>
         </div>
-
         <button
           onClick={() => router.push("/account/settings")}
-          className="p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] text-[var(--neon-cyan)] hover:shadow-[0_0_16px_var(--glow-primary)] transition"
+          className={styles.settingsButton}
           aria-label="Account settings"
         >
           <Settings size={20} />

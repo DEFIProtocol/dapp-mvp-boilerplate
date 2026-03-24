@@ -1,61 +1,299 @@
 /* app/crypto/page.module.css */
-.dashboard {
-  min-height: 100vh;
-  background: var(--accent-gradient-surface);
-  /* Remove padding from here if it's affecting the header */
-  padding: 0; /* Changed from 2rem to 0 */
-}
-
-.title {
-  font-size: 2rem;
-  color: var(--text-strong);
-  margin: 2rem 2rem 2rem 2rem; /* Add margin instead of padding on container */
-  font-weight: 700;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
-}
-
-.selectorView {
-  max-width: 1400px;
+.dashboard{
+  width: 70vw;
   margin: 0 auto;
-  padding: 0 2rem; /* Add padding here instead */
+  padding-top: 2vw;
 }
 
-.tradingView {
+.splashScreen {
   position: relative;
-  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--dark-bg);
 }
 
-.backButton {
+.gradientBg {
+  position: absolute;
+  inset: 0;
+  background: var(--cyber-gradient-bg);
+  z-index: 0;
+}
+
+.splashContent {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  width: 70vw;
+  max-width: 700px;
+  animation: fadeInUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 48px;
+  padding: 3rem 2rem;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.splashContent:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px var(--glow-primary);
+}
+
+/* Logo Section */
+.logoWrapper {
+  position: relative;
+  margin-bottom: 3rem;
+}
+
+.logoGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, var(--glow-primary) 0%, transparent 70%);
+  filter: blur(20px);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.logoIcon {
+  position: relative;
+  color: var(--neon-cyan);
+  filter: drop-shadow(0 0 20px var(--glow-primary));
+  animation: float 3s ease-in-out infinite;
+}
+
+.logoText {
+  margin: 1rem 0 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: var(--cyber-text-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.5px;
+}
+
+/* Loading Section */
+.loadingSection {
+  margin-bottom: 2rem;
+}
+
+.loadingRing {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+}
+
+.ring:nth-child(1) {
+  border-top-color: var(--neon-cyan);
+  animation: spin 1s linear infinite;
+}
+
+.ring:nth-child(2) {
+  border-right-color: var(--neon-pink);
+  animation: spin 1.5s linear infinite reverse;
+}
+
+.ring:nth-child(3) {
+  border-bottom-color: var(--neon-green);
+  animation: spin 2s linear infinite;
+}
+
+.loadingText {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 500;
+  background: linear-gradient(90deg, var(--text-muted), var(--neon-cyan), var(--text-muted));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Manual Redirect Button */
+.manualRedirect {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  margin: 0 2rem 1.5rem 2rem; /* Add margin instead of relying on container */
-  background: var(--surface);
-  border: 2px solid var(--border-soft);
-  border-radius: 50px;
+  padding: 0.75rem 1.5rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 40px;
+  color: var(--text-muted);
   font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-muted-strong);
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-}
-.backButton:hover {
-  background: var(--surface-muted);
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: translateX(-4px);
+  transition: all 0.3s ease;
+  min-width: auto;
+  min-height: auto;
+  width: 100%;
+  max-width: 200px;
+  margin: 0 auto;
 }
 
-@media (max-width: 768px) {
-  .dashboard {
-    padding: 1rem;
+.manualRedirect:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--glow-primary);
+}
+
+/* Particles Animation */
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.particle {
+  position: absolute;
+  bottom: -10px;
+  width: 2px;
+  height: 2px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleUp linear infinite;
+  box-shadow: 0 0 4px var(--glow-primary);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  .title {
-    font-size: 1.5rem;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes particleUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100vh);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .splashContent {
+    width: 85vw;
+    padding: 2rem 1.5rem;
+  }
+  
+  .logoText {
+    font-size: 2rem;
+  }
+  
+  .logoIcon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .logoGlow {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .loadingRing {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .loadingText {
+    font-size: 0.8rem;
+  }
+  
+  .manualRedirect {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .splashContent {
+    width: 90vw;
+    padding: 1.5rem 1rem;
+  }
+  
+  .logoText {
+    font-size: 1.75rem;
+  }
+  
+  .logoIcon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .logoGlow {
+    width: 70px;
+    height: 70px;
   }
 }

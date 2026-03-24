@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { getTraderPerpPositions, placePerpOrder } from '@/lib/api/perpsTrading';
 import type { OrderType, TraderPositionSnapshot, PendingPerpOrder } from '@/types/perpsTrading';
+import { TrendingUp, TrendingDown, Settings, Lock, Edit2, Zap } from 'lucide-react';
 import styles from './styles/PerpetualCard.module.css';
 
 interface PerpetualCardProps {
@@ -19,7 +20,7 @@ export default function PerpetualCard({
   tokenName,
   perpAddress,
   price,
-  fundingRate = 0.001, // 0.1% = 0.001
+  fundingRate = 0.001,
 }: PerpetualCardProps) {
   const { address } = useAccount();
   const [leverage, setLeverage] = useState(10);
@@ -38,13 +39,10 @@ export default function PerpetualCard({
   
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fix funding rate display - convert to percentage and ensure proper decimal
-  const fundingRatePercent = fundingRate * 100; // Convert to percentage
-
-  // Calculate track fill percentage for slider
+  const fundingRatePercent = fundingRate * 100;
   const trackFillPercentage = (leverage / 50) * 100;
+  const isPositiveFunding = fundingRate >= 0;
 
-  // Focus input when editing
   useEffect(() => {
     if (isEditingLeverage && inputRef.current) {
       inputRef.current.focus();
@@ -74,7 +72,6 @@ export default function PerpetualCard({
 
   useEffect(() => {
     if (!address || !perpAddress) return;
-
     refreshPositions();
     const timer = setInterval(refreshPositions, 15000);
     return () => clearInterval(timer);
@@ -83,7 +80,6 @@ export default function PerpetualCard({
   const calculateLiquidationPrice = () => {
     const maintenanceMargin = 0.005;
     const entry = orderType === 'limit' && limitPrice ? limitPrice : price;
-    
     return entry * (1 - (1 / leverage) + maintenanceMargin);
   };
 
@@ -123,7 +119,7 @@ export default function PerpetualCard({
     }
 
     if (!perpAddress) {
-      setApiError(`No Base contract address configured for ${symbol}.`);
+      setApiError(`No contract address configured for ${symbol}.`);
       return;
     }
 
@@ -154,9 +150,7 @@ export default function PerpetualCard({
         limitPrice: orderType === 'limit' ? (limitPrice ?? undefined) : undefined,
       });
 
-      setApiMessage(
-        `Order queued (${response.order?.id ?? 'n/a'}) at mark $${(response.onChain?.markPriceUsd ?? 0).toFixed(2)}`
-      );
+      setApiMessage(`Order queued at mark $${(response.onChain?.markPriceUsd ?? 0).toFixed(2)}`);
       await refreshPositions();
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Failed to place order');
@@ -172,32 +166,46 @@ export default function PerpetualCard({
     return `${sign}${parsed.toFixed(2)}`;
   };
 
+  const getTokenIcon = () => {
+    const icons: Record<string, string> = {
+      BTC: '₿',
+      ETH: 'Ξ',
+      SOL: '◎',
+      BNB: '🟡',
+      AVAX: '❄️',
+    };
+    return icons[symbol] || symbol.charAt(0);
+  };
+
   return (
     <div className={styles.card}>
-      {/* Header - Only funding rate remains */}
+      <div className={styles.gradientBorder} />
+      
+      {/* Header */}
       <div className={styles.header}>
         <div className={styles.symbolInfo}>
-          <span className={styles.tokenIcon}>
-            {symbol === 'BTC' && '₿'}
-            {symbol === 'ETH' && 'Ξ'}
-            {symbol === 'SOL' && 'S◎L'}
-          </span>
+          <div className={styles.tokenIconWrapper}>
+            <span className={styles.tokenIcon}>{getTokenIcon()}</span>
+          </div>
           <div>
             <h3 className={styles.symbol}>{symbol}USDT Perpetual</h3>
             <div className={styles.contractMeta}>{tokenName}</div>
             <div className={styles.contractAddress}>
-              {perpAddress ? `${perpAddress.slice(0, 8)}...${perpAddress.slice(-6)}` : 'No Base address'}
+              {perpAddress ? `${perpAddress.slice(0, 6)}...${perpAddress.slice(-4)}` : 'No address'}
             </div>
             <span className={styles.maxLeverage}>Up to 50x</span>
           </div>
         </div>
         <div className={styles.fundingBadge}>
-          <span className={fundingRate >= 0 ? styles.positive : styles.negative}>
-            {fundingRate >= 0 ? '▲' : '▼'} {Math.abs(fundingRatePercent).toFixed(4)}%
-          </span>
+          <div className={`${styles.fundingRate} ${isPositiveFunding ? styles.positive : styles.negative}`}>
+            {isPositiveFunding ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            <span>{Math.abs(fundingRatePercent).toFixed(4)}%</span>
+          </div>
+          <span className={styles.fundingLabel}>Funding</span>
         </div>
       </div>
 
+      {/* Leverage Section */}
       <div className={styles.leverageContainer}>
         <div className={styles.leverageHeader}>
           <span className={styles.leverageLabel}>Leverage</span>
@@ -217,39 +225,29 @@ export default function PerpetualCard({
                   className={styles.leverageInput}
                 />
                 <span className={styles.leverageX}>x</span>
-                <button 
-                  className={styles.lockButton}
-                  onClick={handleLeverageSubmit}
-                  title="Lock leverage"
-                >
-                  🔒
+                <button className={styles.lockButton} onClick={handleLeverageSubmit}>
+                  <Lock size={12} />
                 </button>
               </div>
             ) : (
               <>
                 <span className={styles.leverageValue}>{leverage}x</span>
-                <button 
-                  className={styles.editButton}
-                  onClick={() => setIsEditingLeverage(true)}
-                  title="Edit leverage"
-                >
-                  ✎
+                <button className={styles.editButton} onClick={() => setIsEditingLeverage(true)}>
+                  <Edit2 size={12} />
                 </button>
               </>
             )}
           </div>
         </div>
 
-        <div 
-          className={styles.sliderWrapper}
-          style={{
-            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${trackFillPercentage}%, var(--surface-3) ${trackFillPercentage}%, var(--surface-3) 100%)`
-          }}
-        >
+        <div className={styles.sliderWrapper} style={{
+          background: `linear-gradient(to right, var(--neon-cyan) 0%, var(--neon-cyan) ${trackFillPercentage}%, var(--surface-3) ${trackFillPercentage}%, var(--surface-3) 100%)`
+        }}>
           <input 
             type="range" 
             min="1" 
             max="50" 
+            step="1"
             value={leverage} 
             onChange={(e) => setLeverage(parseInt(e.target.value))}
             className={styles.leverageSlider}
@@ -263,7 +261,7 @@ export default function PerpetualCard({
         </div>
       </div>
 
-      {/* Trading Interface */}
+      {/* Trading Section */}
       <div className={styles.tradingSection}>
         <div className={styles.orderTypeSelector}>
           <button 
@@ -301,7 +299,6 @@ export default function PerpetualCard({
           </div>
         )}
 
-        {/* Position Size */}
         <div className={styles.positionSize}>
           <div className={styles.sizeHeader}>
             <span>Position Size (USD)</span>
@@ -321,7 +318,6 @@ export default function PerpetualCard({
           />
         </div>
 
-        {/* Collapsible Order Info - Only shows when positionSize has a value */}
         <div className={`${styles.orderInfo} ${positionSize ? styles.visible : styles.hidden}`}>
           <div className={styles.infoRow}>
             <span>Entry Price</span>
@@ -329,9 +325,7 @@ export default function PerpetualCard({
           </div>
           <div className={styles.infoRow}>
             <span>Liquidation Price</span>
-            <span className={styles.liquidation}>
-              ${calculateLiquidationPrice().toFixed(2)}
-            </span>
+            <span className={styles.liquidation}>${calculateLiquidationPrice().toFixed(2)}</span>
           </div>
           <div className={styles.infoRow}>
             <span>Position Value</span>
@@ -349,45 +343,47 @@ export default function PerpetualCard({
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className={styles.actionButtons}>
           <button
             className={`${styles.actionBtn} ${styles.buyBtn}`}
             onClick={() => handleSubmitOrder('LONG')}
             disabled={submitting}
           >
-            {orderType === 'limit' ? 'Place Limit Order' : 'Buy / Long'} {symbol}
+            <TrendingUp size={14} />
+            <span>{orderType === 'limit' ? 'Place Limit' : 'Long'}</span>
           </button>
           <button
             className={`${styles.actionBtn} ${styles.sellBtn}`}
             onClick={() => handleSubmitOrder('SHORT')}
             disabled={submitting}
           >
-            {orderType === 'limit' ? 'Place Limit Order' : 'Sell / Short'} {symbol}
+            <TrendingDown size={14} />
+            <span>{orderType === 'limit' ? 'Place Limit' : 'Short'}</span>
           </button>
         </div>
+        
         {apiError && <div className={styles.errorText}>{apiError}</div>}
         {apiMessage && <div className={styles.successText}>{apiMessage}</div>}
       </div>
 
-      {/* Risk Warning - Only shows when positionSize has a value */}
       {positionSize && (
         <div className={styles.riskWarning}>
-          ⚠️ Leverage trading carries high risk. Liquidation at {calculateLiquidationPrice().toFixed(2)} USD
+          <Zap size={12} />
+          <span>Liquidation at ${calculateLiquidationPrice().toFixed(2)}</span>
         </div>
       )}
 
       <div className={styles.positionsPanel}>
         <div className={styles.positionsHeader}>
-          <h4>Trader Positions</h4>
-          <span>{refreshing ? 'Refreshing...' : `Mark: $${markPriceUsd.toFixed(2)}`}</span>
+          <h4>Positions</h4>
+          <span>{refreshing ? '⟳' : `$${markPriceUsd.toFixed(2)}`}</span>
         </div>
-        {!address && <div className={styles.emptyText}>Connect wallet to load positions and PnL.</div>}
-        {address && positions.length === 0 && <div className={styles.emptyText}>No open on-chain positions.</div>}
+        {!address && <div className={styles.emptyText}>Connect wallet to view positions</div>}
+        {address && positions.length === 0 && <div className={styles.emptyText}>No open positions</div>}
         {positions.map((position) => (
           <div key={position.positionId} className={styles.positionRow}>
             <div className={styles.positionTopRow}>
-              <span>#{position.positionId}</span>
+              <span>#{position.positionId.slice(0, 8)}</span>
               <span className={position.side === 'LONG' ? styles.positive : styles.negative}>{position.side}</span>
             </div>
             <div className={styles.positionGrid}>
@@ -406,9 +402,9 @@ export default function PerpetualCard({
             <div className={styles.pendingTitle}>Pending Orders</div>
             {pendingOrders.slice(0, 3).map((order) => (
               <div key={order.id} className={styles.pendingRow}>
-                <span>{order.side} {order.orderType}</span>
+                <span>{order.side}</span>
                 <span>${order.exposureUsd.toFixed(2)}</span>
-                <span>{order.status}</span>
+                <span className={styles.pendingStatus}>{order.status}</span>
               </div>
             ))}
           </div>

@@ -1,3 +1,4 @@
+// components/Header/WalletModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,8 +8,39 @@ import {
   useDisconnect,
   useSwitchChain,
 } from "wagmi";
-
+import { X, ChevronRight, Zap, Globe, Wallet, Shield, Smartphone, ExternalLink } from "lucide-react";
 import styles from "./WalletModal.module.css";
+
+interface WalletModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  availableChains?: { id: number; label: string }[];
+  selectedChain?: number;
+  setSelectedChain?: (id: number) => void;
+}
+
+const WALLETS = [
+  { name: "metamask", displayName: "MetaMask", icon: "🦊", badge: "Popular", type: "evm" },
+  { name: "coinbase", displayName: "Coinbase Wallet", icon: "🔵", badge: "Secure", type: "evm" },
+  { name: "walletconnect", displayName: "WalletConnect", icon: "🔗", badge: "Mobile", type: "evm" },
+  { name: "injected", displayName: "Browser Wallet", icon: "🌐", badge: "Injected", type: "evm" },
+];
+
+const NON_EVM_WALLETS = [
+  { name: "phantom", displayName: "Phantom", icon: "◎", badge: "Solana", type: "solana" },
+];
+
+const CHAIN_ICONS: Record<string, string> = {
+  Ethereum: "⟠",
+  Base: "⛓️",
+  BNB: "🟡",
+  Polygon: "🔷",
+  Arbitrum: "🔵",
+  Avalanche: "❄️",
+  Solana: "◎",
+  Optimism: "🔴",
+  Fantom: "🔺",
+};
 
 export default function WalletModal({
   isOpen,
@@ -16,39 +48,32 @@ export default function WalletModal({
   availableChains = [],
   selectedChain,
   setSelectedChain,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  availableChains?: { id: number; label: string }[];
-  selectedChain?: number;
-  setSelectedChain?: (id: number) => void;
-}) {
+}: WalletModalProps) {
   const { connect, connectors, error, isPending } = useConnect();
   const { switchChain } = useSwitchChain();
   const { chain } = useAccount();
 
   const [selectedLocal, setSelectedLocal] = useState(selectedChain);
-  const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+  const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setSolanaAddress(null);
     setSelectedLocal(selectedChain);
     setConnectingWallet(null);
+    setShowSuccess(null);
   }, [isOpen, selectedChain]);
 
   if (!isOpen) return null;
 
-  // -----------------------------
-  // EVM CONNECT HANDLER
-  // -----------------------------
   const connectEVM = async (walletName: string) => {
     try {
       setConnectingWallet(walletName);
+      setShowSuccess(null);
 
       const chainId = Number(selectedLocal) || 1;
-
       const connector = connectors.find((c) =>
         c.name.toLowerCase().includes(walletName.toLowerCase())
       );
@@ -59,14 +84,8 @@ export default function WalletModal({
         return;
       }
 
-
-      // Log the request to MetaMask (connector info)
-      console.log("[WalletModal] Connecting with connector:", connector);
-
-      // ❌ DO NOT pass chainId here
       await connect({ connector });
 
-      // ✔ Switch chain AFTER connecting
       if (switchChain && chain?.id !== chainId) {
         try {
           await switchChain({ chainId });
@@ -76,23 +95,23 @@ export default function WalletModal({
       }
 
       setSelectedChain?.(chainId);
-
+      setShowSuccess(walletName);
+      
       setTimeout(() => {
         onClose();
         setConnectingWallet(null);
-      }, 300);
+      }, 500);
     } catch (e) {
       console.error("connectEVM error", e);
       setConnectingWallet(null);
     }
   };
 
-  // -----------------------------
-  // SOLANA CONNECT
-  // -----------------------------
   const handleSolana = async () => {
     try {
-      setConnectingWallet("solana");
+      setConnectingWallet("phantom");
+      setShowSuccess(null);
+      
       const provider = (window as any).solana;
 
       if (provider?.isPhantom) {
@@ -100,13 +119,14 @@ export default function WalletModal({
         const addr = resp.publicKey.toString();
         setSolanaAddress(addr);
         localStorage.setItem("solanaAddress", addr);
-
+        setShowSuccess("phantom");
+        
         setTimeout(() => {
           onClose();
           setConnectingWallet(null);
-        }, 300);
+        }, 500);
       } else {
-        alert("No Solana wallet detected. Install Phantom.");
+        window.open("https://phantom.app/", "_blank");
         setConnectingWallet(null);
       }
     } catch (e) {
@@ -115,144 +135,155 @@ export default function WalletModal({
     }
   };
 
-  const isWalletConnecting = (walletName: string) =>
-    connectingWallet === walletName;
+  const isWalletConnecting = (walletName: string) => connectingWallet === walletName;
+  const isWalletSuccess = (walletName: string) => showSuccess === walletName;
+
+  const getChainIcon = (chainLabel: string) => CHAIN_ICONS[chainLabel] || "⛓️";
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContainer}>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalWindow}>
+          {/* Gradient Border Effect */}
+          <div className={styles.gradientBorder} />
+          
           <div className={styles.modalContent}>
+            {/* Header */}
             <div className={styles.modalHeader}>
-              <h3>Connect Wallet</h3>
+              <div className={styles.headerLeft}>
+                <Zap size={20} className={styles.headerIcon} />
+                <h3>Connect Wallet</h3>
+              </div>
               <button className={styles.closeButton} onClick={onClose}>
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            {/* CHAIN SELECTOR */}
+            {/* Chain Selector */}
             <div className={styles.chainSection}>
-              <span className={styles.chainLabel}>Select chain</span>
+              <div className={styles.sectionHeader}>
+                <Globe size={14} className={styles.sectionIcon} />
+                <span className={styles.sectionTitle}>Select Network</span>
+              </div>
               <div className={styles.chainGrid}>
                 {availableChains.map((chain) => (
                   <button
                     key={chain.id}
                     onClick={() => setSelectedLocal(chain.id)}
-                    className={
-                      styles.chainButton +
-                      (selectedLocal === chain.id ? " " + styles.selectedChain : "")
-                    }
+                    className={`${styles.chainButton} ${
+                      selectedLocal === chain.id ? styles.selected : ""
+                    }`}
                   >
-                    <span>{chain.label}</span>
+                    <span className={styles.chainIcon}>{getChainIcon(chain.label)}</span>
+                    <span className={styles.chainName}>{chain.label}</span>
+                    {selectedLocal === chain.id && (
+                      <span className={styles.chainCheck}>✓</span>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* WALLET OPTIONS */}
-            <div className={styles.divider}>
-              <span className={styles.dividerLine}></span>
-              <span className={styles.dividerText}>Select Wallet</span>
-              <span className={styles.dividerLine}></span>
-            </div>
-
-            <div className={styles.walletGrid}>
-              <button
-                className={
-                  styles.walletButton +
-                  (isWalletConnecting("metamask") ? " " + styles.loadingWallet : "")
-                }
-                onClick={() => connectEVM("metamask")}
-                disabled={!!connectingWallet}
-              >
-                <span className={styles.walletIcon}>🦊</span>
-                <div className={styles.walletInfo}>
-                  <div className={styles.walletName}>MetaMask</div>
-                  <div className={styles.walletBadge}>Popular</div>
-                </div>
-              </button>
-
-              <button
-                className={
-                  styles.walletButton +
-                  (isWalletConnecting("coinbase") ? " " + styles.loadingWallet : "")
-                }
-                onClick={() => connectEVM("coinbase")}
-                disabled={!!connectingWallet}
-              >
-                <span className={styles.walletIcon}>🔵</span>
-                <div className={styles.walletInfo}>
-                  <div className={styles.walletName}>Coinbase Wallet</div>
-                  <div className={styles.walletBadge}>Secure</div>
-                </div>
-              </button>
-
-              <button
-                className={
-                  styles.walletButton +
-                  (isWalletConnecting("walletconnect") ? " " + styles.loadingWallet : "")
-                }
-                onClick={() => connectEVM("walletconnect")}
-                disabled={!!connectingWallet}
-              >
-                <span className={styles.walletIcon}>🔗</span>
-                <div className={styles.walletInfo}>
-                  <div className={styles.walletName}>WalletConnect</div>
-                  <div className={styles.walletBadge}>Mobile</div>
-                </div>
-              </button>
-
-              <button
-                className={
-                  styles.walletButton +
-                  (isWalletConnecting("injected") ? " " + styles.loadingWallet : "")
-                }
-                onClick={() => connectEVM("injected")}
-                disabled={!!connectingWallet}
-              >
-                <span className={styles.walletIcon}>🌐</span>
-                <div className={styles.walletInfo}>
-                  <div className={styles.walletName}>Browser Wallet</div>
-                  <div className={styles.walletBadge}>Injected</div>
-                </div>
-              </button>
-            </div>
-
-            {/* NON-EVM SECTION */}
-            <div className={styles.nonEvmSection}>
-              <div className={styles.divider}>
-                <span className={styles.dividerLine}></span>
-                <span className={styles.dividerText}>Non‑EVM</span>
-                <span className={styles.dividerLine}></span>
+            {/* EVM Wallets */}
+            <div className={styles.walletsSection}>
+              <div className={styles.sectionHeader}>
+                <Wallet size={14} className={styles.sectionIcon} />
+                <span className={styles.sectionTitle}>EVM Wallets</span>
+                <span className={styles.sectionBadge}>Ethereum Compatible</span>
               </div>
-
-              <button
-                className={
-                  styles.walletButton +
-                  (isWalletConnecting("solana") ? " " + styles.loadingWallet : "")
-                }
-                onClick={handleSolana}
-                disabled={!!connectingWallet}
-              >
-                <span className={styles.walletIcon}>◎</span>
-                <div className={styles.walletInfo}>
-                  <div className={styles.walletName}>Phantom (Solana)</div>
-                  <div className={styles.walletBadge}>Non‑EVM</div>
-                </div>
-              </button>
+              <div className={styles.walletGrid}>
+                {WALLETS.map((wallet) => (
+                  <button
+                    key={wallet.name}
+                    className={`${styles.walletButton} ${
+                      isWalletConnecting(wallet.name) ? styles.loading : ""
+                    } ${isWalletSuccess(wallet.name) ? styles.success : ""}`}
+                    onClick={() => connectEVM(wallet.name)}
+                    disabled={!!connectingWallet}
+                  >
+                    <div className={styles.walletIconWrapper}>
+                      <span className={styles.walletIcon}>{wallet.icon}</span>
+                      {isWalletConnecting(wallet.name) && (
+                        <div className={styles.loadingSpinner} />
+                      )}
+                      {isWalletSuccess(wallet.name) && (
+                        <div className={styles.successCheck}>✓</div>
+                      )}
+                    </div>
+                    <div className={styles.walletInfo}>
+                      <div className={styles.walletName}>{wallet.displayName}</div>
+                      <div className={styles.walletBadge}>{wallet.badge}</div>
+                    </div>
+                    <ChevronRight size={14} className={styles.walletArrow} />
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Connection status and errors */}
+            {/* Non-EVM Wallets */}
+            <div className={styles.walletsSection}>
+              <div className={styles.sectionHeader}>
+                <Shield size={14} className={styles.sectionIcon} />
+                <span className={styles.sectionTitle}>Non-EVM Wallets</span>
+                <span className={styles.sectionBadge}>Solana & More</span>
+              </div>
+              <div className={styles.walletGrid}>
+                {NON_EVM_WALLETS.map((wallet) => (
+                  <button
+                    key={wallet.name}
+                    className={`${styles.walletButton} ${
+                      isWalletConnecting(wallet.name) ? styles.loading : ""
+                    } ${isWalletSuccess(wallet.name) ? styles.success : ""}`}
+                    onClick={handleSolana}
+                    disabled={!!connectingWallet}
+                  >
+                    <div className={styles.walletIconWrapper}>
+                      <span className={styles.walletIcon}>{wallet.icon}</span>
+                      {isWalletConnecting(wallet.name) && (
+                        <div className={styles.loadingSpinner} />
+                      )}
+                      {isWalletSuccess(wallet.name) && (
+                        <div className={styles.successCheck}>✓</div>
+                      )}
+                    </div>
+                    <div className={styles.walletInfo}>
+                      <div className={styles.walletName}>{wallet.displayName}</div>
+                      <div className={styles.walletBadge}>{wallet.badge}</div>
+                    </div>
+                    <ChevronRight size={14} className={styles.walletArrow} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Info Message */}
+            <div className={styles.infoMessage}>
+              <ExternalLink size={12} className={styles.infoIcon} />
+              <span>New to crypto? <a href="#" className={styles.infoLink}>Learn about wallets</a></span>
+            </div>
+
+            {/* Connection Status */}
             {isPending && (
               <div className={styles.statusMessage}>
-                <span className={styles.statusIcon}>⏳</span>
+                <div className={styles.statusSpinner} />
                 <span>Connecting...</span>
               </div>
             )}
+            
             {error && (
               <div className={styles.errorMessage}>
                 <span className={styles.errorIcon}>⚠️</span>
-                <span>Error: {error.message}</span>
+                <span>{error.message}</span>
+              </div>
+            )}
+
+            {/* Solana Address Display */}
+            {solanaAddress && (
+              <div className={styles.solanaAddress}>
+                <span className={styles.addressLabel}>Connected:</span>
+                <code className={styles.addressValue}>
+                  {solanaAddress.slice(0, 8)}...{solanaAddress.slice(-6)}
+                </code>
               </div>
             )}
           </div>

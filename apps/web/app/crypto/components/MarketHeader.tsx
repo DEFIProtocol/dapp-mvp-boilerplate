@@ -71,11 +71,11 @@ export default function MarketHeader({
         {/* Left section - Token Info */}
         <div className={styles.tokenSection}>
           <div className={styles.tokenIconWrapper}>
-             <span className={styles.tokenIcon}>
-            {symbol === 'BTC' && '₿'}
-            {symbol === 'ETH' && 'Ξ'}
-            {symbol === 'SOL' && 'S◎L'}
-          </span>
+            <span className={styles.tokenIcon}>
+              {symbol === 'BTC' && '₿'}
+              {symbol === 'ETH' && 'Ξ'}
+              {symbol === 'SOL' && 'S◎L'}
+            </span>
           </div>
           <div className={styles.tokenInfo}>
             <div className={styles.tokenNameRow}>
