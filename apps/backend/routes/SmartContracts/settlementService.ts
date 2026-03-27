@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import settlementAbi from "../../../contracts/artifacts/contracts/PerpSettlement.sol/PerpSettlement.json";
+import settlementAbi from "../../../contracts/artifacts/contracts/PerpSettlement.sol/PerpEngine.json";
 
 function requireEnv(name: string, value: string | undefined): string {
   if (!value || value.trim().length === 0) {

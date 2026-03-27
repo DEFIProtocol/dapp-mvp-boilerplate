@@ -1,5 +1,27 @@
 /* app/account/components/Watchlist.module.css */
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.sectionCount {
+  font-size: 0.75rem;
+  color: var(--neon-cyan);
+  background: var(--glow-base);
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+}
+
 .watchlistCard {
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
@@ -39,6 +61,45 @@
   border-radius: 20px;
 }
 
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  background: var(--surface-glass);
+}
+
+.watchlistTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.watchlistTable th,
+.watchlistTable td {
+  border-bottom: 1px solid var(--glass-border);
+  padding: 0.8rem 0.7rem;
+}
+
+.watchlistTable th {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  background: var(--surface-2);
+}
+
+.numericHeader,
+.numericCell {
+  text-align: right;
+}
+
+.actionHeader,
+.actionCell {
+  text-align: center;
+  width: 56px;
+}
+
 /* Empty State */
 .emptyWatchlist {
   text-align: center;
@@ -64,36 +125,19 @@
   margin: 0;
 }
 
-/* Watchlist Items */
-.watchlistItems {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .watchlistRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  background: var(--glow-base);
-  border-radius: 16px;
-  border: 1px solid var(--glass-border);
-  transition: all 0.3s ease;
+  transition: background-color 0.2s ease;
   cursor: pointer;
 }
 
 .watchlistRow:hover {
-  border-color: var(--neon-cyan);
-  transform: translateX(4px);
-  background: var(--glow-primary);
+  background: var(--glow-base);
 }
 
-.tokenLeft {
+.tokenCell {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 1;
 }
 
 .tokenIcon {
@@ -112,7 +156,6 @@
 
 .watchlistRow:hover .tokenIcon {
   border-color: var(--neon-cyan);
-  transform: scale(1.05);
 }
 
 .tokenIcon img {
@@ -123,7 +166,7 @@
 }
 
 .tokenDetails {
-  flex: 1;
+  min-width: 0;
 }
 
 .tokenSymbol {
@@ -136,22 +179,13 @@
   font-size: 0.7rem;
   color: var(--text-muted);
   margin-top: 0.1rem;
-}
-
-.tokenStats {
-  text-align: right;
-}
-
-.tokenPrice {
-  font-weight: 600;
-  color: var(--text-strong);
-  font-size: 0.9rem;
-  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tokenChange {
   font-size: 0.7rem;
-  margin-top: 0.2rem;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -166,14 +200,39 @@
   color: var(--danger);
 }
 
+.watchButton {
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--neon-cyan);
+  opacity: 0.9;
+  transition: all 0.2s ease;
+}
+
+.watchButtonActive {
+  background: var(--glow-base);
+  border-color: var(--neon-cyan);
+}
+
+.watchButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px var(--glow-primary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .watchlistCard {
     padding: 1.25rem;
   }
 
-  .watchlistRow {
-    padding: 0.6rem;
+  .watchlistTable {
+    min-width: 620px;
   }
 
   .tokenIcon {
@@ -185,26 +244,10 @@
   .tokenSymbol {
     font-size: 0.85rem;
   }
-
-  .tokenPrice {
-    font-size: 0.8rem;
-  }
 }
 
 @media (max-width: 480px) {
-  .watchlistRow {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .tokenStats {
-    text-align: left;
-    width: 100%;
-    padding-left: 52px;
-  }
-
-  .tokenChange {
-    justify-content: flex-start;
+  .watchlistTable {
+    min-width: 560px;
   }
 }

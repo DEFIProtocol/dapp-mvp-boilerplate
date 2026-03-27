@@ -1,11 +1,18 @@
 // components/WalletAction/WalletAction.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useAccount, useBalance, useReadContract } from "wagmi";
-import { formatUnits } from "viem";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useAccount, useBalance, useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
+import { formatUnits, parseUnits, isAddress, type Address } from "viem";
 import { Plus, ArrowUpRight, ArrowLeftRight, X, ChevronDown, Wallet, Copy, Check } from "lucide-react";
 import { useChainContext } from "@/contexts/ChainContext";
+import {
+  createCoinbasePaySession,
+  executeTransfer,
+  getSupportedTokens,
+  quoteTransfer,
+  type SupportedToken,
+} from "@/lib/api/fundsManager";
 import styles from "./WalletAction.module.css";
 
 interface WalletActionProps {
@@ -23,15 +30,29 @@ export default function WalletAction({
   onTransfer,
   onConvert 
 }: WalletActionProps) {
-  const { address: accountAddress, isConnected } = useAccount();
-  const { selectedChain, getChainLabel } = useChainContext();
+  const { address: accountAddress, isConnected, chain } = useAccount();
+  const { selectedChain, getChainLabel, getChainSlug, availableChains } = useChainContext();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"add" | "transfer" | "convert">("add");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferAddress, setTransferAddress] = useState("");
+  const [transferFromChain, setTransferFromChain] = useState<number>(selectedChain);
+  const [transferToChain, setTransferToChain] = useState<number>(1);
+  const [transferTokenAddress, setTransferTokenAddress] = useState<string>("");
+  const [transferTokenDecimals, setTransferTokenDecimals] = useState<number>(6);
+  const [transferQuote, setTransferQuote] = useState<any>(null);
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [isQuotingTransfer, setIsQuotingTransfer] = useState(false);
+  const [isExecutingTransfer, setIsExecutingTransfer] = useState(false);
+  const [supportedTransferTokens, setSupportedTransferTokens] = useState<Record<number, SupportedToken[]>>({});
   const [convertFrom, setConvertFrom] = useState("ETH");
   const [convertTo, setConvertTo] = useState("USDC");
   const [convertAmount, setConvertAmount] = useState("");
+  const [onRampAmount, setOnRampAmount] = useState("100");
+  const [onRampAsset, setOnRampAsset] = useState("USDC");
+  const [isCreatingOnRampSession, setIsCreatingOnRampSession] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +78,14 @@ export default function WalletAction({
   const nativeSymbol = NATIVE_SYMBOL_BY_CHAIN[selectedChain] || symbol;
   const usdcToken = USDC_BY_CHAIN[selectedChain];
   const zeroAddress = "0x0000000000000000000000000000000000000000" as const;
+
+  const { switchChainAsync } = useSwitchChain();
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const fromChainTokens = useMemo(
+    () => supportedTransferTokens[transferFromChain] || [],
+    [supportedTransferTokens, transferFromChain]
+  );
 
   const { data: nativeBalanceData } = useBalance({
     address: walletAddress,
@@ -115,6 +144,71 @@ export default function WalletAction({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setTransferFromChain(selectedChain);
+    const defaultTo = availableChains.find((chainItem) => chainItem.id !== selectedChain)?.id || selectedChain;
+    setTransferToChain(defaultTo);
+  }, [selectedChain, availableChains]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTokens = async () => {
+      setIsLoadingTokens(true);
+      try {
+        const remoteTokens = await getSupportedTokens(transferFromChain);
+        const nativeToken: SupportedToken = {
+          address: zeroAddress,
+          symbol: NATIVE_SYMBOL_BY_CHAIN[transferFromChain] || "NATIVE",
+          name: `${getChainLabel(transferFromChain)} Native`,
+          decimals: 18,
+        };
+
+        const merged = [nativeToken, ...remoteTokens].reduce<SupportedToken[]>((acc, token) => {
+          if (!token.address || acc.some((item) => item.address.toLowerCase() === token.address.toLowerCase())) {
+            return acc;
+          }
+          acc.push(token);
+          return acc;
+        }, []);
+
+        if (!cancelled) {
+          setSupportedTransferTokens((prev) => ({ ...prev, [transferFromChain]: merged }));
+          const preferredToken =
+            merged.find((token) => token.symbol.toUpperCase() === "USDC") || merged[0];
+
+          if (preferredToken) {
+            setTransferTokenAddress(preferredToken.address);
+            setTransferTokenDecimals(preferredToken.decimals);
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTransferError("Failed to load token list for selected chain");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingTokens(false);
+        }
+      }
+    };
+
+    loadTokens();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [transferFromChain, getChainLabel]);
+
+  useEffect(() => {
+    const selectedToken = fromChainTokens.find(
+      (token) => token.address.toLowerCase() === transferTokenAddress.toLowerCase()
+    );
+    if (selectedToken) {
+      setTransferTokenDecimals(selectedToken.decimals);
+    }
+  }, [transferTokenAddress, fromChainTokens]);
+
   const handleCopyAddress = () => {
     if (walletAddress) {
       navigator.clipboard.writeText(walletAddress);
@@ -123,16 +217,104 @@ export default function WalletAction({
     }
   };
 
-  const handleTransfer = () => {
-    if (onTransfer && transferAmount && transferAddress) {
-      onTransfer(transferAmount, transferAddress);
-      setTransferAmount("");
-      setTransferAddress("");
-      setIsOpen(false);
-    } else {
-      // Simulate transfer for now
-      alert(`Transferring ${transferAmount} ${symbol} to ${transferAddress}`);
-      setIsOpen(false);
+  const handleQuoteTransfer = async () => {
+    if (!walletAddress) {
+      setTransferError("Connect wallet to quote transfer");
+      return;
+    }
+
+    if (!transferAmount || Number(transferAmount) <= 0) {
+      setTransferError("Enter a valid transfer amount");
+      return;
+    }
+
+    const recipient = transferAddress || walletAddress;
+    if (!isAddress(recipient)) {
+      setTransferError("Recipient must be a valid EVM address");
+      return;
+    }
+
+    const fromToken = fromChainTokens.find(
+      (token) => token.address.toLowerCase() === transferTokenAddress.toLowerCase()
+    );
+
+    if (!fromToken) {
+      setTransferError("Select a valid source token");
+      return;
+    }
+
+    const toChainTokens = supportedTransferTokens[transferToChain] || [];
+    const toToken =
+      toChainTokens.find((token) => token.symbol.toUpperCase() === fromToken.symbol.toUpperCase()) ||
+      toChainTokens.find((token) => token.symbol.toUpperCase() === "USDC") ||
+      {
+        address: zeroAddress,
+        symbol: NATIVE_SYMBOL_BY_CHAIN[transferToChain] || "NATIVE",
+      };
+
+    setIsQuotingTransfer(true);
+    setTransferError(null);
+    setTransferMessage(null);
+
+    try {
+      const fromAmount = parseUnits(transferAmount, fromToken.decimals).toString();
+      const response = await quoteTransfer({
+        fromChainId: transferFromChain,
+        toChainId: transferToChain,
+        fromTokenAddress: fromToken.address,
+        toTokenAddress: toToken.address,
+        fromAmount,
+        fromAddress: walletAddress,
+        toAddress: recipient,
+      });
+
+      setTransferQuote({ ...response.quote, raw: response.raw });
+      setTransferMessage("Quote ready. Review and transfer.");
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : "Failed to quote transfer");
+    } finally {
+      setIsQuotingTransfer(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!transferQuote) {
+      await handleQuoteTransfer();
+      return;
+    }
+
+    setIsExecutingTransfer(true);
+    setTransferError(null);
+
+    try {
+      const execution = await executeTransfer(transferQuote);
+      if (!execution.transactionRequest) {
+        throw new Error("Transfer request is missing transaction data");
+      }
+
+      if (chain?.id !== transferFromChain) {
+        await switchChainAsync({ chainId: transferFromChain });
+      }
+
+      const tx = execution.transactionRequest;
+      const hash = await sendTransactionAsync({
+        to: tx.to as Address,
+        data: (tx.data as `0x${string}` | undefined) || undefined,
+      });
+
+      setTransferMessage(`Transfer submitted: ${hash.slice(0, 10)}...`);
+      if (onTransfer) {
+        onTransfer(transferAmount, transferAddress || walletAddress || "");
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : "Failed to execute transfer");
+      if (transferQuote?.action) {
+        const action = transferQuote.action;
+        const fallbackUrl = `https://jumper.exchange/?fromChain=${action.fromChainId}&toChain=${action.toChainId}`;
+        setTransferMessage(`Execution failed in-app. You can continue via ${fallbackUrl}`);
+      }
+    } finally {
+      setIsExecutingTransfer(false);
     }
   };
 
@@ -142,15 +324,38 @@ export default function WalletAction({
       setConvertAmount("");
       setIsOpen(false);
     } else {
-      // Simulate conversion for now
       alert(`Converting ${convertAmount} ${convertFrom} to ${convertTo}`);
       setIsOpen(false);
     }
   };
 
-  const handleAddFunds = () => {
-    // Open Coinbase Pay modal/link
-    window.open("https://pay.coinbase.com", "_blank");
+  const handleAddFunds = async () => {
+    if (!walletAddress) {
+      setTransferError("Connect wallet to add funds");
+      return;
+    }
+
+    if (!onRampAmount || Number(onRampAmount) <= 0) {
+      setTransferError("Enter a valid USD amount");
+      return;
+    }
+
+    setIsCreatingOnRampSession(true);
+    setTransferError(null);
+    try {
+      const { paymentUrl } = await createCoinbasePaySession({
+        amount: Number(onRampAmount),
+        asset: onRampAsset,
+        walletAddress,
+        chain: getChainSlug(selectedChain),
+      });
+
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : "Failed to start Coinbase on-ramp");
+    } finally {
+      setIsCreatingOnRampSession(false);
+    }
   };
 
   // Calculate estimated receive amount (simplified)
@@ -253,12 +458,35 @@ export default function WalletAction({
               <p className={styles.contentDescription}>
                 Add funds instantly using your debit card via Coinbase Pay
               </p>
-              <button 
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Amount (USD)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={onRampAmount}
+                  onChange={(e) => setOnRampAmount(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Asset</label>
+                <select
+                  value={onRampAsset}
+                  onChange={(e) => setOnRampAsset(e.target.value)}
+                  className={styles.tokenSelect}
+                >
+                  <option value="USDC">USDC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="USDT">USDT</option>
+                </select>
+              </div>
+              <button
                 className={styles.addFundsButton}
                 onClick={handleAddFunds}
+                disabled={!walletAddress || isCreatingOnRampSession}
               >
                 <Plus size={18} />
-                <span>Add Funds with Coinbase Pay</span>
+                <span>{isCreatingOnRampSession ? "Creating Session..." : "Add Funds with Coinbase Pay"}</span>
               </button>
               <div className={styles.paymentInfo}>
                 <span className={styles.paymentMethod}>💳 Debit Card</span>
@@ -274,21 +502,73 @@ export default function WalletAction({
           {activeTab === "transfer" && (
             <div className={styles.tabContent}>
               <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>Amount ({nativeSymbol})</label>
+                <label className={styles.inputLabel}>From Chain</label>
+                <select
+                  value={transferFromChain}
+                  onChange={(e) => {
+                    setTransferFromChain(Number(e.target.value));
+                    setTransferQuote(null);
+                  }}
+                  className={styles.tokenSelect}
+                >
+                  {availableChains.map((chainOption) => (
+                    <option key={chainOption.id} value={chainOption.id}>
+                      {chainOption.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>To Chain</label>
+                <select
+                  value={transferToChain}
+                  onChange={(e) => {
+                    setTransferToChain(Number(e.target.value));
+                    setTransferQuote(null);
+                  }}
+                  className={styles.tokenSelect}
+                >
+                  {availableChains.map((chainOption) => (
+                    <option key={chainOption.id} value={chainOption.id}>
+                      {chainOption.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Token</label>
+                <select
+                  value={transferTokenAddress}
+                  onChange={(e) => {
+                    setTransferTokenAddress(e.target.value);
+                    setTransferQuote(null);
+                  }}
+                  className={styles.tokenSelect}
+                  disabled={isLoadingTokens}
+                >
+                  {fromChainTokens.map((token) => (
+                    <option key={token.address} value={token.address}>
+                      {token.symbol}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Amount</label>
                 <div className={styles.inputWrapper}>
                   <input
                     type="text"
                     placeholder="0.00"
                     value={transferAmount}
-                    onChange={(e) => setTransferAmount(e.target.value)}
+                    onChange={(e) => {
+                      setTransferAmount(e.target.value);
+                      setTransferQuote(null);
+                    }}
                     className={styles.input}
                   />
-                  <button 
-                    className={styles.maxButton}
-                    onClick={() => setTransferAmount(nativeBalance)}
-                  >
-                    MAX
-                  </button>
                 </div>
               </div>
 
@@ -296,38 +576,51 @@ export default function WalletAction({
                 <label className={styles.inputLabel}>Recipient Address</label>
                 <input
                   type="text"
-                  placeholder="0x..."
+                  placeholder={walletAddress || "0x..."}
                   value={transferAddress}
                   onChange={(e) => setTransferAddress(e.target.value)}
                   className={styles.input}
                 />
               </div>
 
-              <div className={styles.transferInfo}>
-                <div className={styles.infoRow}>
-                  <span>You'll send</span>
-                  <span className={styles.infoValue}>{transferAmount || "0"} {nativeSymbol}</span>
+              {transferQuote?.estimate && (
+                <div className={styles.transferInfo}>
+                  <div className={styles.infoRow}>
+                    <span>Route</span>
+                    <span className={styles.infoValue}>{transferQuote.tool || "Aggregator"}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span>To Amount</span>
+                    <span className={styles.infoValue}>{transferQuote.estimate.toAmount || "-"}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span>Minimum To Amount</span>
+                    <span className={styles.infoValue}>{transferQuote.estimate.toAmountMin || "-"}</span>
+                  </div>
                 </div>
-                <div className={styles.infoRow}>
-                  <span>Network Fee</span>
-                  <span className={styles.infoValue}>~0.0005 {nativeSymbol}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span>Total</span>
-                  <span className={styles.infoValue}>
-                    {transferAmount && Number.isFinite(Number(transferAmount)) ? (Number(transferAmount) + 0.0005).toFixed(4) : "0"} {nativeSymbol}
-                  </span>
-                </div>
-              </div>
+              )}
 
-              <button 
-                className={styles.actionButton}
-                onClick={handleTransfer}
-                disabled={!transferAmount || !transferAddress}
-              >
-                <ArrowUpRight size={16} />
-                <span>Transfer Funds</span>
-              </button>
+              {transferError && <p className={styles.infoText}>{transferError}</p>}
+              {transferMessage && <p className={styles.infoText}>{transferMessage}</p>}
+
+              <div className={styles.convertInputs}>
+                <button
+                  className={styles.actionButton}
+                  onClick={handleQuoteTransfer}
+                  disabled={!walletAddress || isQuotingTransfer || !transferAmount || isLoadingTokens}
+                >
+                  <ArrowLeftRight size={16} />
+                  <span>{isQuotingTransfer ? "Quoting..." : "Get Quote"}</span>
+                </button>
+                <button
+                  className={styles.actionButton}
+                  onClick={handleTransfer}
+                  disabled={!transferQuote || isExecutingTransfer}
+                >
+                  <ArrowUpRight size={16} />
+                  <span>{isExecutingTransfer ? "Submitting..." : "Transfer"}</span>
+                </button>
+              </div>
             </div>
           )}
 

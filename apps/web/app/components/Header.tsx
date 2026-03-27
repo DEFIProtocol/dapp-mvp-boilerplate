@@ -48,7 +48,6 @@ export function Header() {
   const previousChainRef = useRef<number | null>(null);
 
   const { switchChain, isPending } = useSwitchChain();
-  const showWalletAction = pathname?.startsWith("/market") || pathname?.startsWith("/futures");
   const chainSymbol = NATIVE_SYMBOL_BY_CHAIN[selectedChain] || "ETH";
 
   // Handle chain switching updates
@@ -176,8 +175,8 @@ export function Header() {
 
           {/* Right Section */}
           <div className={styles.rightSection}>
-            {/* Wallet Action Button (only on market/futures pages) */}
-            {showWalletAction && isConnected && (
+            {/* Wallet Action Button */}
+            {isConnected && (
               <WalletAction
                 symbol={chainSymbol}
                 address={address || ""}

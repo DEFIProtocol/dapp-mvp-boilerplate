@@ -1,0 +1,550 @@
+/* app/crypto/components/styles/TokenSelector.module.css */
+
+.tokenSelector {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-theme="light"] .tokenSelector {
+  background: linear-gradient(135deg, #dde3f0 0%, #c8d3ea 100%);
+  border: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.tokenSelector:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px var(--glow-primary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--cyber-text-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stats {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-muted);
+  padding: 0.4rem 1rem;
+  border-radius: 30px;
+  border: 1px solid var(--border-soft);
+}
+
+.statLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.statValue {
+  color: var(--neon-cyan);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Search */
+.searchContainer {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 40px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--glow-primary);
+}
+
+/* Table */
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.tableWrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.tableWrapper::-webkit-scrollbar-track {
+  background: var(--surface-3);
+  border-radius: 3px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: var(--neon-cyan);
+  border-radius: 3px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-pink);
+}
+
+.tokenTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 800px;
+  table-layout: fixed;
+}
+
+/* Column Widths */
+.tokenTable th:nth-child(1),
+.tokenTable td:nth-child(1) {
+  width: 32%;
+}
+
+.tokenTable th:nth-child(2),
+.tokenTable td:nth-child(2) {
+  width: 16%;
+}
+
+.tokenTable th:nth-child(3),
+.tokenTable td:nth-child(3) {
+  width: 16%;
+}
+
+.tokenTable th:nth-child(4),
+.tokenTable td:nth-child(4) {
+  width: 16%;
+}
+
+.tokenTable th:nth-child(5),
+.tokenTable td:nth-child(5) {
+  width: 8%;
+}
+
+.tokenTable th:nth-child(6),
+.tokenTable td:nth-child(6) {
+  width: 10%;
+}
+
+.tokenTable th:nth-child(7),
+.tokenTable td:nth-child(7) {
+  width: 10%;
+}
+
+.tokenTable th {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+[data-theme="light"] .tokenTable th {
+  background: rgba(100, 120, 180, 0.12);
+  border-bottom: 1px solid rgba(100, 120, 180, 0.2);
+  color: #1a1a2e;
+}
+
+/* Header Alignment Classes */
+.rightHeader {
+  text-align: left !important;
+}
+
+.centerHeader {
+  text-align: left !important;
+}
+
+.headerLabelWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rightHeaderLabel {
+  justify-content: flex-start;
+  width: auto;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.sortable:hover {
+  color: var(--neon-cyan);
+}
+
+.sortIconPlaceholder {
+  opacity: 0.5;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Table Cells */
+.tokenTable td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .tokenTable td {
+  border-bottom: 1px solid rgba(100, 120, 180, 0.15);
+  color: #1a1a2e;
+}
+
+/* Cell Alignment Classes */
+.rightCell {
+  text-align: left !important;
+}
+
+.centerCell {
+  text-align: left !important;
+}
+
+/* Token Cell */
+.tokenCell {
+  text-align: left !important;
+}
+
+.tokenInfo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.tokenInfo > div {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tokenIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tokenRow:hover .tokenIcon {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px var(--glow-primary);
+}
+
+.tokenIconPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--glow-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tokenRow:hover .tokenIconPlaceholder {
+  transform: scale(1.1);
+  background: rgba(0, 255, 255, 0.16);
+}
+
+.tokenSymbol {
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tokenName {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Price Cell */
+.priceCell {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* Change Badge */
+.changeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.rightCell .changeBadge {
+  justify-content: flex-start;
+}
+
+.centerCell .changeBadge {
+  justify-content: flex-start;
+}
+
+.changeBadge.positive {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--neon-green);
+}
+
+.changeBadge.negative {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.tokenRow:hover .changeBadge {
+  transform: scale(1.05);
+}
+
+/* Market Cap Cell */
+.marketCapCell {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* Badges */
+.leverageBadge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  background: var(--glow-base);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  transition: all 0.2s ease;
+}
+
+.tokenRow:hover .leverageBadge {
+  background: var(--glow-primary);
+  transform: scale(1.05);
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  background: var(--surface-3);
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.statusBadge.active {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--neon-green);
+}
+
+.watchButton {
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0.45rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.65;
+}
+
+.watchButton:hover {
+  opacity: 1;
+  border-color: var(--neon-cyan);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px var(--glow-primary);
+}
+
+.watchButtonActive {
+  opacity: 1;
+  border-color: var(--neon-cyan);
+  background: var(--glow-base);
+}
+
+.watchIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--neon-cyan);
+}
+
+.tokenRow:hover .statusBadge {
+  transform: scale(1.05);
+}
+
+/* Token Row */
+.tokenRow {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tokenRow:hover {
+  background: rgba(108, 130, 181, 0.16);
+}
+
+[data-theme="light"] .tokenRow:hover {
+  background: rgba(131, 151, 196, 0.18);
+}
+
+.tokenRow.selected {
+  background: rgba(92, 125, 194, 0.28);
+  position: relative;
+}
+
+[data-theme="light"] .tokenRow.selected {
+  background: rgba(121, 145, 198, 0.26);
+}
+
+.tokenRow.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--neon-cyan);
+}
+
+/* Footer */
+.footer {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+/* Loading */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 24px;
+  gap: 1rem;
+}
+
+[data-theme="light"] .loadingContainer {
+  background: linear-gradient(135deg, #dde3f0 0%, #c8d3ea 100%);
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-soft);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loadingText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* No Results */
+.noResults {
+  text-align: center;
+  padding: 3rem !important;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tokenSelector {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .stats {
+    width: 100%;
+  }
+
+  .statItem {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tokenTable th,
+  .tokenTable td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .tokenIcon,
+  .tokenIconPlaceholder {
+    width: 28px;
+    height: 28px;
+  }
+
+  .tokenSymbol {
+    font-size: 0.85rem;
+  }
+}

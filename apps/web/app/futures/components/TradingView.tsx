@@ -4,8 +4,8 @@ import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { usePythPriceWithConfidence } from "@/hooks/pyth/usePythPriceWithConfidence";
 import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
 import { UnifiedPriceChart } from "@/components/charts/UnifiedPriceChart";
-import PerpetualCard from "../../futures/components/PerpetualCard";
-import MarketHeader from "../../futures/components/MarketHeader";
+import PerpetualCard from "./PerpetualCard";
+import MarketHeader from "./MarketHeader";
 import styles from "./styles/TradingView.module.css";
 
 interface TradingViewProps {

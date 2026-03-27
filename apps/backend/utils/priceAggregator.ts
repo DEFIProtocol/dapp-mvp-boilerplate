@@ -9,8 +9,8 @@
 //   - Chainlink/Pyth spread exceeds MAX_CHAINLINK_PYTH_DIV_PCT
 //   - Oracle index vs CEX median spread exceeds MAX_ORACLE_VS_CEX_DIV_PCT
 
-import { OracleService } from '../oracle/oracleService';
-import { PythService } from '../pyth/pythService';
+import { OracleService } from '../pricing/oracle/oracleService';
+import { PythService } from '../pricing/pyth/pythService';
 import { globalPriceStore } from './globalPriceStore';
 
 // ======================== THRESHOLDS ========================

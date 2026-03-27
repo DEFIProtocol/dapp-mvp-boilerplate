@@ -78,11 +78,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [address, isConnected]);
 
+  const getWatchlistSymbols = useCallback((): string[] => {
+    const rawList = Array.isArray(user?.watchlist) ? user!.watchlist : [];
+
+    return rawList
+      .map((item: any) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && typeof item.symbol === "string") return item.symbol;
+        return "";
+      })
+      .map((symbol) => String(symbol).trim().toUpperCase())
+      .filter(Boolean);
+  }, [user?.watchlist]);
+
   const isInWatchlist = useCallback((token: { symbol?: string } | string) => {
     const symbol = typeof token === "string" ? token : token?.symbol;
     if (!symbol) return false;
-    return (user?.watchlist || []).some((item) => String(item).toUpperCase() === String(symbol).toUpperCase());
-  }, [user?.watchlist]);
+    const target = String(symbol).toUpperCase();
+    return getWatchlistSymbols().some((item) => item === target);
+  }, [getWatchlistSymbols]);
 
   const toggleWatchlistToken = useCallback(async (token: { symbol?: string } | string) => {
     if (!address || !isConnected) return;
@@ -90,23 +104,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!symbol) return;
 
     try {
-      if (isInWatchlist(symbol)) {
-        await removeFromWatchlist(address, symbol);
-      } else {
-        await addToWatchlist(address, symbol);
+      let ensuredUser = user;
+      if (!ensuredUser) {
+        const existingUser = await getUserByWallet(address);
+        if (existingUser) {
+          ensuredUser = existingUser;
+          setUser(existingUser);
+        } else {
+          const createdUser = await createUser(address);
+          if (createdUser) {
+            ensuredUser = createdUser;
+            setUser(createdUser);
+          }
+        }
       }
-      await refreshUser();
+
+      if (!ensuredUser) {
+        console.error("Unable to ensure user before watchlist toggle");
+        return;
+      }
+
+      let updatedUser: User | null = null;
+      if (isInWatchlist(symbol)) {
+        updatedUser = await removeFromWatchlist(address, symbol);
+      } else {
+        updatedUser = await addToWatchlist(address, symbol);
+      }
+
+      if (updatedUser) {
+        setUser(updatedUser);
+      } else {
+        await refreshUser();
+      }
     } catch (error) {
       console.error("Error toggling watchlist token:", error);
     }
-  }, [address, isConnected, isInWatchlist, refreshUser]);
+  }, [address, isConnected, isInWatchlist, refreshUser, user]);
 
   return (
     <UserContext.Provider
       value={{
         user,
         loading,
-        watchlist: user?.watchlist || [],
+        watchlist: getWatchlistSymbols(),
         refreshUser,
         createUser: handleCreateUser,
         isInWatchlist,

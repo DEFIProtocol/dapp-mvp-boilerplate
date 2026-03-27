@@ -2,24 +2,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useTokens } from "@/contexts/TokenContext";
 import { usePriceStore } from "@/contexts/PriceStoreContext";
 import { useChainContext } from "@/contexts/ChainContext";
+import { useUserContext } from "@/contexts/UserContext";
+import TokenTableView, { TokenTableRow } from "@/components/tables/TokenTableView";
 import styles from "../TokensPage.module.css";
 
 type SortKey = "symbol" | "price" | "marketCap" | "change24h";
 type SortDirection = "asc" | "desc";
-
-interface MergedToken {
-  uuid: string;
-  symbol: string;
-  name: string;
-  image?: string;
-  price: number | null;
-  marketCap: number | null;
-  change24h: number | null;
-}
 
 const FALLBACK_TEXT = "—";
 
@@ -69,16 +60,17 @@ export default function TokensTable() {
   const { tokens, loading: tokensLoading } = useTokens();
   const { priceMap, loading: pricesLoading, error: pricesError } = usePriceStore();
   const { selectedChain, getChainSlug } = useChainContext();
+  const { isInWatchlist, toggleWatchlistToken } = useUserContext();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("marketCap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const mergedTokens = useMemo<MergedToken[]>(() => {
+  const mergedTokens = useMemo<TokenTableRow[]>(() => {
     const chainKey = String(selectedChain || "");
     const aliasKeys = CHAIN_KEY_MAP[chainKey] || [];
 
-    const merged: MergedToken[] = [];
+    const merged: TokenTableRow[] = [];
 
     for (const token of tokens) {
       const chains = normalizeChains(token.chains);
@@ -119,10 +111,11 @@ export default function TokensTable() {
               : null;
 
       merged.push({
-        uuid: token.uuid || "",
+        key: `${symbol}-${token.uuid || ""}`,
         symbol,
         name: token.name || symbol,
         image: token.image,
+        href: token.uuid ? `/market/${getChainSlug(selectedChain)}/${token.uuid}` : undefined,
         price: priceEntry?.price ?? (Number.isFinite(fallbackPrice ?? NaN) ? fallbackPrice : null),
         marketCap: Number.isFinite(marketCap ?? NaN) ? marketCap : null,
         change24h: Number.isFinite(change24h ?? NaN) ? change24h : null,
@@ -130,7 +123,7 @@ export default function TokensTable() {
     }
 
     return merged;
-  }, [tokens, priceMap, selectedChain]);
+  }, [tokens, priceMap, selectedChain, getChainSlug]);
 
   const filteredTokens = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -140,7 +133,7 @@ export default function TokensTable() {
           return (
             token.symbol.toLowerCase().includes(term) ||
             token.name.toLowerCase().includes(term) ||
-            token.uuid.toLowerCase().includes(term)
+            token.key.toLowerCase().includes(term)
           );
         })
       : mergedTokens;
@@ -212,151 +205,25 @@ export default function TokensTable() {
           <span>Price feed error: {pricesError}</span>
         </div>
       )}
-
-      <div className={styles.tableWrapper}>
-        <table className={styles.tokensTable}>
-          <caption className={styles.tableCaption}>Token market overview</caption>
-          <colgroup>
-            <col className={styles.tokenColumn} />
-            <col className={styles.numericColumn} />
-            <col className={styles.numericColumn} />
-            <col className={styles.numericColumn} />
-            <col className={styles.watchColumn} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">
-                <button
-                  type="button"
-                  className={`${styles.sortButton} ${sortKey === "symbol" ? styles.sortButtonActive : ""}`}
-                  onClick={() => handleSort("symbol")}
-                >
-                  <span>Token</span>
-                  <span className={styles.sortMarker}>{getSortMarker("symbol")}</span>
-                </button>
-              </th>
-              <th scope="col" className={styles.numericHeader}>
-                <button
-                  type="button"
-                  className={`${styles.sortButton} ${styles.sortButtonNumeric} ${sortKey === "price" ? styles.sortButtonActive : ""}`}
-                  onClick={() => handleSort("price")}
-                >
-                  <span>Price</span>
-                  <span className={styles.sortMarker}>{getSortMarker("price")}</span>
-                </button>
-              </th>
-              <th scope="col" className={styles.numericHeader}>
-                <button
-                  type="button"
-                  className={`${styles.sortButton} ${styles.sortButtonNumeric} ${sortKey === "change24h" ? styles.sortButtonActive : ""}`}
-                  onClick={() => handleSort("change24h")}
-                >
-                  <span>24h</span>
-                  <span className={styles.sortMarker}>{getSortMarker("change24h")}</span>
-                </button>
-              </th>
-              <th scope="col" className={styles.numericHeader}>
-                <button
-                  type="button"
-                  className={`${styles.sortButton} ${styles.sortButtonNumeric} ${sortKey === "marketCap" ? styles.sortButtonActive : ""}`}
-                  onClick={() => handleSort("marketCap")}
-                >
-                  <span>Market Cap</span>
-                  <span className={styles.sortMarker}>{getSortMarker("marketCap")}</span>
-                </button>
-              </th>
-              <th scope="col" className={styles.watchHeader}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && filteredTokens.length === 0 ? (
-              Array.from({ length: skeletonRows }).map((_, index) => (
-                <tr key={`skeleton-${index}`} className={styles.skeletonRow}>
-                  <td>
-                    <div className={styles.skeletonTokenCell}>
-                      <span className={styles.skeletonIcon} />
-                      <div className={styles.skeletonTextCol}>
-                        <span className={styles.skeletonName} />
-                        <span className={styles.skeletonSubline} />
-                      </div>
-                    </div>
-                  </td>
-                  <td className={styles.numericCell}><span className={styles.skeletonValue} /></td>
-                  <td className={styles.numericCell}><span className={styles.skeletonBadge} /></td>
-                  <td className={styles.numericCell}><span className={styles.skeletonValue} /></td>
-                  <td className={styles.watchCell}><span className={styles.skeletonWatch} /></td>
-                </tr>
-              ))
-            ) : filteredTokens.length === 0 ? (
-              <tr>
-                <td colSpan={5} className={styles.emptyState}>
-                  <div className={styles.emptyIcon}>🔍</div>
-                  <p className={styles.emptyTitle}>No tokens found</p>
-                  <p className={styles.emptyHint}>Try adjusting your search or chain selection</p>
-                </td>
-              </tr>
-            ) : (
-              filteredTokens.map((token) => (
-                <tr key={`${token.symbol}-${token.uuid}`} className={styles.tokenRow}>
-                  <td className={styles.symbolCell}>
-                    <div className={styles.tokenInfo}>
-                      <div className={styles.tokenLogoWrap}>
-                        {token.image ? (
-                          <img src={token.image} alt={token.symbol} className={styles.tokenIcon} />
-                        ) : (
-                          <span className={styles.tokenIconFallback}>{token.symbol.slice(0, 1) || "?"}</span>
-                        )}
-                      </div>
-                      <div className={styles.tokenDetails}>
-                        {token.uuid ? (
-                          <Link href={`/market/${getChainSlug(selectedChain)}/${token.uuid}`} className={styles.tokenName}>
-                            {token.name || token.symbol || FALLBACK_TEXT}
-                          </Link>
-                        ) : (
-                          <span className={styles.tokenName}>{token.name || token.symbol || FALLBACK_TEXT}</span>
-                        )}
-                        <div className={styles.tokenSymbol}>{token.symbol || FALLBACK_TEXT}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className={`${styles.priceCell} ${styles.numericCell}`}>
-                    <span className={styles.priceValue}>{formatPrice(token.price)}</span>
-                  </td>
-                  <td className={styles.numericCell}>
-                    {token.change24h === null ? (
-                      FALLBACK_TEXT
-                    ) : (
-                      <span
-                        className={`${styles.changeBadge} ${
-                          token.change24h >= 0 ? styles.changePositive : styles.changeNegative
-                        }`}
-                      >
-                        {token.change24h > 0 ? "+" : ""}
-                        {token.change24h.toFixed(2)}%
-                      </span>
-                    )}
-                  </td>
-                  <td className={styles.numericCell}>
-                    <span className={styles.marketCapValue}>{formatMarketCap(token.marketCap)}</span>
-                  </td>
-                  <td className={styles.watchCell}>
-                    <button
-                      type="button"
-                      className={styles.watchButton}
-                      title="Add to watchlist"
-                      disabled
-                    >
-                      <svg className={styles.watchIcon} viewBox="0 0 24 24" fill="none">
-                        <path d="M12 4L14.5 9.5L20.5 10.5L16.5 14.5L17.5 20.5L12 17.5L6.5 20.5L7.5 14.5L3.5 10.5L9.5 9.5L12 4Z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <TokenTableView
+        styles={styles}
+        rows={filteredTokens}
+        isLoading={isLoading}
+        skeletonRows={skeletonRows}
+        emptyTitle="No tokens found"
+        emptyHint="Try adjusting your search or chain selection"
+        sortKey={sortKey}
+        getSortMarker={getSortMarker}
+        onSort={handleSort}
+        isInWatchlist={isInWatchlist}
+        onToggleWatchlist={async (symbol, event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await toggleWatchlistToken(symbol);
+        }}
+        formatPrice={formatPrice}
+        formatMarketCap={formatMarketCap}
+      />
     </section>
   );
 }

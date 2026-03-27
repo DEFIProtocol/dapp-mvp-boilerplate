@@ -1,22 +1,3 @@
-// Update user by wallet address
-export async function updateUserByWallet(
-  wallet_address: string,
-  data: Partial<User>
-): Promise<User | null> {
-  try {
-    const response = await fetch(`${API_BASE}/users/wallet/${wallet_address}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error('Failed to update user');
-    const resData = await response.json();
-    return resData.data;
-  } catch (error) {
-    console.error('Error updating user by wallet:', error);
-    return null;
-  }
-}
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 export interface User {
@@ -31,6 +12,33 @@ export interface User {
   updated_at?: string;
 }
 
+const unwrapUser = (payload: any): User | null => {
+  if (!payload) return null;
+  if (payload.data) return payload.data as User;
+  if (payload.wallet_address) return payload as User;
+  return null;
+};
+
+// Update user by wallet address
+export async function updateUserByWallet(
+  wallet_address: string,
+  data: Partial<User>
+): Promise<User | null> {
+  try {
+    const response = await fetch(`${API_BASE}/users/wallet/${wallet_address}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update user');
+    const resData = await response.json();
+    return unwrapUser(resData);
+  } catch (error) {
+    console.error('Error updating user by wallet:', error);
+    return null;
+  }
+}
+
 export async function getUserByWallet(address: string): Promise<User | null> {
   try {
     const response = await fetch(`${API_BASE}/users/wallet/${address}`);
@@ -39,7 +47,7 @@ export async function getUserByWallet(address: string): Promise<User | null> {
       throw new Error('Failed to fetch user');
     }
     const data = await response.json();
-    return data.data; // The API wraps data in { success: true, data: ... }
+    return unwrapUser(data);
   } catch (error) {
     console.error('Error fetching user:', error);
     return null;
@@ -55,7 +63,7 @@ export async function createUser(wallet_address: string): Promise<User | null> {
     });
     if (!response.ok) throw new Error('Failed to create user');
     const data = await response.json();
-    return data.data;
+    return unwrapUser(data);
   } catch (error) {
     console.error('Error creating user:', error);
     return null;
@@ -74,7 +82,7 @@ export async function updateUserWatchlist(
     });
     if (!response.ok) throw new Error('Failed to update watchlist');
     const data = await response.json();
-    return data.data;
+    return unwrapUser(data);
   } catch (error) {
     console.error('Error updating watchlist:', error);
     return null;
@@ -91,9 +99,23 @@ export async function addToWatchlist(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet_address, tokenSymbol }),
     });
-    if (!response.ok) throw new Error('Failed to add to watchlist');
+    if (!response.ok) {
+      const raw = await response.text();
+      let message = `Failed to add to watchlist (${response.status})`;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.error) message = `${message}: ${parsed.error}`;
+          else if (parsed?.message) message = `${message}: ${parsed.message}`;
+          else message = `${message}: ${raw}`;
+        } catch {
+          message = `${message}: ${raw}`;
+        }
+      }
+      throw new Error(message);
+    }
     const data = await response.json();
-    return data.data;
+    return unwrapUser(data);
   } catch (error) {
     console.error('Error adding to watchlist:', error);
     return null;
@@ -110,9 +132,23 @@ export async function removeFromWatchlist(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet_address, tokenSymbol }),
     });
-    if (!response.ok) throw new Error('Failed to remove from watchlist');
+    if (!response.ok) {
+      const raw = await response.text();
+      let message = `Failed to remove from watchlist (${response.status})`;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.error) message = `${message}: ${parsed.error}`;
+          else if (parsed?.message) message = `${message}: ${parsed.message}`;
+          else message = `${message}: ${raw}`;
+        } catch {
+          message = `${message}: ${raw}`;
+        }
+      }
+      throw new Error(message);
+    }
     const data = await response.json();
-    return data.data;
+    return unwrapUser(data);
   } catch (error) {
     console.error('Error removing from watchlist:', error);
     return null;

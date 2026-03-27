@@ -316,8 +316,8 @@ export async function addToWatchlist(
     `UPDATE users
      SET watchlist = 
        CASE 
-         WHEN watchlist IS NULL THEN jsonb_build_array($2)
-         WHEN NOT (watchlist ? $2) THEN watchlist || jsonb_build_array($2)
+         WHEN watchlist IS NULL THEN jsonb_build_array($2::text)
+         WHEN NOT (watchlist ? $2::text) THEN watchlist || jsonb_build_array($2::text)
          ELSE watchlist
        END,
        updated_at = NOW()
@@ -341,7 +341,7 @@ export async function removeFromWatchlist(
   
   const result = await pool.query(
     `UPDATE users
-     SET watchlist = watchlist - $2,
+     SET watchlist = watchlist - $2::text,
          updated_at = NOW()
      WHERE id = $1
      RETURNING *`,

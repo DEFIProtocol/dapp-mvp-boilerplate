@@ -4,18 +4,20 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path"; // Add this import
 import infuraRouter from "./routes/infura";
-import usersRouter from "./routes/users";
-import tokensRouter from "./routes/tokens";
-import coinbasePricingRouter from "./routes/coinbasePricing";
-import binancePricingRouter from "./routes/binancePricing";
-import coinRankingRouter from "./routes/coinRanking";
+import usersRouter from "./routes/database/users";
+import tokensRouter from "./routes/database/tokens";
+import coinbasePricingRouter from "./routes/pricing/coinbasePricing";
+import binancePricingRouter from "./routes/pricing/binancePricing";
+import coinRankingRouter from "./routes/pricing/coinRanking";
 import oneInchRouter from "./routes/oneInchTokens";
-import pricesRouter from "./routes/prices";
-import klineRoutes from "./routes/klineRoutes";
-import oracleRouter from "./routes/oracle";
-import pythRouter from "./routes/pyth"; // Import Pyth router
-import priceAggregatorRouter from "./routes/priceAggregator";
-import perpsRouter from "./routes/perps"; // Your routes
+import pricesRouter from "./routes/pricing/prices";
+import klineRoutes from "./routes/pricing/klineRoutes";
+import oracleRouter from "./routes/pricing/oracle";
+import pythRouter from "./routes/pricing/pyth"; // Import Pyth router
+import priceAggregatorRouter from "./routes/pricing/priceAggregator";
+import perpsRouter from "./routes/database/perps"; // Your routes
+import fiatOnRampRouter from "./routes/fiatOnRamp";
+import transfersRouter from "./routes/transfers";
 //import smartContractsRouter from "./routes/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
 import * as perpsHelpers from "./postgres/perps"; // Import your helpers (adjust path if needed)
@@ -80,6 +82,8 @@ app.use('/api/klines', klineRoutes);
 app.use("/api/oracle", oracleRouter);
 app.use("/api/pyth", pythRouter); // Add Pyth routes
 app.use("/api/aggregator", priceAggregatorRouter); // Validated index+mark prices
+app.use("/api/coinbase-onramp", fiatOnRampRouter);
+app.use("/api/transfers", transfersRouter);
 //app.use("/api/smart-contracts", smartContractsRouter(pool));
 app.use("/api/contract-sim", contractSimulationRouter());
 

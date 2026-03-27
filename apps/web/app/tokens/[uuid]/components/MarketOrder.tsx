@@ -27,7 +27,7 @@ const nativePriceFallbacks: Record<string, number> = {
 export default function MarketOrder({ usdPrice, tokenName, symbol, decimals }: MarketOrderProps) {
   const { address } = useAccount();
   const { selectedChain, getChainLabel, availableChains } = useChainContext();
-  const { getPrice, refreshPrices } = usePriceStore();
+  const { priceMap, refresh } = usePriceStore();
   const { tokens } = useTokens();
   
   const [amount, setAmount] = useState("");
@@ -45,10 +45,10 @@ export default function MarketOrder({ usdPrice, tokenName, symbol, decimals }: M
   }, [selectedChain]);
 
   const nativePrice = useMemo(() => {
-    const price = getPrice?.(nativeSymbol);
+    const price = priceMap[nativeSymbol.toUpperCase()];
     if (price?.price) return Number(price.price);
     return nativePriceFallbacks[nativeSymbol] || 0;
-  }, [getPrice, nativeSymbol]);
+  }, [priceMap, nativeSymbol]);
 
   const tokenUsdPrice = useMemo(() => Number(usdPrice) || 0, [usdPrice]);
   const pricePerToken = nativePrice && tokenUsdPrice 
@@ -57,7 +57,7 @@ export default function MarketOrder({ usdPrice, tokenName, symbol, decimals }: M
 
   const handleRefreshPrices = async () => {
     setIsRefreshing(true);
-    if (refreshPrices) await refreshPrices();
+    refresh();
     setIsRefreshing(false);
   };
 
