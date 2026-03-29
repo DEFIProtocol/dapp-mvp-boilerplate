@@ -1,0 +1,424 @@
+/* app/crypto/components/styles/MarketHeader.module.css */
+.header {
+  width: 85vw;
+  position: sticky;
+  top: 0;
+  margin-left: calc(50% - 42.5vw);
+  z-index: 1000;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 0.75rem 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 16px 16px;
+  transition: background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+[data-theme="light"] .header {
+  background: linear-gradient(135deg, #dde3f0 0%, #c8d3ea 100%);
+  box-shadow: 0 4px 20px rgba(100, 120, 180, 0.18);
+  border-bottom: 1px solid rgba(100, 120, 180, 0.2);
+}
+
+.headerContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  color: var(--text-inverse);
+}
+
+[data-theme="light"] .headerContent {
+  color: #1a1a2e;
+}
+
+.header.scrolled {
+  padding: 0.5rem 0;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .header.scrolled {
+  background: linear-gradient(135deg, rgba(221, 227, 240, 0.97), rgba(200, 211, 234, 0.97));
+  box-shadow: 0 8px 32px rgba(100, 120, 180, 0.2);
+}
+
+/* Token Section */
+.tokenSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 200px;
+}
+
+.tokenIconWrapper {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  padding: 0.25rem;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tokenIconWrapper:hover {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: rgba(0, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.tokenIcon {
+  width: 40px;
+  height: 40px;
+  background: var(--surface);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.tokenIconWrapper:hover .tokenIcon {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.tokenIconImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tokenNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tokenName {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-inverse);
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+[data-theme="light"] .tokenName {
+  color: #1a1a2e;
+}
+
+.tokenSymbol {
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.tokenSymbol:hover {
+  background: rgba(0, 255, 255, 0.2);
+  color: var(--neon-cyan);
+}
+
+.maxLeverage {
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 700;
+  color: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.maxLeverage:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.confidence {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-mono);
+}
+
+/* Price Section */
+.priceSection {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 160px;
+  transition: all 0.3s ease;
+}
+
+.priceSection:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(0, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.priceContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.priceLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="light"] .priceLabel {
+  color: rgba(26, 26, 46, 0.65);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.price {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-inverse);
+  font-family: 'Roboto Mono', monospace;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+[data-theme="light"] .price {
+  color: #1a1a2e;
+  text-shadow: 0 2px 4px rgba(100, 120, 180, 0.15);
+}
+
+.priceSection:hover .price {
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.priceChange {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.priceChange.positive {
+  background: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.priceChange.negative {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fecaca;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex: 1;
+  justify-content: flex-end;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.statsGrid::-webkit-scrollbar {
+  height: 3px;
+}
+
+.statsGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.statsGrid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 70px;
+  text-align: right;
+  transition: all 0.3s ease;
+  cursor: default;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+}
+
+.statItem:hover {
+  background: rgba(0, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.statLabel {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+[data-theme="light"] .statLabel {
+  color: rgba(26, 26, 46, 0.55);
+}
+
+.statItem:hover .statLabel {
+  color: rgba(0, 255, 255, 0.8);
+}
+
+.statValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-inverse);
+  font-family: 'Roboto Mono', monospace;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+[data-theme="light"] .statValue {
+  color: #1a1a2e;
+  text-shadow: none;
+}
+
+.statItem:hover .statValue {
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+.statValue.positive {
+  color: #a7f3d0;
+}
+
+.statValue.negative {
+  color: #fecaca;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .headerContent {
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .statsGrid {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .headerContent {
+    flex-wrap: wrap;
+  }
+
+  .tokenSection {
+    min-width: auto;
+  }
+
+  .priceSection {
+    order: 3;
+    width: 100%;
+  }
+
+  .statsGrid {
+    order: 2;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    width: 95vw;
+    margin-left: calc(50% - 47.5vw);
+    border-radius: 0 0 12px 12px;
+  }
+
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .tokenSection {
+    width: 100%;
+  }
+
+  .priceSection {
+    width: 100%;
+  }
+
+  .statsGrid {
+    width: 100%;
+    padding-bottom: 0.25rem;
+  }
+
+  .tokenName {
+    font-size: 1.1rem;
+  }
+
+  .price {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tokenNameRow {
+    flex-wrap: wrap;
+  }
+
+  .statItem {
+    min-width: 60px;
+  }
+
+  .statValue {
+    font-size: 0.8rem;
+  }
+}
+
+/* Subtle animations */
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
