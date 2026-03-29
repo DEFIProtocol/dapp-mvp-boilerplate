@@ -3,7 +3,7 @@
 import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { usePythPriceWithConfidence } from "@/hooks/pyth/usePythPriceWithConfidence";
 import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
-import { UnifiedPriceChart } from "@/components/charts/UnifiedPriceChart";
+import { UnifiedPriceChart } from "@/components/charts";
 import PerpetualCard from "../../futures/components/PerpetualCard";
 import MarketHeader from "../../futures/components/MarketHeader";
 import styles from "./styles/TradingView.module.css";
@@ -80,6 +80,7 @@ export default function TradingView({
               candles={candles}
               symbol={selectedSymbol}
               exchange={exchange || "Loading"}
+              surface="crypto"
               onTimeframeChange={onTimeframeChange}
               selectedTimeframe={selectedTimeframe}
               isLoading={chartLoading}

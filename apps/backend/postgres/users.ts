@@ -4,8 +4,10 @@ export interface UserRow {
   id?: string;
   wallet_address: string;
   email?: string;
+  email_verified?: boolean;
   username?: string;
   chain_addresses?: any;
+  preferences?: any;
   watchlist?: any;
   is_verified_by_coinbase?: boolean;
   created_at?: string;
@@ -69,8 +71,10 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       wallet_address VARCHAR(66) UNIQUE NOT NULL,
       email VARCHAR(255),
+      email_verified BOOLEAN DEFAULT FALSE,
       username VARCHAR(50),
       chain_addresses JSONB,
+      preferences JSONB,
       watchlist JSONB,
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW(),
@@ -80,6 +84,8 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
 
   // Add watchlist column if it doesn't exist (for backward compatibility)
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS watchlist JSONB');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
 
   tableReady = true;
 }
@@ -93,8 +99,10 @@ export function mapUserRow(row: any): UserRow | null {
     id: row.id,
     wallet_address: row.wallet_address,
     email: row.email,
+    email_verified: row.email_verified,
     username: row.username,
     chain_addresses: row.chain_addresses,
+    preferences: row.preferences,
     watchlist: row.watchlist,
     is_verified_by_coinbase: row.is_verified_by_coinbase,
     created_at: row.created_at,
@@ -139,9 +147,11 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
   const { 
     wallet_address, 
     email, 
+    email_verified,
     username, 
     is_verified_by_coinbase, 
     chain_addresses, 
+    preferences,
     watchlist 
   } = data;
   
@@ -154,22 +164,26 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
   const payload = {
     wallet_address: normalizedWallet,
     email: email || null,
+    email_verified: email_verified === true,
     username: username || null,
     is_verified_by_coinbase: is_verified_by_coinbase === true,
     chain_addresses: normalizeJsonb(chain_addresses),
+    preferences: normalizeJsonb(preferences),
     watchlist: normalizeJsonb(watchlist)
   };
 
   try {
     const result = await pool.query(
-      `INSERT INTO users (wallet_address, email, username, chain_addresses, watchlist, is_verified_by_coinbase)
-       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6)
+      `INSERT INTO users (wallet_address, email, email_verified, username, chain_addresses, preferences, watchlist, is_verified_by_coinbase)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)
        RETURNING *`,
       [
         payload.wallet_address,
         payload.email,
+        payload.email_verified,
         payload.username,
         payload.chain_addresses,
+        payload.preferences,
         payload.watchlist,
         payload.is_verified_by_coinbase
       ]
@@ -196,27 +210,33 @@ export async function updateUser(
   
   const { 
     email, 
+    email_verified,
     username, 
     is_verified_by_coinbase, 
     chain_addresses, 
+    preferences,
     watchlist 
   } = data;
 
   const result = await pool.query(
     `UPDATE users
      SET email = COALESCE($2, email),
-         username = COALESCE($3, username),
-         chain_addresses = COALESCE($4::jsonb, chain_addresses),
-         watchlist = COALESCE($5::jsonb, watchlist),
-         is_verified_by_coinbase = COALESCE($6, is_verified_by_coinbase),
+         email_verified = COALESCE($3, email_verified),
+         username = COALESCE($4, username),
+         chain_addresses = COALESCE($5::jsonb, chain_addresses),
+         preferences = COALESCE($6::jsonb, preferences),
+         watchlist = COALESCE($7::jsonb, watchlist),
+         is_verified_by_coinbase = COALESCE($8, is_verified_by_coinbase),
          updated_at = NOW()
      WHERE id = $1
      RETURNING *`,
     [
       id,
       email ?? null,
+      email_verified,
       username ?? null,
       normalizeJsonb(chain_addresses),
+      normalizeJsonb(preferences),
       normalizeJsonb(watchlist),
       is_verified_by_coinbase
     ]
@@ -243,27 +263,33 @@ export async function updateUserByWallet(
 
   const { 
     email, 
+    email_verified,
     username, 
     is_verified_by_coinbase, 
     chain_addresses, 
+    preferences,
     watchlist 
   } = data;
 
   const result = await pool.query(
     `UPDATE users
      SET email = COALESCE($2, email),
-         username = COALESCE($3, username),
-         chain_addresses = COALESCE($4::jsonb, chain_addresses),
-         watchlist = COALESCE($5::jsonb, watchlist),
-         is_verified_by_coinbase = COALESCE($6, is_verified_by_coinbase),
+         email_verified = COALESCE($3, email_verified),
+         username = COALESCE($4, username),
+         chain_addresses = COALESCE($5::jsonb, chain_addresses),
+         preferences = COALESCE($6::jsonb, preferences),
+         watchlist = COALESCE($7::jsonb, watchlist),
+         is_verified_by_coinbase = COALESCE($8, is_verified_by_coinbase),
          updated_at = NOW()
      WHERE wallet_address = $1
      RETURNING *`,
     [
       walletAddress,
       email ?? null,
+      email_verified,
       username ?? null,
       normalizeJsonb(chain_addresses),
+      normalizeJsonb(preferences),
       normalizeJsonb(watchlist),
       is_verified_by_coinbase
     ]

@@ -153,8 +153,6 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
                 </span>
               </th>
               <th className={styles.centerHeader}>Watch</th>
-              <th className={styles.centerHeader}>Max Lev</th>
-              <th className={styles.centerHeader}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -183,7 +181,10 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
                         </div>
                       )}
                       <div>
-                        <div className={styles.tokenSymbol}>{token.symbol}</div>
+                        <div className={styles.tokenSymbolRow}>
+                          <div className={styles.tokenSymbol}>{token.symbol}</div>
+                          <span className={styles.inlineLeverageBadge}>{token.max_leverage}x</span>
+                        </div>
                         <div className={styles.tokenName}>{token.name}</div>
                       </div>
                     </div>
@@ -224,24 +225,12 @@ export default function TokenSelector({ onSelectToken, selectedSymbol }: TokenSe
                       </svg>
                     </button>
                   </td>
-                  
-                  {/* Max Leverage Column */}
-                  <td className={styles.centerCell}>
-                    <span className={styles.leverageBadge}>{token.max_leverage}x</span>
-                  </td>
-                  
-                  {/* Status Column */}
-                  <td className={styles.centerCell}>
-                    <span className={`${styles.statusBadge} ${token.is_active ? styles.active : ''}`}>
-                      {token.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
                 </tr>
               );
             })}
             {filteredAndSortedTokens.length === 0 && (
               <tr>
-                <td colSpan={7} className={styles.noResults}>
+                <td colSpan={5} className={styles.noResults}>
                   No matching markets found
                 </td>
               </tr>

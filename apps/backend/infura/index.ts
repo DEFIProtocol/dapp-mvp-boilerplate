@@ -53,6 +53,7 @@ const chainConfig: Record<
   { network: string | null; key: string; nativeSymbol: string }
 > = {
   "1": { network: "mainnet", key: "ethereum", nativeSymbol: "ETH" },
+  "8453": { network: "base-mainnet", key: "base", nativeSymbol: "ETH" },
   "137": { network: "polygon-mainnet", key: "polygon", nativeSymbol: "MATIC" },
   "42161": { network: "arbitrum-mainnet", key: "arbitrum", nativeSymbol: "ETH" },
   "43114": { network: "avalanche-mainnet", key: "avalanche", nativeSymbol: "AVAX" },

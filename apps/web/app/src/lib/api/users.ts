@@ -1,11 +1,41 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
+import type { UserChartPreferences } from "@/lib/chartPreferences";
+
+export interface UserPreferences {
+  theme: string;
+  defaultView: string;
+  notifications: {
+    email: {
+      tradeExecuted: boolean;
+      orderFilled: boolean;
+      priceAlerts: boolean;
+      securityAlerts: boolean;
+      newsletter: boolean;
+    };
+  };
+  trading: {
+    slippageTolerance: number;
+    defaultOrderType: string;
+    showConfirmationDialogs: boolean;
+    favoritePairs: string[];
+  };
+  privacy: {
+    showBalanceInNav: boolean;
+    shareTradingActivity: boolean;
+  };
+  enabledChains: number[];
+  chart: UserChartPreferences;
+}
+
 export interface User {
   id: string;
   wallet_address: string;
   email?: string;
+  email_verified?: boolean;
   username?: string;
   chain_addresses?: Record<string, any>;
+  preferences?: Partial<UserPreferences>;
   watchlist?: string[];
   is_verified_by_coinbase?: boolean;
   created_at?: string;
@@ -35,6 +65,25 @@ export async function updateUserByWallet(
     return unwrapUser(resData);
   } catch (error) {
     console.error('Error updating user by wallet:', error);
+    return null;
+  }
+}
+
+export async function patchUserPreferencesByWallet(
+  wallet_address: string,
+  patch: Partial<UserPreferences>
+): Promise<User | null> {
+  try {
+    const response = await fetch(`${API_BASE}/users/wallet/${wallet_address}/preferences`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) throw new Error('Failed to patch user preferences');
+    const resData = await response.json();
+    return unwrapUser(resData);
+  } catch (error) {
+    console.error('Error patching user preferences:', error);
     return null;
   }
 }

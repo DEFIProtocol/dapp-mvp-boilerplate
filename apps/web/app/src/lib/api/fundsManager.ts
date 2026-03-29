@@ -122,21 +122,53 @@ export async function createCoinbasePaySession(input: {
   asset: string;
   walletAddress: string;
   chain: string;
-}): Promise<{ paymentUrl: string; session: any }> {
-  const response = await fetch(`${API_BASE}/coinbase-onramp/create-pay-session`, {
+}): Promise<{ paymentUrl: string; session: any; sessionToken?: string }> {
+  let response = await fetch(`${API_BASE}/coinbase-onramp/create-session-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      amount: input.amount,
+      asset: input.asset,
+      walletAddress: input.walletAddress,
+      blockchains: [input.chain],
+      redirectUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+    }),
   });
+
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE}/coinbase-onramp/create-pay-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: input.amount,
+        asset: input.asset,
+        walletAddress: input.walletAddress,
+        chain: input.chain,
+      }),
+    });
+  }
 
   const payload = await response.json();
 
   if (!response.ok || !payload.success) {
-    throw new Error(payload.error || "Failed to create Coinbase Pay session");
+    throw new Error(payload.error || payload.message || "Failed to create Coinbase Pay session");
+  }
+
+  const sessionToken = payload.sessionToken as string | undefined;
+  const fallbackSessionToken = payload?.session?.sessionId as string | undefined;
+  const basePaymentUrl = payload.paymentUrl as string | undefined;
+  const effectiveSessionToken = sessionToken || fallbackSessionToken;
+  const paymentUrl = effectiveSessionToken
+    ? `https://pay.coinbase.com/buy/select-asset?sessionToken=${encodeURIComponent(effectiveSessionToken)}`
+    : basePaymentUrl;
+
+  if (!paymentUrl) {
+    throw new Error("Failed to create Coinbase Pay session URL");
   }
 
   return {
-    paymentUrl: payload.paymentUrl,
+    paymentUrl,
     session: payload.session,
+    sessionToken: effectiveSessionToken,
   };
 }

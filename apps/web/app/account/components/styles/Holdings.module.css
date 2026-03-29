@@ -104,6 +104,66 @@
   margin: 0;
 }
 
+.footerMeta {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rangeInfo {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.paginationWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-soft);
+}
+
+.pageButton {
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text-muted-strong);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: var(--accent-gradient);
+  color: var(--text-inverse);
+  transform: translateY(-1px);
+}
+
+.pageButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0 0.35rem;
+}
+
+.sectionHint {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
 /* Holdings List */
 .holdingsList {
   display: flex;
@@ -206,6 +266,11 @@
 @media (max-width: 768px) {
   .holdingsCard {
     padding: 1.25rem;
+  }
+
+  .footerMeta {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .holdingRow {

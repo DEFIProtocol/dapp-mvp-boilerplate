@@ -28,7 +28,8 @@ export class SettlementService {
       throw new Error("Invalid EVM_PRIVATE_KEY format. Expected a 32-byte hex key prefixed with 0x.");
     }
 
-    const provider = new ethers.JsonRpcProvider(`https://base-sepolia.infura.io/v3/${infuraApiKey}`);
+    const network = process.env.SETTLEMENT_NETWORK || "base-sepolia";
+    const provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
     const wallet = new ethers.Wallet(privateKey, provider);
 
     this.contract = new ethers.Contract(

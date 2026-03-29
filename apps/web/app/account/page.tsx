@@ -18,34 +18,45 @@ export default function AccountPage() {
   const { address } = useAccount();
   const router = useRouter();
   const { selectedChain, getChainLabel } = useChainContext();
-  const { user, watchlist } = useUser();
+  const { watchlist } = useUser();
   const { tokens } = useTokens();
   
   const [loading, setLoading] = useState(false);
   const [nativeBalance, setNativeBalance] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [totalValue, setTotalValue] = useState<string>("0.00");
 
   useEffect(() => {
     if (!address) return;
+
+    const controller = new AbortController();
+    let isMounted = true;
 
     const loadHoldings = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const data = await fetchHoldings(address, selectedChain);
+        const data = await fetchHoldings(address, selectedChain, controller.signal);
+        if (!isMounted) return;
         setNativeBalance(data.nativeBalance?.balance || null);
         setHoldings(data.holdings || []);
       } catch (err: any) {
+        if (!isMounted || err?.name === "AbortError") return;
         setError(err.message || "Failed to load holdings");
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadHoldings();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [address, selectedChain]);
 
   if (!address) {

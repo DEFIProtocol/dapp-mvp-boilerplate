@@ -11,7 +11,7 @@ import { useUserContext } from "@/contexts/UserContext";
 import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { Check, Plus, Star, ArrowLeft, ExternalLink, Copy, RefreshCw } from "lucide-react";
 import styles from "./TokenDetails.module.css";
-import { UnifiedPriceChart } from "../../src/components/charts/UnifiedPriceChart";
+import { UnifiedPriceChart } from "@/components/charts";
 import MarketOrder from "./components/MarketOrder";
 
 // Format large numbers
@@ -282,6 +282,7 @@ export default function TokenDetailsPage() {
               candles={candles}
               symbol={combinedData.symbol}
               exchange={exchange || "Loading"}
+              surface="token"
               onTimeframeChange={setTimePeriod}
               selectedTimeframe={timePeriod}
               isLoading={chartLoading}

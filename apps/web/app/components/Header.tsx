@@ -47,7 +47,7 @@ export function Header() {
   const chainDropdownRef = useRef<HTMLDivElement>(null);
   const previousChainRef = useRef<number | null>(null);
 
-  const { switchChain, isPending } = useSwitchChain();
+  const { switchChainAsync, isPending } = useSwitchChain();
   const chainSymbol = NATIVE_SYMBOL_BY_CHAIN[selectedChain] || "ETH";
 
   // Handle chain switching updates
@@ -96,20 +96,39 @@ export function Header() {
     }
   }, [selectedChain, getChainLabel]);
 
+  // Sync app state when the user switches chains directly in MetaMask
+  useEffect(() => {
+    if (!chain?.id) return;
+    if (chain.id === selectedChain) return;
+    const supported = availableChains.find((c) => c.id === chain.id);
+    if (supported) {
+      setSelectedChain(chain.id);
+    }
+  }, [chain?.id, selectedChain, availableChains, setSelectedChain]);
+
   const handleChainSwitch = async (chainId: number) => {
     setChainLoading(true);
     setIsChainDropdownOpen(false);
-    setSelectedChain(chainId);
+
+    // If no wallet connected, just update app context (no MetaMask prompt)
+    if (!isConnected) {
+      setSelectedChain(chainId);
+      setChainLoading(false);
+      return;
+    }
+
     setToastMessage("Changing chain...");
     setShowToast(true);
-    
+
     try {
-      await switchChain({ chainId });
+      await switchChainAsync({ chainId });
+      setSelectedChain(chainId); // only update AFTER MetaMask confirms
       const label = getChainLabel?.(chainId) || `Chain ${chainId}`;
       setToastMessage(`Switched to ${label}`);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      setToastMessage("Failed to switch chain");
+      // User rejected or switch failed — do NOT update selectedChain
+      setToastMessage("Chain switch cancelled");
       setTimeout(() => setShowToast(false), 3000);
     } finally {
       setChainLoading(false);

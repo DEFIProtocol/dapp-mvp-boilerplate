@@ -191,7 +191,7 @@ export const createPaySession = async (request: PaySessionRequest): Promise<{ se
   };
 
   // Generate a payment URL
-  const paymentUrl: string = `https://pay.coinbase.com/buy/select-asset?session=${sessionId}`;
+  const paymentUrl: string = `https://pay.coinbase.com/buy/select-asset?sessionToken=${sessionId}`;
 
   console.log('Session created successfully:', sessionId);
 

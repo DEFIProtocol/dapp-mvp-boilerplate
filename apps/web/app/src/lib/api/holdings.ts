@@ -19,15 +19,23 @@ export interface HoldingsResponse {
 
 export async function fetchHoldings(
   address: string,
-  chainId: string | number
+  chainId: string | number,
+  signal?: AbortSignal
 ): Promise<HoldingsResponse> {
   const response = await fetch(
-    `${API_BASE}/infura/holdings?address=${address}&chainId=${chainId}`
+    `${API_BASE}/infura/holdings?address=${address}&chainId=${chainId}`,
+    { signal }
   );
   
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch holdings');
+    let message = 'Failed to fetch holdings';
+    try {
+      const error = await response.json();
+      message = error.error || message;
+    } catch {
+      message = response.statusText || message;
+    }
+    throw new Error(message);
   }
   
   return response.json();

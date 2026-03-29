@@ -1,0 +1,768 @@
+/* app/account/settings/SettingsPage.module.css */
+
+.pageContainer {
+  position: relative;
+  min-height: 100vh;
+  background: var(--dark-bg);
+  overflow-x: hidden;
+}
+
+.gradientBg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--cyber-gradient-bg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.main {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Header */
+.headerCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.headerCard:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  background: var(--glow-base);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neon-cyan);
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--cyber-text-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+.saveButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--glow-primary);
+  border: 1px solid var(--glass-border);
+  border-radius: 40px;
+  color: var(--neon-cyan);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: auto;
+  min-height: auto;
+}
+
+.saveButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--glow-primary);
+  border-color: var(--neon-cyan);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Settings Grid */
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+/* Settings Card */
+.settingsCard {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 1.5rem;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease-out;
+}
+
+.settingsCard:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: var(--card-shadow-hover);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardIcon {
+  width: 36px;
+  height: 36px;
+  background: var(--glow-base);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neon-cyan);
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.cardDescription {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0.125rem 0 0 0;
+}
+
+/* Chains Grid */
+.chainsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.chainCard {
+  background: var(--glow-base);
+  border-radius: 16px;
+  padding: 1rem;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chainCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.chainCard:hover::before {
+  transform: translateX(100%);
+}
+
+.chainCard.connected {
+  border-color: var(--neon-cyan);
+  background: var(--glow-primary);
+}
+
+.chainCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chainStatus {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.chainStatus.connected {
+  background: var(--neon-green);
+  box-shadow: 0 0 8px var(--neon-green);
+}
+
+.chainStatus.disconnected {
+  background: var(--text-muted);
+}
+
+.chainName {
+  font-weight: 500;
+  color: var(--text-strong);
+  font-size: 0.875rem;
+}
+
+.chainAddress {
+  background: var(--glass-bg);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--glass-border);
+  font-size: 0.7rem;
+}
+
+.addressLabel {
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.125rem;
+}
+
+.addressValue {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.chainCardFooter {
+  margin-top: auto;
+}
+
+.chainButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.connectButton {
+  background: var(--glow-primary);
+  color: var(--neon-cyan);
+  border: 1px solid var(--glass-border);
+}
+
+.connectButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px var(--glow-primary);
+}
+
+.disconnectButton {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.disconnectButton:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Email Input */
+.emailGroup {
+  margin-bottom: 1.5rem;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--glow-primary);
+}
+
+.emailInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.75rem 0.5rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.emailInput::placeholder {
+  color: var(--text-muted);
+}
+
+.verifyButton {
+  padding: 0.375rem 0.75rem;
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--neon-cyan);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.verifyButton:hover {
+  background: var(--glow-primary);
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 20px;
+  color: var(--neon-green);
+  font-size: 0.7rem;
+  margin-top: 0.5rem;
+}
+
+/* Toggle Switches */
+.toggleItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--glow-base);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.toggleItem:last-child {
+  margin-bottom: 0;
+}
+
+.toggleItem:hover {
+  border-color: var(--neon-cyan);
+  transform: translateX(2px);
+}
+
+.toggleLabel {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggleInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 34px;
+  transition: 0.3s;
+}
+
+.toggleSlider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.toggleInput:checked + .toggleSlider {
+  background-color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+}
+
+.toggleInput:checked + .toggleSlider:before {
+  transform: translateX(20px);
+  background-color: var(--text-inverse);
+}
+
+/* Chart Summary */
+.chartSummarySection {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.chartSurfaceCard {
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.chartSurfaceTitle {
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.chartSurfaceMeta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.chartSurfaceMeta span {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: var(--neon-cyan);
+  background: var(--glow-primary);
+  border: 1px solid var(--glass-border);
+}
+
+.chartSurfaceIndicators {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.indicatorListWrap {
+  background: var(--glow-base);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.indicatorListTitle {
+  color: var(--text-strong);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.indicatorList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.indicatorListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 0.55rem 0.6rem;
+}
+
+.indicatorName {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.indicatorDescription {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.indicatorStatus {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.indicatorEnabled {
+  color: var(--neon-green);
+  background: rgba(0, 255, 136, 0.12);
+  border-color: rgba(0, 255, 136, 0.25);
+}
+
+.indicatorDisabled {
+  color: var(--text-muted);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+}
+
+/* Select Inputs */
+.selectGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.selectWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.selectLabel {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.selectInput {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selectInput:hover {
+  border-color: var(--neon-cyan);
+}
+
+.selectInput:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 12px var(--glow-primary);
+}
+
+/* Slippage Control */
+.slippageControl {
+  margin-bottom: 1.5rem;
+}
+
+.slippageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.slippageLabel {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.slippageValue {
+  color: var(--neon-cyan);
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--glow-base);
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+}
+
+.slippageSlider {
+  width: 100%;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.slippageSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--neon-cyan);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--glass-bg);
+  box-shadow: 0 0 8px var(--glow-primary);
+  transition: all 0.2s ease;
+}
+
+.slippageSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.slippageMarkers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* Chains Select Grid */
+.chainsSelectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.chainSelectItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--glow-base);
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chainSelectItem:hover {
+  border-color: var(--neon-cyan);
+  transform: translateX(2px);
+}
+
+.chainCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--neon-cyan);
+  cursor: pointer;
+}
+
+.chainSelectLabel {
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+/* Notification Grid */
+.notificationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+/* Loading Spinner */
+.loadingSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-inverse);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 1rem;
+  }
+  
+  .headerCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+  
+  .selectGroup {
+    grid-template-columns: 1fr;
+  }
+  
+  .notificationGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chainsSelectGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chainsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.5rem;
+  }
+  
+  .settingsCard {
+    padding: 1rem;
+  }
+  
+  .toggleItem {
+    padding: 0.5rem;
+  }
+}

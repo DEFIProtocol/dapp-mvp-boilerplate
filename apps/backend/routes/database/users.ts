@@ -4,6 +4,38 @@ import * as userHelpers from "../../postgres/users";
 
 export default function usersRouter(pool: Pool) {
   const router = Router();
+  const ALLOWED_PREFERENCES_KEYS = new Set([
+    "theme",
+    "defaultView",
+    "notifications",
+    "trading",
+    "privacy",
+    "enabledChains",
+    "chart"
+  ]);
+
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+  const deepMergeObjects = (
+    base: Record<string, unknown>,
+    patch: Record<string, unknown>
+  ): Record<string, unknown> => {
+    const output: Record<string, unknown> = { ...base };
+
+    for (const [key, value] of Object.entries(patch)) {
+      if (isPlainObject(value) && isPlainObject(output[key])) {
+        output[key] = deepMergeObjects(
+          output[key] as Record<string, unknown>,
+          value as Record<string, unknown>
+        );
+      } else {
+        output[key] = value;
+      }
+    }
+
+    return output;
+  };
 
   const getUserByWalletOr404 = async (walletAddress: string, res: Response) => {
     const user = await userHelpers.getUserByWallet(pool, walletAddress);
@@ -142,6 +174,54 @@ export default function usersRouter(pool: Pool) {
       res.json({ success: true, data: user });
     } catch (error) {
       res.status(500).json({ success: false, error: "Failed to update user" });
+    }
+  });
+
+  router.patch("/wallet/:address/preferences", async (req: Request, res: Response) => {
+    try {
+      const incoming = req.body?.preferences ?? req.body;
+
+      if (!isPlainObject(incoming)) {
+        return res.status(400).json({
+          success: false,
+          error: "Preferences patch must be a JSON object"
+        });
+      }
+
+      const patchKeys = Object.keys(incoming);
+      const invalidKeys = patchKeys.filter((key) => !ALLOWED_PREFERENCES_KEYS.has(key));
+      if (invalidKeys.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Unsupported preference keys: ${invalidKeys.join(", ")}`
+        });
+      }
+
+      const existingUser = await userHelpers.getUserByWallet(pool, req.params.address);
+      if (!existingUser) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+
+      const basePreferences = isPlainObject(existingUser.preferences)
+        ? (existingUser.preferences as Record<string, unknown>)
+        : {};
+
+      const mergedPreferences = deepMergeObjects(
+        basePreferences,
+        incoming as Record<string, unknown>
+      );
+
+      const user = await userHelpers.updateUserByWallet(pool, req.params.address, {
+        preferences: mergedPreferences
+      });
+
+      if (!user) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+
+      res.json({ success: true, data: user });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to patch user preferences" });
     }
   });
 

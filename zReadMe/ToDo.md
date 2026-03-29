@@ -1,157 +1,212 @@
+Smart Contract To Do:
 
-# Smart Contract & Protocol To-Do
-*Items verified against live contract code. Resolved items removed. Order = priority.*
+1. Hardening the Registry & Governance
 
----
+You have the authorizedModules mapping, which is great. To make this 100% "audit-proof," you should implement two-step ownership transfers and a Timelock.
 
-## DONE — verified in code, no action needed
+    The Risk: If your private key is compromised, an attacker could authorize a malicious "Module" that simply calls perpStorage.addBadDebt() or perpStorage.transferCollateral().
 
-- Funding rate formula: `imbalance = (long - short) / total → rate = imbalance × maxRate`
-  (`FundingLib.calculateFundingRate`)
-- Max oracle deviation guard: execution price checked vs mark price (5% cap) before every settlement
-  (`SettlementEngine._requireWithinOracleDeviation`)
-- Withdrawal safety: post-withdraw equity ≥ maintenance margin checked on every withdrawal
-  (`CollateralManager.withdrawCollateral`)
-- Emergency pause: `setEmergencyPause()`, per-market pause, frozen accounts — all wired
-  (`PerpStorage`, `PerpSettlement.setEmergencyPause`)
-- Oracle replacement: `setOracle()` + `setInsuranceFund()` exist on `PerpSettlement`
-- Parameter governance: `setRiskParams`, `setFeeParams`, `setFundingParams`, etc. all exist
-- Max leverage: `MAX_LEVERAGE=100` constant enforced in `PositionManager` on every position open
-- Max positions per market: 1 active position per trader per market enforced in `PositionManager`
-- Solvency check every sim step: `consistency.ts` solvency-bound assertion runs each step
-- Liquidator reward: `liquidate()` pays liquidator via `LiquidationEngine._distributeLiquidationProceeds`
+    The Fix: Your deploy.ts already mentions a Timelock. Ensure that in PerpStorage.sol, the function setAuthorizedModule can only be called by that Timelock address. This gives users a 24–48 hour "exit window" if a malicious or buggy module is about to be pushed.
 
-**1. Solvency-bound consistency failures in stress runs**
-Simulator throws "Consistency check failed" in some stress scenarios. Root cause not yet diagnosed.
-Run oracle-failure and black-swan scenarios, isolate which assertion fails (solvency-bound /
-insurance-balance-sync / exposure-sync), trace back to the responsible module, fix the accounting.
-- Files: `consistency.ts`, `runSimulator.ts`, `LiquidationEngine.sol`, `CollateralManager.sol`
+2. "Graceful Degredation" (De-listing Logic)
 
-**2. Oracle staleness — no fallback or auto-freeze behavior**
-`MarkPrice.sol` reverts when the oracle index is stale: liquidations fail silently.
-There is no auto-trigger to pause new settlement on staleness — only manual `setEmergencyPause`.
-- Fix: when oracle is stale, the settlement loop should auto-halt (new stale-oracle flag) so
-  operators can observe and act without needing an emergency manual call.
-- Files: `MarkPrice.sol` (`getMarkPrice`), `Oracle.sol` (`isStale`), `PerpSettlement`
+In DeFi, "Paused" often becomes a trap where user funds are stuck. To reach 100%, your MarketConfig should support a "Close-Only" mode.
 
-??
-**3. Circuit breakers, liquidation throttling, order size limits**
-`maxReductionBpsPerEvent` and `maxStepsPerTx` are defined in `ADLEngine` but never enforced —
-the while-loop in `executeAutoDeleverage` runs unbounded. No price-speed gate exists.
-- Fix: enforce throttle params in the while-loop; add a `maxPriceMovePct` storage param
-  checked at the top of `settleMatch`.
-- Files: `ADLEngine.sol` (`executeAutoDeleverage`), `PerpStorage.sol`, `SettlementEngine._settleMatch`
+    The Problem: If you set market.paused = true, it might block PositionManager.closePosition(). This is bad because if the market is crashing, users need to exit.
 
----
+    The Fix: Update your logic so that when a market is "Paused" or "De-listed":
 
-## PRIORITY 2 — Fix before production launch
+        SettlementEngine rejects all new matches.
 
-**4. Trade matching attack: matchId uses `block.timestamp`**
-Current: `matchId = keccak256(longHash, shortHash, block.timestamp)` — two matches in the
-same block with the same orders produce an identical matchId (replay vector).
-- Fix: add a `fillNonce` counter to `PerpStorage`, increment on every match, use it instead:
-  `keccak256(longHash, shortHash, fillNonce)` — applies to 3 places in `SettlementEngine`.
-- Files: `SettlementEngine._settleMatch` (lines 262, 314, 412), `PerpStorage`
+        PositionManager still allows closePosition or reducePosition.
 
-**5. Keeper incentives: `updateFunding()` has no on-chain reward**
-`updateFunding()` is open to anyone but pays nothing. If no one calls it, funding stops.
-- Fix: allocate a small bps from the fee pool per successful `updateFunding()` call, paid to
-  `msg.sender` via `CollateralManager.transferOut`.
-- Files: `FundingEngine.updateFunding`, `CollateralManager`
----
-**6. Anti-DoS: no max open orders per account**
-Max leverage and single-active-position-per-market are enforced, but a trader can place unlimited
-pending orders (no cap on the `filledAmount` mapping).
-- Fix: add `maxPendingOrdersPerAccount` to `PerpStorage`, track per-account counter, enforce
-  inside `SettlementEngine._validateOrder`.
-- Files: `PerpStorage`, `SettlementEngine._validateOrder`
+        CollateralManager allows withdrawals as long as the user's remaining positions stay solvent.
 
----
+3. Gas Optimization Strategy
 
-## PRIORITY 3 — Launch readiness / investor documentation
+You asked if it could be working "as is." Yes, it likely works, but gas optimization in a Perpetual DEX is a competitive advantage for your traders.
 
-**7. Governance: no multisig or timelock**
-All admin functions use basic `Ownable` (single hot key). Production requires a Gnosis Safe
-(2-of-3 or 3-of-5) + `TimelockController` on parameter changes.
-- Fix: deploy `OpenZeppelin TimelockController` + Gnosis Safe, transfer `PerpSettlement`
-  ownership to timelock, document delay values.
-- Files: deploy scripts, `PerpSettlement` (`transferOwnership`)
+    The 24KB Limit: Your PerpEngine.sol is a router. If it gets too big, use the Diamond Standard (ERC-2535) or keep it as you have it with delegatecall to implementation contracts.
 
-**8. Upgrade posture not hardened**
-`upgradeModule()` in `PerpSettlement` exists but is flagged in its own comment as "simplified."
-No proxies, migration scripts, or rollback plan.
-- Fix: decide UUPS vs. manual module-swap strategy, write the policy document, at minimum add
-  events and interface validation to `upgradeModule()`.
-- Files: `PerpSettlement.upgradeModule`
+    Specific Optimizations:
 
-## PRIORITY 1 — Fix before stress-test sign-off
+        External vs Public: Ensure all functions in your "Engines" that aren't called internally are marked external. It's cheaper for the EVM to read arguments from calldata than stack.
+
+        Storage Caching: In PnlLib or FundingLib, if you read a storage variable (like entryPrice) more than once in a function, save it to a local uint256 memory _price variable first. Reading from memory costs 3 gas; reading from storage (SLOAD) costs 100–2100 gas.
+
+        Short-Circuiting: In RiskManager.isSafe(), check the most likely failure condition first so the function returns early without running the rest of the expensive math.
+
+4. Professional Testing (The "Pre-Audit" Checklist)
+
+To be 100% ready, you should have a test/ folder that includes:
+
+    Invariant Tests (Foundry): Create a test that says: "The sum of all position.margin + insuranceFund must always be <= CollateralToken.balanceOf(PerpStorage)." Run this for 10,000 random trades (fuzzing).
+
+    Oracle Failure Simulation: What happens if the Oracle stops updating for 4 hours? Does your MarkPrice.sol successfully revert to prevent liquidations on stale prices?
+
+    Integration Test: Run a full "Trade → Funding Update → Price Move → Liquidation → ADL" sequence in a single script.
+
+Personal Opinion: If you have the Timelock integrated, a "Close-Only" mode for markets, and a suite of Fuzz tests, you are 100% ready for an audit. Your architecture is clean, and your separation of concerns (Storage vs. Logic vs. Math) is exactly what auditors like to see because it reduces the "surface area" for bugs.
 
 
-**9. Proof pack: risk parameters tied to scenario evidence**
-Simulation run outputs exist in `simulation-results/` but nothing formally links parameter
-choices (`maintenanceMarginBps`, `liquidationRewardBps`, ADL ratios) to scenario outcomes.
-- Fix: write `zReadMe/ProofPack.md` — a table of param → scenario → outcome with links to
-  specific simulation JSON runs.
-- Status: ✅ Implemented in `zReadMe/ProofPack.md`.
 
-**10. Liquidation price caching (gas reduction)**
-`liquidationPrice` and `bankruptcyPrice` are computed on-demand inside every liquidation check.
-- Fix: store both in the `Position` struct, update on every margin/exposure change.
-  Reduces gas for keepers scanning all positions.
-- Files: `PerpStorage.Position` struct, `PositionManager`, `RiskManager.isPositionLiquidatable`
-- Status: ✅ Implemented in `PerpStorage.Position`, `PositionManager` cache refresh hooks,
-  and `RiskManager` cached-liquidation checks.
+Backend To Do Smart Contract:
+ Gemini said
 
----
+This is a solid foundation. By combining these TypeScript services with your Solidity architecture, you’ve moved from just having "smart contracts" to having a functional backend infrastructure.
 
-## PRIORITY 4 — Future scope
+To reach the level of a "true" exchange like dYdX or GMX, here is how your current TypeScript files fit into the bigger picture and what the remaining gaps are.
+1. Where You Are Now (The Infrastructure)
 
-**11. External security audit**
-No code changes — schedule when code is stable after Priority 1–3 items are closed.
-Target: Sherlock or Code4rena.
+    settlementService.ts: This is your Bridge. It’s the primary way your backend communicates with the blockchain. It handles the heavy lifting of ethers.js interactions so your other scripts don't have to.
 
-**12. Advanced order types**
-Currently only market (limitPrice=0) and limit orders exist.
-Users expect stop-loss, take-profit, reduce-only, post-only.
-High effort, high user-facing value — scope separately after core stability.
-- Files: `OrderLib.sol` (`Order` struct, `ORDER_TYPEHASH`), `SettlementEngine._validateOrder`
+    smartContracts.ts: This is your API Layer. It exposes your exchange's functionality to the outside world (or your front-end) via Express routes, allowing for administrative actions like updating fees or checking order status.
 
-**13. Funding rate: optional mark-index formula upgrade**
-Current imbalance-based formula is correct and intentional. Classic `(mark - index) / index`
-formula would track price divergence instead of order-book imbalance.
-Only needed if you want to match GMX / dYdX funding behaviour exactly.
-- Files: `FundingLib.calculateFundingRate`, `FundingEngine.updateFunding`
+    liquidationWorker.ts & fundingWork.ts: These are your Keepers. This is the most "professional" part of your current setup. A true exchange cannot rely on users to update their own funding or liquidate themselves; these automated workers ensure the system stays solvent and the math stays current.
 
-**14. Wire `MarkPrice` / TWAP oracle into simulator**
-`deployLocal.ts` uses `MockOracle` instead of `MarkPrice`, so simulation does not exercise the
-production oracle stack.
-- Files: `scripts/simulator/deployLocal.ts`
+2. The Missing "Engine" Room
 
----
+While you have the settlement and maintenance scripts, a "true exchange" usually requires two more high-performance components:
 
-## UNCLEAR / OUT OF SCOPE FOR SMART CONTRACTS
+    The Off-Chain Matcher: Right now, if User A wants to go Long and User B wants to go Short, how do they find each other?
 
-- **Solvency buffer "fail at 99.5% solvent"**: this is a simulator config observation.
-  `maintenanceMarginBps=75` (0.75%) in `PerpStorage`. Adjust that value in `deployLocal.ts`
-  if you want a different buffer. No logic change needed — just a knob.
+        Current Gap: You need a service that collects "Order Intents" (the signed EIP-712 messages), stores them in a database (PostgreSQL/Redis), and matches them when prices cross.
+
+        Why: Matching on-chain is too expensive. You match off-chain, then send the "matched pair" to your SettlementEngine.sol.
+
+    The Real-Time WebSocket Server: * Current Gap: Your front-end needs to see the "Orderbook" and "Recent Trades" instantly.
+
+        Why: Relying on blockchain events is too slow for a trading UI. You need a fast stream (Socket.io or similar) that pushes data to the user the millisecond your Matcher finishes a trade.
+
+3. Critical "Production" Check
+
+Before you consider this "complete," look closely at your liquidationWorker.ts.
+
+In a live environment, the "Liquidation Race" is intense. Professional bots will try to front-run your worker to claim the liquidation rewards. To compete, your worker needs:
+
+    Gas Strategy: Logic to "bump" gas fees if a transaction is stuck.
+
+    Multicall: The ability to liquidate 10+ positions in a single transaction to save on costs.
+
+    Redundancy: Running multiple instances of the worker across different RPC providers (e.g., Alchemy + Infura) so that if one provider lags, you don't lose the liquidation.
+
+Next Step Recommendation
+
+You have the Settlement, Funding, and Liquidation modules. The logical next move to finish the "true exchange" framework is the Orderbook/Matching logic.
+
+Would you like to look at how to structure a PostgreSQL schema to store these signed orders so your Matcher can find them efficiently?
 
 
-- **Chain-aware pages + cross-chain swap UI**: frontend/infrastructure work.
-  Add chain selector + bridge call button to each page. Not a contract change.
+Frontend:
 
-- **Funding formula product question (imbalance vs mark-index)**: intentional design decision.
-  Current implementation is correct. Revisit only if product direction changes.
 
----
+1.) Orderflow component for perps page.
 
-## Simulation Results
 
-| Scenario            | Bad Debt | Insurance Used | Solvency Buffer | Notes |
-|---------------------|----------|----------------|-----------------|-------|
-| Normal              |          |                |                 |       |
-| Oracle Failure      |          |                |                 |       |
-| Bear Market         |          |                |                 |       |
-| Volatility Shock    |          |                |                 |       |
-| Black Swan          |          |                |                 |       |
-| Liquidation Cascade |          |                |                 |       |
+2.) Accounts Page. 
+
+
+3.) Possible to connect solana wallet, and eth wallet to same application?
+
+
+Default User Preferences JSON (preferences JSONB):
+
+```json
+{
+    "theme": "dark",
+    "defaultView": "trading",
+    "notifications": {
+        "email": {
+            "tradeExecuted": true,
+            "orderFilled": true,
+            "priceAlerts": true,
+            "securityAlerts": true,
+            "newsletter": false
+        }
+    },
+    "trading": {
+        "slippageTolerance": 0.5,
+        "defaultOrderType": "market",
+        "showConfirmationDialogs": true,
+        "favoritePairs": []
+    },
+    "privacy": {
+        "showBalanceInNav": true,
+        "shareTradingActivity": false
+    },
+    "enabledChains": [1, 8453],
+    "chart": {
+        "token": {
+            "timeframe": "24h",
+            "chartType": "candles",
+            "indicators": ["ema9", "ema21"],
+            "activeTool": "pointer"
+        },
+        "crypto": {
+            "timeframe": "1h",
+            "chartType": "candles",
+            "indicators": ["ema9", "ema21", "volume"],
+            "activeTool": "pointer"
+        },
+        "futures": {
+            "timeframe": "1h",
+            "chartType": "candles",
+            "indicators": ["ema9", "ema21", "volume"],
+            "activeTool": "pointer"
+        }
+    }
+}
+```
+
+
+PowerShell API Smoke Tests (User Preferences):
+
+```powershell
+# 0) Set base values
+$api = "http://localhost:3001/api"
+$wallet = "0x1111111111111111111111111111111111111111"
+
+# 1) Ensure user exists (idempotent pattern)
+Invoke-RestMethod -Method Post -Uri "$api/users" -ContentType "application/json" -Body (@{
+    wallet_address = $wallet
+} | ConvertTo-Json)
+
+# 2) Read current user (confirm preferences/email_verified fields)
+Invoke-RestMethod -Method Get -Uri "$api/users/wallet/$wallet" | ConvertTo-Json -Depth 12
+
+# 3) PATCH top-level preference key
+Invoke-RestMethod -Method Patch -Uri "$api/users/wallet/$wallet/preferences" -ContentType "application/json" -Body (@{
+    theme = "light"
+} | ConvertTo-Json) | ConvertTo-Json -Depth 12
+
+# 4) PATCH nested preference key (deep merge)
+Invoke-RestMethod -Method Patch -Uri "$api/users/wallet/$wallet/preferences" -ContentType "application/json" -Body (@{
+    trading = @{
+        slippageTolerance = 1.2
+    }
+} | ConvertTo-Json -Depth 12) | ConvertTo-Json -Depth 12
+
+# 5) PATCH array field (replace-on-write behavior)
+Invoke-RestMethod -Method Patch -Uri "$api/users/wallet/$wallet/preferences" -ContentType "application/json" -Body (@{
+    enabledChains = @(1, 8453, 137)
+} | ConvertTo-Json -Depth 12) | ConvertTo-Json -Depth 12
+
+# 6) Invalid key test (should return 400)
+try {
+    Invoke-RestMethod -Method Patch -Uri "$api/users/wallet/$wallet/preferences" -ContentType "application/json" -Body (@{
+        dangerousFlag = $true
+    } | ConvertTo-Json -Depth 12)
+} catch {
+    $_.Exception.Response.StatusCode.value__
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    $reader.ReadToEnd()
+}
+
+# 7) Update top-level identity fields (email + email_verified)
+Invoke-RestMethod -Method Put -Uri "$api/users/wallet/$wallet" -ContentType "application/json" -Body (@{
+    email = "dev@example.com"
+    email_verified = $true
+} | ConvertTo-Json -Depth 12) | ConvertTo-Json -Depth 12
+```
+
 
