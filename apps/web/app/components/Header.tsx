@@ -36,7 +36,7 @@ export function Header() {
     availableChains,
     getChainLabel,
   } = useChainContext();
-  const { theme, toggleTheme } = useTheme();
+  const { mode, toggleMode } = useTheme();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -98,13 +98,15 @@ export function Header() {
 
   // Sync app state when the user switches chains directly in MetaMask
   useEffect(() => {
+    const isRouteManagedChain = pathname?.startsWith("/futures") || pathname?.startsWith("/market");
+    if (isRouteManagedChain) return;
     if (!chain?.id) return;
     if (chain.id === selectedChain) return;
     const supported = availableChains.find((c) => c.id === chain.id);
     if (supported) {
       setSelectedChain(chain.id);
     }
-  }, [chain?.id, selectedChain, availableChains, setSelectedChain]);
+  }, [chain?.id, selectedChain, availableChains, pathname, setSelectedChain]);
 
   const handleChainSwitch = async (chainId: number) => {
     setChainLoading(true);
@@ -204,11 +206,11 @@ export function Header() {
 
             {/* Theme Toggle */}
             <button
-              onClick={toggleTheme}
+              onClick={toggleMode}
               className={styles.themeToggle}
               aria-label="Toggle theme"
             >
-              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+              {mode === "light" ? <Moon size={16} /> : <Sun size={16} />}
             </button>
 
             {/* Chain Selector Dropdown */}
@@ -310,9 +312,9 @@ export function Header() {
             </nav>
 
             <div className={styles.mobileFooter}>
-              <button onClick={toggleTheme} className={styles.mobileThemeToggle}>
-                {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
-                <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+              <button onClick={toggleMode} className={styles.mobileThemeToggle}>
+                {mode === "light" ? <Moon size={16} /> : <Sun size={16} />}
+                <span>{mode === "light" ? "Dark Mode" : "Light Mode"}</span>
               </button>
             </div>
           </div>

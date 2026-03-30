@@ -4,6 +4,8 @@ import type { UserChartPreferences } from "@/lib/chartPreferences";
 
 export interface UserPreferences {
   theme: string;
+  themeMode: string;
+  themeDesign: string;
   defaultView: string;
   notifications: {
     email: {

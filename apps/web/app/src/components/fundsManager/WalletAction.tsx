@@ -145,9 +145,9 @@ export default function WalletAction({
   }, []);
 
   useEffect(() => {
-    setTransferFromChain(selectedChain);
+    setTransferFromChain((prev) => (prev === selectedChain ? prev : selectedChain));
     const defaultTo = availableChains.find((chainItem) => chainItem.id !== selectedChain)?.id || selectedChain;
-    setTransferToChain(defaultTo);
+    setTransferToChain((prev) => (prev === selectedChain ? defaultTo : prev));
   }, [selectedChain, availableChains]);
 
   useEffect(() => {

@@ -50,12 +50,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
-  color: var(--neon-cyan);
+  color: var(--neon-cyan) !important;
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: auto;
@@ -66,6 +66,32 @@
   border-color: var(--neon-cyan);
   transform: scale(1.05);
   box-shadow: 0 0 16px var(--glow-primary);
+}
+
+.settingsButton svg {
+  stroke: var(--neon-cyan) !important;
+  fill: none;
+  display: block;
+}
+
+.settingsIcon {
+  color: var(--neon-cyan) !important;
+  stroke: var(--neon-cyan) !important;
+  opacity: 1 !important;
+}
+
+.settingsGlyph {
+  color: var(--neon-cyan) !important;
+  font-size: 1.45rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.6s ease;
+}
+
+.settingsButton:hover .settingsGlyph {
+  transform: rotate(180deg);
 }
 
 /* Connect Wallet State */
@@ -109,7 +135,7 @@
   }
 
   .settingsButton {
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
   }
 }

@@ -1,10 +1,11 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import {
   createRequest,
   batchRequest,
   getRateLimiterStats,
   getCacheStats,
   clearCache,
+  startCoinrankingGlobalSync,
   CoinRankingResponse,
   CoinsResponse,
   CoinDetailResponse,
@@ -12,6 +13,8 @@ import {
 } from '../../pricing/coinranking/tokenPricing';
 
 const router = express.Router();
+
+startCoinrankingGlobalSync();
 
 // Get all coins with pagination
 router.get('/coins', async (req: Request, res: Response) => {

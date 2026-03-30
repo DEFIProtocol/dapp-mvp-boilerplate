@@ -345,3 +345,33 @@ export const clearCache = (): number => {
   rapidApiCache.clear();
   return size;
 };
+let coinrankingGlobalSyncTimer: NodeJS.Timeout | null = null;
+
+const runCoinrankingGlobalSync = async (): Promise<void> => {
+  try {
+    await createRequest<CoinRankingResponse<CoinsResponse>>('/coins', {
+      limit: 1500,
+      offset: 0,
+      referenceCurrencyUuid: 'yhjMzLPhuIDl',
+    });
+  } catch (error) {
+    console.error('❌ Coinranking global sync failed:', error);
+  }
+};
+
+export const startCoinrankingGlobalSync = (): void => {
+  if (coinrankingGlobalSyncTimer) return;
+
+  const intervalMs = Number(process.env.COINRANKING_SYNC_INTERVAL_MS || 120000);
+
+  void runCoinrankingGlobalSync();
+  coinrankingGlobalSyncTimer = setInterval(() => {
+    void runCoinrankingGlobalSync();
+  }, Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : 120000);
+};
+
+export const stopCoinrankingGlobalSync = (): void => {
+  if (!coinrankingGlobalSyncTimer) return;
+  clearInterval(coinrankingGlobalSyncTimer);
+  coinrankingGlobalSyncTimer = null;
+};

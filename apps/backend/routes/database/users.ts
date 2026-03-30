@@ -6,6 +6,8 @@ export default function usersRouter(pool: Pool) {
   const router = Router();
   const ALLOWED_PREFERENCES_KEYS = new Set([
     "theme",
+    "themeMode",
+    "themeDesign",
     "defaultView",
     "notifications",
     "trading",

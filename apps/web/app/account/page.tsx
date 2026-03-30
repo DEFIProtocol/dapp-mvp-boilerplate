@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
 import { fetchHoldings } from "../src/lib/api/holdings";
 import { useChainContext } from "../src/contexts/ChainContext";
 import { useUser } from "../src/contexts/UserContext";
@@ -83,7 +82,7 @@ export default function AccountPage() {
           className={styles.settingsButton}
           aria-label="Account settings"
         >
-          <Settings size={20} />
+          <span className={styles.settingsGlyph} aria-hidden="true">⚙</span>
         </button>
       </div>
 

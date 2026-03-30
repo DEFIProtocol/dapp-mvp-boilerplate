@@ -200,7 +200,7 @@ export function UnifiedPriceChart({
   height = 450,
   timeframeOptions = DEFAULT_TOKEN_TIMEFRAMES,
 }: UnifiedPriceChartProps) {
-  const { theme } = useTheme();
+  const { mode } = useTheme();
   const { user } = useUser();
   const { address } = useAccount();
 
@@ -266,7 +266,7 @@ export function UnifiedPriceChart({
   }, [indicatorQuery]);
 
   const palette = useMemo(() => {
-    if (theme === "light") {
+    if (mode === "light") {
       return {
         chartBackground: "#ffffff",
         chartText: "#0f172a",
@@ -297,7 +297,7 @@ export function UnifiedPriceChart({
       loadingOverlay: "rgba(15,23,42,0.6)",
       panelShadow: "0 8px 24px rgba(0,0,0,0.35)",
     };
-  }, [theme]);
+  }, [mode]);
 
   const timeToUnix = (time: Time): number => {
     if (typeof time === "number") return Math.floor(time);
