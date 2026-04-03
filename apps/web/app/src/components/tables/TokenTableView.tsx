@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 type SortKey = "symbol" | "price" | "marketCap" | "change24h";
 
@@ -21,7 +22,7 @@ interface TokenTableViewProps {
   isLoading?: boolean;
   skeletonRows?: number;
   emptyTitle: string;
-  emptyHint: string;
+  emptyHint: ReactNode;
   countLabel?: string;
   sortKey?: SortKey;
   getSortMarker?: (key: SortKey) => string;

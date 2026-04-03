@@ -16,7 +16,7 @@ import type { PerpsToken, PerpsTokenFormData } from "@/types/perps";
 
 const SimulatorDashboard = dynamic(
     () => import("./simData/components/dashboard/DashboardLayout").then((mod) => mod.DashboardLayout),
-    { ssr: false }
+    { ssr: false, loading: () => <div className={styles.simulatorLoading}><p>Loading simulator...</p></div> }
 );
 
 interface StatusMessage {

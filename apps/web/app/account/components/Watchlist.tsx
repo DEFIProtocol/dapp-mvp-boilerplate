@@ -20,7 +20,7 @@ export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) 
   const { priceMap } = usePriceStore();
   const { activeTokens } = usePerps();
   const { toggleWatchlistToken, isInWatchlist } = useUserContext();
-  const { getChainSlug } = useChainContext();
+  const { getChainSlug, getChainLabel } = useChainContext();
 
   const watchlistSymbols = useMemo(() => {
     return (Array.isArray(watchlist) ? watchlist : [])
@@ -160,7 +160,13 @@ export function Watchlist({ watchlist, tokens, selectedChain }: WatchlistProps) 
           styles={tableStyles}
           rows={marketRows}
           emptyTitle="No market favorites"
-          emptyHint="Add spot market tokens to track them here"
+          emptyHint={
+            <>
+              <span>Tokens will be saved to current chain.</span>
+              <br />
+              <span>Current chain is {getChainLabel(selectedChain)}.</span>
+            </>
+          }
           isInWatchlist={isInWatchlist}
           onToggleWatchlist={handleToggle}
           formatPrice={formatPrice}

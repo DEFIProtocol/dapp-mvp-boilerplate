@@ -1,5 +1,5 @@
 import express from "express";
-import { isAddress } from "ethers";
+import { ethers, isAddress } from "ethers";
 import { Pool } from "pg";
 import { SettlementService } from "./settlementService";
 import * as perpsHelpers from "../../postgres/perps";
@@ -11,6 +11,8 @@ type OrderIntent = {
   id: string;
   createdAt: string;
   symbol: string;
+  marketId: string;
+  subAccountId?: string;
   perpAddress: string;
   trader: string;
   side: OrderSide;
@@ -38,6 +40,14 @@ function parseNumeric(input: unknown): number | null {
   return input;
 }
 
+function resolveMarketId(symbol: string, provided?: string): string {
+  if (provided && /^0x[a-fA-F0-9]{64}$/.test(provided)) {
+    return provided;
+  }
+
+  return ethers.encodeBytes32String(`${symbol.toUpperCase()}/USD`);
+}
+
 function getOrderIntentsForTrader(trader: string): OrderIntent[] {
   return orderIntentStore.get(trader.toLowerCase()) ?? [];
 }
@@ -61,6 +71,8 @@ export default function smartContractsRouter(pool: Pool) {
     try {
       const {
         symbol,
+        marketId,
+        subAccountId,
         perpAddress,
         trader,
         side,
@@ -128,6 +140,8 @@ export default function smartContractsRouter(pool: Pool) {
         id: `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`,
         createdAt: new Date().toISOString(),
         symbol: symbol.toUpperCase(),
+        marketId: resolveMarketId(symbol, typeof marketId === "string" ? marketId : undefined),
+        subAccountId: typeof subAccountId === "string" ? subAccountId : undefined,
         perpAddress,
         trader,
         side,
@@ -168,6 +182,8 @@ export default function smartContractsRouter(pool: Pool) {
     try {
       const { trader } = req.params;
       const symbol = typeof req.query.symbol === "string" ? req.query.symbol : undefined;
+      const marketId = typeof req.query.marketId === "string" ? req.query.marketId : undefined;
+      const subAccountId = typeof req.query.subAccountId === "string" ? req.query.subAccountId : undefined;
       const perpAddress = typeof req.query.perpAddress === "string" ? req.query.perpAddress : undefined;
 
       if (!isAddress(trader)) {
@@ -196,19 +212,23 @@ export default function smartContractsRouter(pool: Pool) {
       }
 
       const [positions, markPrice] = await Promise.all([
-        settlement.getTraderPositionSnapshots(trader),
+        settlement.getTraderPositionSnapshots(trader, { marketId, subAccountId }),
         settlement.getMarkPrice(),
       ]);
 
       const intents = getOrderIntentsForTrader(trader).filter((intent) => {
-        if (!symbol) return true;
-        return intent.symbol === symbol.toUpperCase();
+        if (symbol && intent.symbol !== symbol.toUpperCase()) return false;
+        if (marketId && intent.marketId.toLowerCase() !== marketId.toLowerCase()) return false;
+        if (subAccountId && intent.subAccountId !== subAccountId) return false;
+        return true;
       });
 
       res.json({
         success: true,
         trader,
         symbol: symbol?.toUpperCase(),
+        marketId,
+        subAccountId,
         perpAddress: perpAddress ?? tokenAddress,
         markPrice: markPrice.toString(),
         markPriceUsd: Number(markPrice) / 1e18,

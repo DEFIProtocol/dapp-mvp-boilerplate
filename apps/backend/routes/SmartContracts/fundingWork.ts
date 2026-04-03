@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import { PythService } from "../../pricing/pyth/pythService";
 import { SettlementService } from "./settlementService";
 
@@ -22,7 +23,13 @@ export async function updateFunding() {
 
   const fundingRate = deviation * 0.5;
 
-  await settlement.updateFunding(fundingRate, -fundingRate);
+  const marketIdFromEnv = process.env.FUNDING_MARKET_ID;
+  const marketId =
+    marketIdFromEnv && /^0x[a-fA-F0-9]{64}$/.test(marketIdFromEnv)
+      ? marketIdFromEnv
+      : ethers.encodeBytes32String("ETH/USD");
 
-  console.log("Funding updated:", fundingRate);
+  await settlement.updateFundingForMarket(marketId);
+
+  console.log("Funding updated:", { fundingRate, marketId });
 }

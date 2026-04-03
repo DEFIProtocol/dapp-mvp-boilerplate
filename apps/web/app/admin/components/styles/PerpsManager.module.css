@@ -394,6 +394,18 @@
   border: 1px solid var(--border-contrast);
   border-radius: 14px;
   overflow: hidden;
+  min-height: 600px;
+}
+
+.simulatorLoading {
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted-strong);
+  background: #0b1220;
+  border-radius: 14px;
+  font-size: 0.95rem;
 }
 
 .fundingValue {

@@ -43,6 +43,7 @@ export interface SimulatorStepState {
   stepProactiveAdlEvents: number;
   stepVolume: bigint;
   trades: number;
+  optionsTrades: number;
   uniqueTraders: number;
   openOrders: number;
   newOrders: number;
@@ -103,6 +104,7 @@ export interface ProtocolMetrics {
   stepProactiveAdlEvents: number;
   volume24h: bigint;
   tradeCount: number;
+  optionsTrades: number;
   uniqueTraders: number;
   openOrders: number;
   newOrders: number;
@@ -264,6 +266,7 @@ export class MetricsCollector {
       stepProactiveAdlEvents: state.stepProactiveAdlEvents,
       volume24h: rollingVolume,
       tradeCount: state.trades,
+      optionsTrades: state.optionsTrades,
       uniqueTraders: state.uniqueTraders,
       openOrders: state.openOrders,
       newOrders: state.newOrders,

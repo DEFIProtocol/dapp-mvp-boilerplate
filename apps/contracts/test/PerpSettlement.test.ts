@@ -30,6 +30,8 @@ describe("PerpSettlement Module Integration", function () {
   let settlementEngine: Contract;
   let fundingEngine: Contract;
   let liquidationEngine: Contract;
+  let optionsPricer: Contract;
+  let optionsEngine: Contract;
 
   let owner: any;
   let longTrader: any;
@@ -103,6 +105,18 @@ describe("PerpSettlement Module Integration", function () {
     );
     await liquidationEngine.waitForDeployment();
 
+    const OptionsPricer = await ethers.getContractFactory("OptionsPricerCore");
+    optionsPricer = await OptionsPricer.deploy();
+    await optionsPricer.waitForDeployment();
+
+    const OptionsEngine = await ethers.getContractFactory("OptionsEngineModule");
+    optionsEngine = await OptionsEngine.deploy(
+      await perpStorage.getAddress(),
+      await collateralManager.getAddress(),
+      await optionsPricer.getAddress()
+    );
+    await optionsEngine.waitForDeployment();
+
     const latest = await ethers.provider.getBlock("latest");
     if (!latest) {
       throw new Error("Latest block unavailable");
@@ -112,6 +126,7 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setInsuranceFund(await insuranceTreasury.getAddress());
     await perpStorage.setProtocolTreasury(await protocolTreasury.getAddress());
     await perpStorage.setMarkOracle(await mockOracle.getAddress());
+    await perpStorage.setOptionsPricer(await optionsPricer.getAddress());
     const marketId = ethers.encodeBytes32String("ETH/USD");
     await perpStorage.setMarketFeedId(marketId);
 
@@ -131,6 +146,7 @@ describe("PerpSettlement Module Integration", function () {
     await perpStorage.setAuthorizedModule(await settlementEngine.getAddress(), true);
     await perpStorage.setAuthorizedModule(await fundingEngine.getAddress(), true);
     await perpStorage.setAuthorizedModule(await liquidationEngine.getAddress(), true);
+    await perpStorage.setAuthorizedModule(await optionsEngine.getAddress(), true);
 
     await insuranceTreasury.setAuthorizedModule(await collateralManager.getAddress(), true);
     await insuranceTreasury.setAuthorizedModule(await liquidationEngine.getAddress(), true);
@@ -162,9 +178,92 @@ describe("PerpSettlement Module Integration", function () {
 
       const longPositions = await positionManager.getTraderPositions(longTrader.address);
       const shortPositions = await positionManager.getTraderPositions(shortTrader.address);
+      const longPosition = await perpStorage.getPosition(longPositions[0]);
 
       expect(longPositions.length).to.equal(1);
       expect(shortPositions.length).to.equal(1);
+      expect(longPosition.collateralToken).to.equal(await mockToken.getAddress());
+    });
+
+    it("pulls JIT margin from wallet when collateral is not pre-funded", async function () {
+      const initialBalance = ethers.parseEther("10000");
+      await collateralManager.connect(longTrader).withdrawCollateral(initialBalance);
+      await collateralManager.connect(shortTrader).withdrawCollateral(initialBalance);
+
+      expect(await perpStorage.accountCollateral(longTrader.address)).to.equal(0n);
+      expect(await perpStorage.accountCollateral(shortTrader.address)).to.equal(0n);
+
+      await mockToken.connect(longTrader).approve(await collateralManager.getAddress(), ethers.MaxUint256);
+      await mockToken.connect(shortTrader).approve(await collateralManager.getAddress(), ethers.MaxUint256);
+
+      await perpStorage.setJitModeEnabled(true);
+
+      const exposure = ethers.parseEther("500");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 31n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 32n);
+
+      await settlementEngine.settleMatch(
+        longOrder,
+        await signOrder(longTrader, longOrder),
+        shortOrder,
+        await signOrder(shortTrader, shortOrder),
+        exposure
+      );
+
+      const requiredMargin = exposure / 10n;
+      expect(await perpStorage.accountCollateral(longTrader.address)).to.be.at.least(requiredMargin);
+      expect(await perpStorage.accountCollateral(shortTrader.address)).to.be.at.least(requiredMargin);
+    });
+
+    it("routes settleMatch using order marketId when non-default market is provided", async function () {
+      const altMarketId = ethers.encodeBytes32String("BTC/USD");
+      await perpStorage.addMarket(altMarketId, altMarketId, 5, 10, 750, 80, 150);
+
+      const exposure = ethers.parseEther("400");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 3n, altMarketId);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 4n, altMarketId);
+
+      const longSig = await signOrder(longTrader, longOrder);
+      const shortSig = await signOrder(shortTrader, shortOrder);
+
+      await settlementEngine.settleMatch(longOrder, longSig, shortOrder, shortSig, exposure);
+
+      const longPositions = await positionManager.getTraderPositions(longTrader.address);
+      const shortPositions = await positionManager.getTraderPositions(shortTrader.address);
+      const longPosition = await perpStorage.getPosition(longPositions[0]);
+      const shortPosition = await perpStorage.getPosition(shortPositions[0]);
+
+      expect(longPosition.marketId).to.equal(altMarketId);
+      expect(shortPosition.marketId).to.equal(altMarketId);
+    });
+
+    it("supports mixed-market batch settlement in settleMatches", async function () {
+      const defaultMarketId = await perpStorage.marketFeedId();
+      const altMarketId = ethers.encodeBytes32String("SOL/USD");
+      await perpStorage.addMarket(altMarketId, altMarketId, 5, 10, 750, 80, 150);
+
+      const firstExposure = ethers.parseEther("250");
+      const secondExposure = ethers.parseEther("350");
+
+      const longOrderOne = await buildOrder(longTrader.address, 0, firstExposure, 0n, 5n, defaultMarketId);
+      const shortOrderOne = await buildOrder(shortTrader.address, 1, firstExposure, 0n, 6n, defaultMarketId);
+      const longOrderTwo = await buildOrder(longTrader.address, 0, secondExposure, 0n, 7n, altMarketId);
+      const shortOrderTwo = await buildOrder(shortTrader.address, 1, secondExposure, 0n, 8n, altMarketId);
+
+      await settlementEngine.settleMatches(
+        [longOrderOne, longOrderTwo],
+        [await signOrder(longTrader, longOrderOne), await signOrder(longTrader, longOrderTwo)],
+        [shortOrderOne, shortOrderTwo],
+        [await signOrder(shortTrader, shortOrderOne), await signOrder(shortTrader, shortOrderTwo)],
+        [firstExposure, secondExposure]
+      );
+
+      const longPositions = await positionManager.getTraderPositions(longTrader.address);
+      const marketA = await perpStorage.getPosition(longPositions[0]);
+      const marketB = await perpStorage.getPosition(longPositions[1]);
+
+      expect(longPositions.length).to.equal(2);
+      expect([marketA.marketId, marketB.marketId]).to.have.members([defaultMarketId, altMarketId]);
     });
 
     it("rejects non-crossing limit orders", async function () {
@@ -314,6 +413,77 @@ describe("PerpSettlement Module Integration", function () {
       await expect(
         collateralManager.connect(longTrader).withdrawCollateral(withdrawAmount)
       ).to.be.revertedWith("Insufficient maintenance margin after withdraw");
+    });
+
+    it("auto-pauses stale oracle market and blocks new settlement", async function () {
+      await perpStorage.setOracleStaleAutoPauseEnabled(true);
+      await mockOracle.setForceStale(true);
+
+      const exposure = ethers.parseEther("500");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 281n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 282n);
+
+      await expect(
+        settlementEngine.settleMatch(
+          longOrder,
+          await signOrder(longTrader, longOrder),
+          shortOrder,
+          await signOrder(shortTrader, shortOrder),
+          exposure
+        )
+      ).to.be.revertedWith("Market oracle stale paused");
+    });
+
+    it("reverts settlement when protocol treasury is missing for fee routing", async function () {
+      await perpStorage.setProtocolTreasury(ethers.ZeroAddress);
+
+      const exposure = ethers.parseEther("500");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 283n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 284n);
+
+      await expect(
+        settlementEngine.settleMatch(
+          longOrder,
+          await signOrder(longTrader, longOrder),
+          shortOrder,
+          await signOrder(shortTrader, shortOrder),
+          exposure
+        )
+      ).to.be.revertedWith("Protocol treasury not set");
+    });
+
+    it("uses bad debt path when insurance accounting is non-zero but treasury has no balance", async function () {
+      const market = await perpStorage.marketFeedId();
+      await perpStorage.setMarketRiskParams(market, 750, 0, 0);
+      await settlementEngine.setExecutionLeverage(100);
+
+      const exposure = ethers.parseEther("100000");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 285n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 286n);
+
+      await settlementEngine.settleMatch(
+        longOrder,
+        await signOrder(longTrader, longOrder),
+        shortOrder,
+        await signOrder(shortTrader, shortOrder),
+        exposure
+      );
+
+      await perpStorage.setAuthorizedModule(owner.address, true);
+      const syntheticInsuranceBalance = ethers.parseEther("1000");
+      await perpStorage.connect(owner).setInsuranceFundBalance(syntheticInsuranceBalance);
+
+      const longPosId = (await positionManager.getTraderPositions(longTrader.address))[0];
+      await mockOracle.setPrice(ethers.parseEther("10"));
+      expect(await riskManager.isPositionLiquidatable(longPosId)).to.equal(true);
+
+      const insuranceTreasuryBefore = await insuranceTreasury.balance();
+      await liquidationEngine.connect(liquidator).liquidate(longPosId);
+      const insuranceTreasuryAfter = await insuranceTreasury.balance();
+
+      expect(await perpStorage.totalBadDebt()).to.be.gt(0n);
+      expect(insuranceTreasuryAfter).to.equal(insuranceTreasuryBefore);
+      expect(await perpStorage.insuranceFundBalance()).to.equal(syntheticInsuranceBalance);
     });
   });
 
@@ -765,6 +935,183 @@ describe("PerpSettlement Module Integration", function () {
       // Verify trader lost margin
       expect(beforeTraderBalance - afterTraderBalance).to.be.at.least(margin);
     });
+
+    it("should force-close unhealthy short option positions", async function () {
+      const latest = await ethers.provider.getBlock("latest");
+      if (!latest) throw new Error("Latest block unavailable");
+
+      const expiry = BigInt(latest.timestamp + 3600);
+      const strike = ethers.parseEther("1000");
+      const optionSize = ethers.parseEther("10");
+      const marketId = await perpStorage.marketFeedId();
+
+      await optionsEngine.registerOptionSeries(
+        marketId,
+        true,
+        strike,
+        expiry,
+        9000,
+        100,
+        await mockToken.getAddress()
+      );
+
+      const seriesId = (await perpStorage.nextOptionSeriesId()) - 1n;
+      await optionsEngine.connect(shortTrader).openShortOption(seriesId, optionSize);
+
+      const optionPositionId = 0n;
+      await mockOracle.setPrice(ethers.parseEther("5000"));
+
+      const liquidatable = await riskManager.isOptionPositionLiquidatable(optionPositionId);
+      expect(liquidatable).to.equal(true);
+
+      await liquidationEngine.connect(liquidator).liquidateOptionPosition(optionPositionId);
+
+      const optionPosition = await perpStorage.getOptionPosition(optionPositionId);
+      expect(optionPosition.active).to.equal(false);
+      expect(optionPosition.settled).to.equal(true);
+    });
+
+    it("conserves liquidation fund flows across collateral, insurance, and liquidator balances", async function () {
+      const exposure = ethers.parseEther("5000");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 13000n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 13001n);
+
+      await settlementEngine.settleMatch(
+        longOrder,
+        await signOrder(longTrader, longOrder),
+        shortOrder,
+        await signOrder(shortTrader, shortOrder),
+        exposure
+      );
+
+      const longPositions = await positionManager.getTraderPositions(longTrader.address);
+      const longPosId = longPositions[0];
+
+      // Choose a liquidatable price with no bad debt to keep accounting buckets deterministic.
+      await mockOracle.setPrice(ethers.parseEther("900"));
+      expect(await riskManager.isPositionLiquidatable(longPosId)).to.equal(true);
+
+      const cmAddress = await collateralManager.getAddress();
+      const insuranceAddress = await insuranceTreasury.getAddress();
+      const protocolAddress = await protocolTreasury.getAddress();
+
+      const cmBefore = await mockToken.balanceOf(cmAddress);
+      const insuranceBefore = await mockToken.balanceOf(insuranceAddress);
+      const protocolBefore = await mockToken.balanceOf(protocolAddress);
+      const liquidatorBefore = await mockToken.balanceOf(liquidator.address);
+      const feePoolBefore = await perpStorage.feePool();
+      const insuranceFundBefore = await perpStorage.insuranceFundBalance();
+
+      const tx = await liquidationEngine.connect(liquidator).liquidate(longPosId);
+      const receipt = await tx.wait();
+      if (!receipt) throw new Error("Missing liquidation receipt");
+
+      let reward = 0n;
+      let badDebt = 0n;
+      let insuranceUsed = 0n;
+      let penaltyCollected = 0n;
+      for (const log of receipt.logs) {
+        try {
+          const parsed = liquidationEngine.interface.parseLog(log);
+          if (parsed?.name === "PositionLiquidated") {
+            reward = BigInt(parsed.args.reward.toString());
+            badDebt = BigInt(parsed.args.badDebt.toString());
+            insuranceUsed = BigInt(parsed.args.insuranceUsed.toString());
+            penaltyCollected = BigInt(parsed.args.penaltyCollected.toString());
+            break;
+          }
+        } catch {
+          // Ignore non-LiquidationEngine logs.
+        }
+      }
+
+      const cmAfter = await mockToken.balanceOf(cmAddress);
+      const insuranceAfter = await mockToken.balanceOf(insuranceAddress);
+      const protocolAfter = await mockToken.balanceOf(protocolAddress);
+      const liquidatorAfter = await mockToken.balanceOf(liquidator.address);
+      const feePoolAfter = await perpStorage.feePool();
+      const insuranceFundAfter = await perpStorage.insuranceFundBalance();
+
+      expect(badDebt).to.equal(0n);
+      expect(penaltyCollected).to.equal(reward + insuranceUsed);
+      expect(liquidatorAfter - liquidatorBefore).to.equal(reward);
+      expect(insuranceAfter - insuranceBefore).to.equal(insuranceUsed);
+      expect(insuranceFundAfter - insuranceFundBefore).to.equal(insuranceUsed);
+      expect(protocolAfter - protocolBefore).to.equal(0n);
+      expect(feePoolAfter - feePoolBefore).to.equal(0n);
+
+      // Token movement conservation for liquidation payout routes:
+      // CollateralManager outflows are exactly liquidator reward + insurance transfer.
+      const cmDelta = cmAfter - cmBefore;
+      const insuranceDelta = insuranceAfter - insuranceBefore;
+      const protocolDelta = protocolAfter - protocolBefore;
+      const liquidatorDelta = liquidatorAfter - liquidatorBefore;
+      expect(cmDelta + insuranceDelta + protocolDelta + liquidatorDelta).to.equal(0n);
+    });
+
+    it("requires liquidateWithPrice when oracle is stale-paused and only allows it for modules", async function () {
+      const exposure = ethers.parseEther("5000");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 14001n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 14002n);
+      await settlementEngine.settleMatch(
+        longOrder,
+        await signOrder(longTrader, longOrder),
+        shortOrder,
+        await signOrder(shortTrader, shortOrder),
+        exposure
+      );
+
+      const longPosId = (await positionManager.getTraderPositions(longTrader.address))[0];
+      await mockOracle.setPrice(ethers.parseEther("500"));
+      expect(await riskManager.isPositionLiquidatable(longPosId)).to.equal(true);
+
+      await perpStorage.setOracleStaleAutoPauseEnabled(true);
+      await mockOracle.setForceStale(true);
+
+      await expect(liquidationEngine.connect(liquidator).liquidate(longPosId)).to.be.revertedWith("Market oracle stale paused");
+
+      await perpStorage.setAllowLiquidationWhenOracleStalePaused(true);
+      await expect(liquidationEngine.connect(liquidator).liquidate(longPosId)).to.be.revertedWith("Use liquidateWithPrice while oracle stale");
+
+      await perpStorage.setAuthorizedModule(owner.address, true);
+      await liquidationEngine.connect(owner).liquidateWithPrice(longPosId, ethers.parseEther("500"));
+      const closed = await perpStorage.positions(longPosId);
+      expect(closed.active).to.equal(false);
+    });
+
+    it("does not consume insurance when insurance balance is configured but treasury is empty", async function () {
+      const market = await perpStorage.marketFeedId();
+      await perpStorage.setMarketRiskParams(market, 750, 0, 0);
+      await settlementEngine.setExecutionLeverage(100);
+
+      const exposure = ethers.parseEther("100000");
+      const longOrder = await buildOrder(longTrader.address, 0, exposure, 0n, 15001n);
+      const shortOrder = await buildOrder(shortTrader.address, 1, exposure, 0n, 15002n);
+
+      await settlementEngine.settleMatch(
+        longOrder,
+        await signOrder(longTrader, longOrder),
+        shortOrder,
+        await signOrder(shortTrader, shortOrder),
+        exposure
+      );
+
+      await perpStorage.setAuthorizedModule(owner.address, true);
+      const fakeInsurance = ethers.parseEther("1000");
+      await perpStorage.connect(owner).setInsuranceFundBalance(fakeInsurance);
+
+      const longPosId = (await positionManager.getTraderPositions(longTrader.address))[0];
+      await mockOracle.setPrice(ethers.parseEther("10"));
+      expect(await riskManager.isPositionLiquidatable(longPosId)).to.equal(true);
+
+      const insuranceTreasuryBefore = await insuranceTreasury.balance();
+      await liquidationEngine.connect(liquidator).liquidate(longPosId);
+      const insuranceTreasuryAfter = await insuranceTreasury.balance();
+
+      expect(await perpStorage.totalBadDebt()).to.be.gt(0n);
+      expect(insuranceTreasuryAfter).to.equal(insuranceTreasuryBefore);
+      expect(await perpStorage.insuranceFundBalance()).to.equal(fakeInsurance);
+    });
   });
 
   // ==================== HELPER FUNCTIONS ====================
@@ -782,7 +1129,8 @@ describe("PerpSettlement Module Integration", function () {
     side: 0 | 1,
     exposure: bigint,
     limitPrice: bigint,
-    nonce: bigint
+    nonce: bigint,
+    marketId?: string
   ): Promise<TestOrder> {
     const { ethers } = await network.connect();
     const latest = await ethers.provider.getBlock("latest");
@@ -797,7 +1145,7 @@ describe("PerpSettlement Module Integration", function () {
       limitPrice,
       expiry: BigInt(latest.timestamp + 3600),
       nonce,
-      marketId: await perpStorage.marketFeedId(),
+      marketId: marketId ?? await perpStorage.marketFeedId(),
     };
   }
 

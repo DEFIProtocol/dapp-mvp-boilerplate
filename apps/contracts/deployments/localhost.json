@@ -11,6 +11,8 @@
   "fundingEngine": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
   "insuranceFund": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
   "protocolTreasury": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "optionsPricer": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+  "optionsEngine": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
   "agents": {
     "marketMaker": [
       "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",

@@ -18,6 +18,8 @@ interface DeployedAddresses {
   fundingEngine: string;
   insuranceFund: string;
   protocolTreasury: string;
+  optionsPricer: string;
+  optionsEngine: string;
   agents: {
     [key: string]: string[]; // trader addresses
   };
@@ -148,6 +150,26 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await adlEngine.waitForDeployment();
   const adlEngineAddress = await adlEngine.getAddress();
   console.log(`ADLEngine: ${adlEngineAddress}`);
+
+  // 9.6 Deploy OptionsPricerCore
+  console.log("\n📝 Deploying OptionsPricerCore...");
+  const OptionsPricerCore = await ethers.getContractFactory("OptionsPricerCore");
+  const optionsPricer = await OptionsPricerCore.deploy();
+  await optionsPricer.waitForDeployment();
+  const optionsPricerAddress = await optionsPricer.getAddress();
+  console.log(`OptionsPricerCore: ${optionsPricerAddress}`);
+
+  // 9.7 Deploy OptionsEngineModule
+  console.log("\n📝 Deploying OptionsEngineModule...");
+  const OptionsEngineModule = await ethers.getContractFactory("OptionsEngineModule");
+  const optionsEngine = await OptionsEngineModule.deploy(
+    perpStorageAddress,
+    collateralManagerAddress,
+    optionsPricerAddress
+  );
+  await optionsEngine.waitForDeployment();
+  const optionsEngineAddress = await optionsEngine.getAddress();
+  console.log(`OptionsEngineModule: ${optionsEngineAddress}`);
   
   // 10. Initialize contracts (set storage params and module permissions)
   console.log("\n🔧 Initializing contracts...");
@@ -157,6 +179,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setInsuranceFund(insuranceFundAddress);
   await perpStorage.setProtocolTreasury(protocolTreasuryAddress);
   await perpStorage.setMarkOracle(oracleAddress);
+  await perpStorage.setOptionsPricer(optionsPricerAddress);
   const simMarketId = ethers.encodeBytes32String("SIM_MARK");
   await perpStorage.setMarketFeedId(simMarketId);
 
@@ -191,6 +214,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setAuthorizedModule(adlEngineAddress, true);
   await perpStorage.setAuthorizedModule(settlementEngineAddress, true);
   await perpStorage.setAuthorizedModule(fundingEngineAddress, true);
+  await perpStorage.setAuthorizedModule(optionsEngineAddress, true);
 
   await liquidationEngine.setAdlEngine(adlEngineAddress);
 
@@ -268,6 +292,8 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     fundingEngine: fundingEngineAddress,
     insuranceFund: insuranceFundAddress,
     protocolTreasury: protocolTreasuryAddress,
+    optionsPricer: optionsPricerAddress,
+    optionsEngine: optionsEngineAddress,
     agents: agentAddresses
   };
   

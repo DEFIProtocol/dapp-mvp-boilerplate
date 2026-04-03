@@ -44,6 +44,7 @@ export interface SimulationMetrics {
   stepProactiveAdlEvents: number;
   positionsAtRisk: number;
   trades: number;
+  optionsTrades: number;
   uniqueTraders: number;
   openOrders: number;
   newOrders: number;

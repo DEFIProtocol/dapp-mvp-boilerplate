@@ -10,7 +10,8 @@ import type {
   SimulationRun,
 } from '../../types/simulation';
 
-const API_BASE = '/api/contract-sim';
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim().replace(/\/$/, '');
+const API_BASE = API_ORIGIN ? `${API_ORIGIN}/api/contract-sim` : '/api/contract-sim';
 
 type RawSimulationMetric = Record<string, unknown>;
 type RawPosition = Record<string, unknown>;
@@ -146,6 +147,7 @@ const normalizeMetric = (rawMetric: RawSimulationMetric, step: number): Simulati
     stepProactiveAdlEvents: finiteOrZero(toNumber(rawMetric.stepProactiveAdlEvents)),
     positionsAtRisk: finiteOrZero(toNumber(rawMetric.positionsAtRisk)),
     trades: finiteOrZero(toNumber(rawMetric.tradeCount)),
+    optionsTrades: finiteOrZero(toNumber(rawMetric.optionsTrades)),
     uniqueTraders: finiteOrZero(toNumber(rawMetric.uniqueTraders)),
     openOrders: finiteOrZero(toNumber(rawMetric.openOrders)),
     newOrders: finiteOrZero(toNumber(rawMetric.newOrders)),

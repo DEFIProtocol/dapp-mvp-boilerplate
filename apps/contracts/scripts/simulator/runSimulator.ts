@@ -44,6 +44,7 @@ interface CumulativeFlows {
   proactiveAdlEvents: number;
   proactiveAdlSoftEvents: number;
   proactiveAdlHardEvents: number;
+  optionsTrades: number;
 }
 
 interface TraderBehavior {
@@ -100,6 +101,10 @@ interface SimulationOptions {
 
 const FIXED_SIMULATION_STEPS = 2000;
 const ADL_QUEUE_REFRESH_INTERVAL = 25;
+const OPTION_TRADE_INTERVAL = 5;
+const OPTION_TRADERS_PER_STEP = 4;
+const OPTION_TRADE_SIZE = 10n ** 16n;
+const OPTION_SERIES_LIFETIME_SECONDS = 300 * 1000;
 const STRESS_SCENARIOS = new Set([
   "blackSwan",
   "blackSwanDown",
@@ -140,6 +145,7 @@ export async function runSimulation(options: SimulationOptions) {
   const adlEngine = await ethers.getContractAt("ADLEngine", addresses.adlEngine);
   const settlementEngine = await ethers.getContractAt("SettlementEngine", addresses.settlementEngine);
   const fundingEngine = await ethers.getContractAt("FundingEngine", addresses.fundingEngine);
+  const optionsEngine = await ethers.getContractAt("OptionsEngineModule", addresses.optionsEngine);
   const insuranceTreasury = await ethers.getContractAt("InsuranceTreasury", addresses.insuranceFund);
   const protocolTreasury = await ethers.getContractAt("ProtocolTreasury", addresses.protocolTreasury);
 
@@ -186,6 +192,7 @@ export async function runSimulation(options: SimulationOptions) {
     proactiveAdlEvents: 0,
     proactiveAdlSoftEvents: 0,
     proactiveAdlHardEvents: 0,
+    optionsTrades: 0,
   };
 
   const metricsCollector = new MetricsCollector(
@@ -211,6 +218,14 @@ export async function runSimulation(options: SimulationOptions) {
 
   const initialPrice = scenario.priceModel.initialPrice;
   await oracle.setPrice(toOraclePrice(ethers, initialPrice));
+  const optionSeriesIds = await initializeOptionSeries({
+    ethers,
+    perpStorage,
+    optionsEngine,
+    marketId: defaultMarketId,
+    collateralToken: addresses.usdc,
+    initialPrice,
+  });
 
   const initialAdlQueueStats = await refreshAdlQueuesOnChain({
     perpStorage,
@@ -243,6 +258,7 @@ export async function runSimulation(options: SimulationOptions) {
     const takerBps = BigInt(takerBpsRaw);
 
     let stepTradeCount = 0;
+    let stepOptionsTrades = 0;
     let stepNewOrders = 0;
     let stepFilledOrders = 0;
     let stepCancelledOrders = 0;
@@ -395,6 +411,23 @@ export async function runSimulation(options: SimulationOptions) {
       cumulative.takerFees += takerFee;
     }
 
+    stepOptionsTrades = await runStepOptionTrades({
+      step,
+      random,
+      traderSigners,
+      traderProfileByAddress,
+      optionsEngine,
+      optionSeriesIds,
+      logger,
+      cumulative,
+    });
+
+    await expireAndSettleOptions({
+      perpStorage,
+      optionsEngine,
+      optionSeriesIds,
+    });
+
     const nextFundingTime = await perpStorage.nextFundingTime();
     const currentTs = BigInt((await ethers.provider.getBlock("latest")).timestamp);
     if (currentTs >= nextFundingTime) {
@@ -480,6 +513,45 @@ export async function runSimulation(options: SimulationOptions) {
         exposure: pos.exposure,
         leverage: 1,
         reason: `position:${pos.positionId.toString()}`,
+      });
+    }
+
+    const liquidatableOptionPositions = await findLiquidatableOptionPositions(perpStorage, riskManager);
+    for (const optionPosition of liquidatableOptionPositions) {
+      stepLiquidatorOrders++;
+      const liquidator = random.pick(liquidatorSigners);
+
+      const result = await tryLiquidateOptionPosition(liquidationEngine, liquidator, optionPosition.positionId);
+      if (!result.ok) {
+        continue;
+      }
+
+      stepLiquidations++;
+      cumulative.liquidatorRewards += result.reward;
+      cumulative.liquidationPenalty += result.penaltyCollected;
+
+      if (result.coverAmount > 0n) {
+        cumulative.insuranceOutflow += result.coverAmount;
+      }
+
+      if (result.insuranceInflow > 0n) {
+        cumulative.insuranceInflow += result.insuranceInflow;
+        cumulative.liquidationInsuranceInflow += result.insuranceInflow;
+      }
+
+      cumulative.marginReturned += result.marginReturned;
+
+      const liquidatorProfile = traderProfileByAddress.get(liquidator.address) ?? getDefaultTraderProfile();
+      logger.logExecutionEvent({
+        step,
+        eventType: "liquidation",
+        trader: liquidator.address,
+        counterparty: optionPosition.trader,
+        agentType: liquidatorProfile.agentType,
+        side: "short",
+        exposure: optionPosition.size,
+        leverage: 1,
+        reason: `option-position:${optionPosition.positionId.toString()}`,
       });
     }
 
@@ -576,6 +648,7 @@ export async function runSimulation(options: SimulationOptions) {
       stepProactiveAdlEvents,
       stepVolume,
       trades: stepTradeCount,
+      optionsTrades: stepOptionsTrades,
       uniqueTraders: positionStats.uniqueTraders,
       openOrders: 0,
       newOrders: stepNewOrders,
@@ -712,8 +785,16 @@ async function trySettleMatch(
     const longSig = await longTrader.signTypedData(domain, types, longOrder);
     const shortSig = await shortTrader.signTypedData(domain, types, shortOrder);
 
+    if (String(longOrder.marketId).toLowerCase() !== String(shortOrder.marketId).toLowerCase()) {
+      return false;
+    }
+
+    const marketId = String(longOrder.marketId);
+
     await (
-      await settlementEngine.connect(matcher).settleMatch(longOrder, longSig, shortOrder, shortSig, size)
+      await settlementEngine
+        .connect(matcher)
+        .settleMatchForMarket(marketId, longOrder, longSig, shortOrder, shortSig, size)
     ).wait();
     return true;
   } catch {
@@ -1140,6 +1221,241 @@ async function tryLiquidate(
       proactiveAdlEvents: 0,
       proactiveAdlSoftEvents: 0,
       proactiveAdlHardEvents: 0,
+    };
+  }
+}
+
+async function initializeOptionSeries(params: {
+  ethers: any;
+  perpStorage: Contract;
+  optionsEngine: Contract;
+  marketId: string;
+  collateralToken: string;
+  initialPrice: number;
+}): Promise<bigint[]> {
+  const {
+    ethers,
+    perpStorage,
+    optionsEngine,
+    marketId,
+    collateralToken,
+    initialPrice,
+  } = params;
+
+  const latestBlock = await ethers.provider.getBlock("latest");
+  const startTimestamp = BigInt(latestBlock?.timestamp ?? Math.floor(Date.now() / 1000));
+  const expiry = startTimestamp + BigInt(OPTION_SERIES_LIFETIME_SECONDS);
+  const strike = toOraclePrice(ethers, initialPrice);
+
+  await (await optionsEngine.registerOptionSeries(marketId, true, strike, expiry, 8000, 100, collateralToken)).wait();
+  const callSeriesId = (await perpStorage.nextOptionSeriesId()) - 1n;
+
+  await (await optionsEngine.registerOptionSeries(marketId, false, strike, expiry, 8000, 100, collateralToken)).wait();
+  const putSeriesId = (await perpStorage.nextOptionSeriesId()) - 1n;
+
+  return [callSeriesId, putSeriesId];
+}
+
+async function runStepOptionTrades(params: {
+  step: number;
+  random: DeterministicRandom;
+  traderSigners: Signer[];
+  traderProfileByAddress: Map<string, TraderProfile>;
+  optionsEngine: Contract;
+  optionSeriesIds: bigint[];
+  logger: SimulationLogger;
+  cumulative: CumulativeFlows;
+}): Promise<number> {
+  const {
+    step,
+    random,
+    traderSigners,
+    traderProfileByAddress,
+    optionsEngine,
+    optionSeriesIds,
+    logger,
+    cumulative,
+  } = params;
+
+  if (step % OPTION_TRADE_INTERVAL !== 0 || traderSigners.length === 0 || optionSeriesIds.length === 0) {
+    return 0;
+  }
+
+  let stepOptionsTrades = 0;
+  const selectedTraders = shuffleDeterministic(traderSigners, random).slice(0, Math.min(OPTION_TRADERS_PER_STEP, traderSigners.length));
+
+  for (const trader of selectedTraders) {
+    const seriesId = random.pick(optionSeriesIds);
+    const openLong = random.next() < 0.7;
+    const profile = traderProfileByAddress.get(trader.address) ?? getDefaultTraderProfile();
+
+    try {
+      if (openLong) {
+        await (await optionsEngine.connect(trader).openLongOption(seriesId, OPTION_TRADE_SIZE)).wait();
+      } else {
+        await (await optionsEngine.connect(trader).openShortOption(seriesId, OPTION_TRADE_SIZE)).wait();
+      }
+
+      stepOptionsTrades += 1;
+      cumulative.optionsTrades += 1;
+
+      logger.logExecutionEvent({
+        step,
+        eventType: "option-filled",
+        trader: trader.address,
+        agentType: profile.agentType,
+        side: openLong ? "long" : "short",
+        exposure: OPTION_TRADE_SIZE,
+        leverage: 1,
+        reason: `series:${seriesId.toString()}`,
+      });
+    } catch {
+      logger.logExecutionEvent({
+        step,
+        eventType: "option-failed",
+        trader: trader.address,
+        agentType: profile.agentType,
+        side: openLong ? "long" : "short",
+        exposure: OPTION_TRADE_SIZE,
+        leverage: 1,
+        reason: `series:${seriesId.toString()}`,
+      });
+    }
+  }
+
+  return stepOptionsTrades;
+}
+
+async function expireAndSettleOptions(params: {
+  perpStorage: Contract;
+  optionsEngine: Contract;
+  optionSeriesIds: bigint[];
+}): Promise<void> {
+  const {
+    perpStorage,
+    optionsEngine,
+    optionSeriesIds,
+  } = params;
+
+  const provider = optionsEngine.runner?.provider;
+  const latestBlock = provider ? await provider.getBlock("latest") : null;
+  const currentTimestamp = BigInt(latestBlock?.timestamp ?? Math.floor(Date.now() / 1000));
+
+  for (const seriesId of optionSeriesIds) {
+    const series = await perpStorage.getOptionSeries(seriesId);
+    const status = Number(series.status);
+    const expiry = BigInt(series.expiry);
+
+    if (status === 1 && currentTimestamp >= expiry) {
+      try {
+        await (await optionsEngine.expireSeries(seriesId)).wait();
+      } catch {
+        // Ignore expiry races once the series has already transitioned.
+      }
+    }
+
+    const refreshedSeries = await perpStorage.getOptionSeries(seriesId);
+    if (Number(refreshedSeries.status) !== 2) {
+      continue;
+    }
+
+    const nextOptionPositionId = BigInt(await perpStorage.nextOptionPositionId());
+    for (let positionId = 0n; positionId < nextOptionPositionId; positionId += 1n) {
+      try {
+        const position = await perpStorage.getOptionPosition(positionId);
+        if (!position.active || position.settled) continue;
+        if (BigInt(position.seriesId) !== seriesId) continue;
+
+        await (await optionsEngine.settleOption(positionId)).wait();
+      } catch {
+        // Ignore positions that are no longer actionable.
+      }
+    }
+  }
+}
+
+async function findLiquidatableOptionPositions(
+  perpStorage: Contract,
+  riskManager: Contract,
+): Promise<Array<{ positionId: bigint; trader: string; size: bigint }>> {
+  const positions: Array<{ positionId: bigint; trader: string; size: bigint }> = [];
+  const nextOptionPositionId = BigInt(await perpStorage.nextOptionPositionId());
+
+  for (let positionId = 0n; positionId < nextOptionPositionId; positionId += 1n) {
+    try {
+      const position = await perpStorage.getOptionPosition(positionId);
+      if (!position.active || position.settled || position.isLong) continue;
+
+      const liquidatable = await riskManager.isOptionPositionLiquidatable(positionId);
+      if (!liquidatable) continue;
+
+      positions.push({
+        positionId,
+        trader: position.trader,
+        size: BigInt(position.size),
+      });
+    } catch {
+      // Ignore uninitialized ids and positions that no longer resolve cleanly.
+    }
+  }
+
+  return positions;
+}
+
+async function tryLiquidateOptionPosition(
+  liquidationEngine: Contract,
+  liquidator: Signer,
+  optionPositionId: bigint,
+): Promise<{
+  ok: boolean;
+  reward: bigint;
+  coverAmount: bigint;
+  insuranceInflow: bigint;
+  penaltyCollected: bigint;
+  marginReturned: bigint;
+}> {
+  try {
+    const tx = await liquidationEngine.connect(liquidator).liquidateOptionPosition(optionPositionId);
+    const receipt = await tx.wait();
+    let reward = 0n;
+    let coverAmount = 0n;
+    let insuranceInflow = 0n;
+    let penaltyCollected = 0n;
+    let marginReturned = 0n;
+
+    for (const log of receipt.logs) {
+      try {
+        const parsed = liquidationEngine.interface.parseLog(log);
+        if (parsed.name === "OptionPositionLiquidated") {
+          reward = BigInt(parsed.args.reward ?? 0n);
+          insuranceInflow = BigInt(parsed.args.insuranceUsed ?? 0n);
+          penaltyCollected = BigInt(parsed.args.penaltyCollected ?? 0n);
+          marginReturned = BigInt(parsed.args.marginReturned ?? 0n);
+        }
+        if (parsed.name === "InsuranceFundUsed") {
+          coverAmount = BigInt(parsed.args.amount ?? 0n);
+        }
+      } catch {
+        // Ignore unrelated logs.
+      }
+    }
+
+    return {
+      ok: true,
+      reward,
+      coverAmount,
+      insuranceInflow,
+      penaltyCollected,
+      marginReturned,
+    };
+  } catch {
+    return {
+      ok: false,
+      reward: 0n,
+      coverAmount: 0n,
+      insuranceInflow: 0n,
+      penaltyCollected: 0n,
+      marginReturned: 0n,
     };
   }
 }

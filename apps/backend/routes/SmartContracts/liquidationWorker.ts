@@ -51,7 +51,7 @@ export async function runLiquidations(
 
   for (const positionId of positionIds) {
     try {
-      await settlement.liquidate(positionId, priceData.markPrice);
+      await settlement.liquidate(positionId);
       console.log(`[liquidationWorker] Liquidated position #${positionId}`);
     } catch {
       // Expected — position is above maintenance margin

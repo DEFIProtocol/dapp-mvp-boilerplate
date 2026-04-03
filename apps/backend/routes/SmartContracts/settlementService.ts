@@ -1,6 +1,24 @@
 import { ethers } from "ethers";
 import settlementAbi from "../../../contracts/artifacts/contracts/PerpSettlement.sol/PerpEngine.json";
 
+type PositionSnapshot = {
+  positionId: string;
+  trader: string;
+  side: "LONG" | "SHORT";
+  marketId: string;
+  subAccountId: string;
+  exposure: string;
+  margin: string;
+  entryPrice: string;
+  active: boolean;
+  exposureUsd: string;
+  marginUsd: string;
+  entryPriceUsd: string;
+  unrealizedPnlUsd: string;
+  unrealizedFundingUsd: string;
+  equityUsd: string;
+};
+
 function requireEnv(name: string, value: string | undefined): string {
   if (!value || value.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -39,29 +57,68 @@ export class SettlementService {
     );
   }
 
-  async liquidate(positionId: number, markPrice: number) {
-    const tx = await this.contract.liquidateWithPrice(
-      positionId,
-      ethers.parseUnits(markPrice.toString(), 18)
+  async liquidate(positionId: number) {
+    const tx = await this.contract.liquidate(positionId);
+
+    await tx.wait();
+    return tx.hash;
+  }
+
+  async updateFunding() {
+    const tx = await this.contract.updateFunding();
+
+    await tx.wait();
+    return tx.hash;
+  }
+
+  async updateFundingForMarket(marketId: string) {
+    const tx = await this.contract.updateFundingForMarket(marketId);
+    await tx.wait();
+    return tx.hash;
+  }
+
+  async settleMatchForMarket(
+    marketId: string,
+    longOrder: unknown,
+    longSignature: string,
+    shortOrder: unknown,
+    shortSignature: string,
+    matchSize: bigint
+  ) {
+    const tx = await this.contract.settleMatchForMarket(
+      marketId,
+      longOrder,
+      longSignature,
+      shortOrder,
+      shortSignature,
+      matchSize
     );
 
     await tx.wait();
     return tx.hash;
   }
 
-  async updateFunding(longFunding: number, shortFunding: number) {
-    const parseSignedRate = (value: number) => {
-      const sign = value < 0 ? "-" : "";
-      const absolute = Math.abs(value).toString();
-      return ethers.parseUnits(`${sign}${absolute}`, 18);
-    };
-
-    const tx = await this.contract.updateFunding(
-      parseSignedRate(longFunding),
-      parseSignedRate(shortFunding)
+  async settleMatchWithRolesForMarket(
+    marketId: string,
+    longOrder: unknown,
+    longSignature: string,
+    shortOrder: unknown,
+    shortSignature: string,
+    matchSize: bigint,
+    longIsTaker: boolean
+  ) {
+    const tx = await this.contract.settleMatchWithRolesForMarket(
+      marketId,
+      longOrder,
+      longSignature,
+      shortOrder,
+      shortSignature,
+      matchSize,
+      longIsTaker
     );
 
     await tx.wait();
+    return tx.hash;
   }
 
   async getParams() {
@@ -97,9 +154,12 @@ export class SettlementService {
     return await this.contract.getPositionWithPnL(positionId);
   }
 
-  async getTraderPositionSnapshots(trader: string) {
+  async getTraderPositionSnapshots(
+    trader: string,
+    options?: { marketId?: string; subAccountId?: string }
+  ): Promise<PositionSnapshot[]> {
     const positionIds = await this.getTraderPositionIds(trader);
-    const snapshots = await Promise.all(
+    const snapshots: PositionSnapshot[] = await Promise.all(
       positionIds.map(async (id) => {
         const positionTuple = await this.getPositionWithPnl(id);
 
@@ -114,6 +174,8 @@ export class SettlementService {
           positionId: id.toString(),
           trader: String(position.trader),
           side: sideValue === 0 ? "LONG" : "SHORT",
+          marketId: String(position.marketId),
+          subAccountId: position.subAccountId.toString(),
           exposure: position.exposure.toString(),
           margin: position.margin.toString(),
           entryPrice: position.entryPrice.toString(),
@@ -128,7 +190,25 @@ export class SettlementService {
       })
     );
 
-    return snapshots;
+    return snapshots.filter((snapshot) => {
+      if (options?.marketId && snapshot.marketId.toLowerCase() !== options.marketId.toLowerCase()) {
+        return false;
+      }
+
+      if (options?.subAccountId && snapshot.subAccountId !== options.subAccountId) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  async getSubAccountEquity(trader: string, subAccountId: bigint): Promise<bigint> {
+    return await this.contract.getSubAccountEquity(trader, subAccountId);
+  }
+
+  async getSubAccounts(trader: string): Promise<unknown[]> {
+    return await this.contract.getSubAccounts(trader);
   }
 
   async setFeeParams(makerFeeBps: number, takerFeeBps: number, insuranceBps: number) {

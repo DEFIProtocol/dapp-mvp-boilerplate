@@ -336,6 +336,8 @@ export const DashboardLayout: React.FC = () => {
   const runAverageLeverage = data.metrics.length > 0
     ? data.metrics.reduce((sum, metric) => sum + metric.avgLeverage, 0) / data.metrics.length
     : 0;
+  const totalFuturesTrades = data.metrics.reduce((sum, metric) => sum + metric.trades, 0);
+  const totalOptionsTrades = data.metrics.reduce((sum, metric) => sum + metric.optionsTrades, 0);
   const stepOutcomes = data.metrics.map((metric) => {
     const failed = Math.max(metric.newOrders - metric.filledOrders - metric.cancelledOrders, 0);
     return {
@@ -401,6 +403,18 @@ export const DashboardLayout: React.FC = () => {
                 <span className="text-slate-400">Step:</span>
                 <span className="ml-2 font-mono text-cyan-300">
                   {safeStep}/{data.metrics.length - 1}
+                </span>
+              </div>
+              <div className="text-sm bg-slate-800/60 border border-slate-700/70 px-4 py-2 rounded-lg">
+                <span className="text-slate-400">Futures:</span>
+                <span className="ml-2 font-mono text-cyan-300">
+                  {totalFuturesTrades.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-sm bg-slate-800/60 border border-slate-700/70 px-4 py-2 rounded-lg">
+                <span className="text-slate-400">Options:</span>
+                <span className="ml-2 font-mono text-violet-300">
+                  {totalOptionsTrades.toLocaleString()}
                 </span>
               </div>
               <div className="text-sm bg-slate-800/60 border border-slate-700/70 px-3 py-2 rounded-lg flex items-center gap-2">
