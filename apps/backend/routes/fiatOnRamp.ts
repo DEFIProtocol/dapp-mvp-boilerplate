@@ -2,6 +2,8 @@ import express, { Request, Response, Router } from 'express';
 import { getAssets, createPaySession, getExchangeRate, PaySessionRequest } from '../fiatOnRamp/coinbasePay';
 
 const router: Router = express.Router();
+const first = (value: string | string[] | undefined): string =>
+  Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 
 interface SessionTokenRequestBody {
   walletAddress: string;
@@ -141,10 +143,10 @@ router.post('/create-session-token', async (req: Request, res: Response): Promis
  */
 router.get('/rate/:asset', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { asset } = req.params;
-    const { amount } = req.query;
+    const asset = first(req.params.asset);
+    const amount = first(req.query.amount as string | string[] | undefined);
 
-    const rateData = await getExchangeRate(asset, amount as string);
+    const rateData = await getExchangeRate(asset, amount);
 
     res.json({
       success: true,

@@ -4,6 +4,8 @@ import * as userHelpers from "../../postgres/users";
 
 export default function usersRouter(pool: Pool) {
   const router = Router();
+  const getParam = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
   const ALLOWED_PREFERENCES_KEYS = new Set([
     "theme",
     "themeMode",
@@ -61,7 +63,7 @@ export default function usersRouter(pool: Pool) {
   // GET user by id
   router.get("/db/:id", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.getUserById(pool, req.params.id);
+      const user = await userHelpers.getUserById(pool, getParam(req.params.id));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -74,7 +76,7 @@ export default function usersRouter(pool: Pool) {
   // GET user by wallet address
   router.get("/db/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.getUserByWallet(pool, req.params.address);
+      const user = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -97,7 +99,7 @@ export default function usersRouter(pool: Pool) {
   // PUT update user by ID
   router.put("/db/:id", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.updateUser(pool, req.params.id, req.body);
+      const user = await userHelpers.updateUser(pool, getParam(req.params.id), req.body);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -110,7 +112,7 @@ export default function usersRouter(pool: Pool) {
   // PUT update user by wallet address
   router.put("/db/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.updateUserByWallet(pool, req.params.address, req.body);
+      const user = await userHelpers.updateUserByWallet(pool, getParam(req.params.address), req.body);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -123,7 +125,7 @@ export default function usersRouter(pool: Pool) {
   // DELETE user
   router.delete("/db/:id", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.deleteUser(pool, req.params.id);
+      const user = await userHelpers.deleteUser(pool, getParam(req.params.id));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -145,7 +147,7 @@ export default function usersRouter(pool: Pool) {
 
   router.get("/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.getUserByWallet(pool, req.params.address);
+      const user = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
       if (!user) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -169,7 +171,7 @@ export default function usersRouter(pool: Pool) {
 
   router.put("/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.updateUserByWallet(pool, req.params.address, req.body);
+      const user = await userHelpers.updateUserByWallet(pool, getParam(req.params.address), req.body);
       if (!user) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -199,7 +201,7 @@ export default function usersRouter(pool: Pool) {
         });
       }
 
-      const existingUser = await userHelpers.getUserByWallet(pool, req.params.address);
+      const existingUser = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
       if (!existingUser) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -213,7 +215,7 @@ export default function usersRouter(pool: Pool) {
         incoming as Record<string, unknown>
       );
 
-      const user = await userHelpers.updateUserByWallet(pool, req.params.address, {
+      const user = await userHelpers.updateUserByWallet(pool, getParam(req.params.address), {
         preferences: mergedPreferences
       });
 
