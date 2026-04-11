@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { setupDiagnosticsFixture } from "./fixtures/diagnostic-fixtures";
-import { analyzeDrainDelta, summarizeFindings } from "./monitors/drain-analyzer";
-import { computeSnapshotDelta } from "./monitors/margin-flow-monitor";
+import { setupDiagnosticsFixture } from "./fixtures/diagnostic-fixtures.js";
+import { analyzeDrainDelta, summarizeFindings } from "./monitors/drain-analyzer.js";
+import { computeSnapshotDelta } from "./monitors/margin-flow-monitor.js";
 import {
   runLiquidationShockScenario,
   runNormalFlowScenario,
   runWithdrawalAttemptScenario,
-} from "./scenarios/margin-drain-scenarios";
+} from "./scenarios/margin-drain-scenarios.js";
 
 describe("Margin Drain Diagnostics", function () {
   this.timeout(180000);

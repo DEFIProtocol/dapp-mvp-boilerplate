@@ -17,7 +17,7 @@
  *   - no-token-creation invariant across all tracked vaults
  */
 import { expect } from "chai";
-import { setupDiagnosticsFixture, type DiagnosticsFixture } from "./fixtures/diagnostic-fixtures";
+import { setupDiagnosticsFixture, type DiagnosticsFixture } from "./fixtures/diagnostic-fixtures.js";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -149,8 +149,8 @@ describe("Margin Vault Drain Isolation", function () {
   describe("Fee accounting – per trade invariant", function () {
     it("trading fees are deducted from traders and routed to protocol treasury", async function () {
       const { perpStorage, protocolTreasury, mockToken } = fixture.contracts;
-      const makerBps = await perpStorage.makerFeeBps();
-      const takerBps = await perpStorage.takerFeeBps();
+      const makerBps = BigInt(await perpStorage.makerFeeBps());
+      const takerBps = BigInt(await perpStorage.takerFeeBps());
       const exposure = fixture.ethers.parseEther("1000");
 
       const beforeFeePoll = await feePool(fixture);
@@ -239,8 +239,8 @@ describe("Margin Vault Drain Isolation", function () {
     it("accountCollateral drop equals fee charged – no extra deduction on open", async function () {
       const { perpStorage } = fixture.contracts;
       const exposure = fixture.ethers.parseEther("3000");
-      const makerBps = await perpStorage.makerFeeBps();
-      const takerBps = await perpStorage.takerFeeBps();
+      const makerBps = BigInt(await perpStorage.makerFeeBps());
+      const takerBps = BigInt(await perpStorage.takerFeeBps());
 
       const beforeLong = await perpStorage.accountCollateral(fixture.traders[0].address);
       const beforeShort = await perpStorage.accountCollateral(fixture.traders[1].address);

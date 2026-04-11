@@ -1,0 +1,433 @@
+.tradingView {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
+}
+
+.marketHeader {
+  max-width: 1400px;
+  margin: 0 auto 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--card-shadow);
+}
+
+[data-theme="light"] .marketHeader {
+  background: linear-gradient(135deg, #dde3f0 0%, #c8d3ea 100%);
+  border-color: rgba(100, 120, 180, 0.2);
+}
+
+.marketHeaderMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.marketTitle,
+.surfaceHeader h3,
+.ticketTitle {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.marketSubtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.marketStats {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.statCard {
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statCard span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.statCard strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.watchButton,
+.baseOnlyBadge,
+.toggleButton,
+.iconButton,
+.secondaryButton,
+.primaryButton,
+.sideButton {
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.watchButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+
+.watchButtonActive {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 255, 255, 0.15);
+}
+
+.topRow {
+  max-width: 1400px;
+  margin: 1rem auto;
+  padding: 0 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 380px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.chartColumn,
+.surfaceCard,
+.ticketCard {
+  background: var(--surface);
+  border-radius: 24px;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.chartColumn {
+  padding: 1rem;
+  min-width: 0;
+}
+
+.sideColumn {
+  position: sticky;
+  top: 100px;
+}
+
+.ticketCard {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ticketHeader,
+.surfaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.baseOnlyBadge {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.sideToggle,
+.toggleGroup {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.sideButton,
+.toggleButton {
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+}
+
+.sideButtonActive,
+.toggleButtonActive {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 255, 255, 0.12);
+}
+
+.sideButtonSell {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inputLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.input,
+.select,
+.searchInput {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  padding: 0.7rem 0.8rem;
+}
+
+.quoteBox,
+.summaryGrid,
+.greeksGrid,
+.positionMetaGrid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.quoteBox {
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.quoteRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.summaryGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summaryItem {
+  padding: 0.7rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.summaryItem span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.greeksGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(6, 182, 212, 0.18));
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.ticketHint,
+.subtle,
+.emptyState span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.successMessage {
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: rgba(34, 197, 94, 0.14);
+  color: #22c55e;
+}
+
+.errorMessage {
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+}
+
+.bottomGrid {
+  max-width: 1400px;
+  margin: 0 auto 2rem;
+  padding: 0 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+  gap: 1rem;
+}
+
+.surfaceCard {
+  padding: 1rem;
+}
+
+.filterRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tableWrap {
+  overflow: auto;
+  max-height: 460px;
+  margin-top: 0.85rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+}
+
+.chainTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.chainTable th,
+.chainTable td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.chainTable th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  z-index: 1;
+}
+
+.selectedRow {
+  background: rgba(0, 255, 255, 0.08);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.callBadge {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.putBadge {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+.positionsList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.positionCard {
+  padding: 0.9rem;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+}
+
+.positionTopRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.positionMetaGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0.65rem 0 0.8rem;
+  font-size: 0.82rem;
+}
+
+.emptyState {
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border-soft);
+}
+
+.emptyState p {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .topRow,
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sideColumn {
+    position: static;
+  }
+
+  .marketStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .marketHeaderMain,
+  .surfaceHeader,
+  .ticketHeader,
+  .positionTopRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .marketStats,
+  .summaryGrid,
+  .greeksGrid,
+  .positionMetaGrid {
+    grid-template-columns: 1fr;
+  }
+}

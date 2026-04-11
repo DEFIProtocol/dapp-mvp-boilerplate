@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import type { Contract } from "ethers";
+
+type Contract = any;
 
 describe("Treasury Contracts", function () {
   let ethers: any;

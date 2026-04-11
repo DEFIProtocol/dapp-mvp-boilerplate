@@ -76,6 +76,10 @@
   gap: 0.5rem;
 }
 
+.navGroup {
+  position: relative;
+}
+
 .navLink {
   position: relative;
   padding: 0.5rem 1rem;
@@ -105,6 +109,57 @@
   background: var(--neon-cyan);
   border-radius: 2px;
   box-shadow: 0 0 8px var(--glow-primary);
+}
+
+.navGroupButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  min-width: auto;
+  min-height: auto;
+}
+
+.navGroupChevron {
+  transition: transform 0.2s ease;
+}
+
+.navDropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  min-width: 180px;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  z-index: 120;
+  animation: slideDown 0.2s ease;
+}
+
+.navDropdownLink {
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.navDropdownLink:hover {
+  background: var(--glow-base);
+  color: var(--neon-cyan);
+}
+
+.navDropdownLinkActive {
+  background: var(--glow-primary);
+  color: var(--neon-cyan);
 }
 
 /* Right Section */
@@ -182,7 +237,9 @@
   transition: transform 0.3s ease;
 }
 
-.chainChevron.rotated {
+.chainChevron.rotated,
+.navGroupChevron.rotated,
+.mobileNavChevron.rotated {
   transform: rotate(180deg);
 }
 
@@ -401,6 +458,68 @@
 }
 
 .mobileNavLink.active {
+  background: var(--glow-primary);
+  color: var(--neon-cyan);
+}
+
+.mobileNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mobileNavButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  min-width: auto;
+  min-height: auto;
+}
+
+.mobileNavButton:hover {
+  background: var(--glow-base);
+  color: var(--neon-cyan);
+}
+
+.mobileNavButton.active {
+  background: var(--glow-primary);
+  color: var(--neon-cyan);
+}
+
+.mobileNavChevron {
+  transition: transform 0.2s ease;
+}
+
+.mobileSubNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.75rem;
+}
+
+.mobileSubNavLink {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.mobileSubNavLink:hover {
+  background: var(--glow-base);
+  color: var(--neon-cyan);
+}
+
+.mobileSubNavLink.active {
   background: var(--glow-primary);
   color: var(--neon-cyan);
 }

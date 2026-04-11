@@ -1,5 +1,5 @@
-import type { DiagnosticsFixture } from "../fixtures/diagnostic-fixtures";
-import { takeMarginFlowSnapshot, type MarginFlowSnapshot } from "../monitors/margin-flow-monitor";
+import type { DiagnosticsFixture } from "../fixtures/diagnostic-fixtures.js";
+import { takeMarginFlowSnapshot, type MarginFlowSnapshot } from "../monitors/margin-flow-monitor.js";
 
 type ScenarioResult = {
   name: string;

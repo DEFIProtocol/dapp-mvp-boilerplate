@@ -1,4 +1,4 @@
-import type { Contract } from "ethers";
+type Contract = any;
 
 export type TraderSnapshot = {
   trader: string;
@@ -128,7 +128,7 @@ export async function takeMarginFlowSnapshot(input: SnapshotInput): Promise<Marg
 
   return {
     label,
-    blockNumber: latestBlock.number,
+    blockNumber: BigInt(latestBlock.number),
     timestamp: latestBlock.timestamp,
     markPrice,
     traders: traderSnapshots,

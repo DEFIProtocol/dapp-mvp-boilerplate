@@ -1,12 +1,12 @@
 import { formatUnits, parseUnits } from 'ethers';
 
-import { LiquidatorAgent } from '../agents/liquidatorAgent.ts';
-import { MarketMakerAgent, MomentumTraderAgent, RetailTraderAgent, WhaleAgent } from '../agents/traderAgent.ts';
-import type { BaseAgent } from '../agents/baseAgent.ts';
-import { AGENT_CONFIGS } from '../config/agents.ts';
-import { SCENARIOS } from '../config/scenarios.ts';
-import { MarketPriceEngine } from '../core/markPrice.ts';
-import { DeterministicRandom } from '../utils/deterministicRandom.ts';
+import { LiquidatorAgent } from '../agents/liquidatorAgent.js';
+import { MarketMakerAgent, MomentumTraderAgent, RetailTraderAgent, WhaleAgent } from '../agents/traderAgent.js';
+import type { BaseAgent } from '../agents/baseAgent.js';
+import { AGENT_CONFIGS } from '../config/agents.js';
+import { SCENARIOS } from '../config/scenarios.js';
+import { MarketPriceEngine } from '../core/markPrice.js';
+import { DeterministicRandom } from '../utils/deterministicRandom.js';
 
 export interface SimulationState {
   step: number;

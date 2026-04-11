@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import type { Contract } from "ethers";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+
+type Contract = any;
+type SignerWithAddress = any;
 
 type TestOrder = {
   trader: string;

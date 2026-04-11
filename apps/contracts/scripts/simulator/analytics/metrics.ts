@@ -44,6 +44,7 @@ export interface SimulatorStepState {
   stepVolume: bigint;
   trades: number;
   optionsTrades: number;
+  spotTrades: number;
   uniqueTraders: number;
   openOrders: number;
   newOrders: number;
@@ -105,6 +106,7 @@ export interface ProtocolMetrics {
   volume24h: bigint;
   tradeCount: number;
   optionsTrades: number;
+  spotTrades: number;
   uniqueTraders: number;
   openOrders: number;
   newOrders: number;
@@ -267,6 +269,7 @@ export class MetricsCollector {
       volume24h: rollingVolume,
       tradeCount: state.trades,
       optionsTrades: state.optionsTrades,
+      spotTrades: state.spotTrades,
       uniqueTraders: state.uniqueTraders,
       openOrders: state.openOrders,
       newOrders: state.newOrders,
@@ -393,6 +396,8 @@ export class MetricsCollector {
         totalVolume: formatUnits(cumulativeVolume, 6),
         volume24h: formatUnits(latest.volume24h, 6),
         avgTradeCount: (this.metricsHistory.reduce((sum, m) => sum + m.tradeCount, 0) / this.metricsHistory.length).toFixed(0),
+        optionsTrades: latest.optionsTrades,
+        spotTrades: latest.spotTrades,
         ordersPlaced: totalOrdersPlaced,
         fillRatePercent: totalOrdersPlaced > 0 ? ((totalOrdersFilled / totalOrdersPlaced) * 100).toFixed(2) : '0.00',
         finalOpenOrders: latest.openOrders,

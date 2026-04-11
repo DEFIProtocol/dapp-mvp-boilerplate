@@ -20,6 +20,7 @@ interface DeployedAddresses {
   protocolTreasury: string;
   optionsPricer: string;
   optionsEngine: string;
+  spotEngine: string;
   agents: {
     [key: string]: string[]; // trader addresses
   };
@@ -170,6 +171,16 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await optionsEngine.waitForDeployment();
   const optionsEngineAddress = await optionsEngine.getAddress();
   console.log(`OptionsEngineModule: ${optionsEngineAddress}`);
+
+  console.log("\n📝 Deploying SpotEngine...");
+  const SpotEngine = await ethers.getContractFactory("SpotEngine");
+  const spotEngine = await SpotEngine.deploy(
+    perpStorageAddress,
+    collateralManagerAddress
+  );
+  await spotEngine.waitForDeployment();
+  const spotEngineAddress = await spotEngine.getAddress();
+  console.log(`SpotEngine: ${spotEngineAddress}`);
   
   // 10. Initialize contracts (set storage params and module permissions)
   console.log("\n🔧 Initializing contracts...");
@@ -215,6 +226,8 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
   await perpStorage.setAuthorizedModule(settlementEngineAddress, true);
   await perpStorage.setAuthorizedModule(fundingEngineAddress, true);
   await perpStorage.setAuthorizedModule(optionsEngineAddress, true);
+  await perpStorage.setAuthorizedModule(spotEngineAddress, true);
+  await perpStorage.setAuthorizedModule(deployer.address, true);
 
   await liquidationEngine.setAdlEngine(adlEngineAddress);
 
@@ -294,6 +307,7 @@ export async function deployLocal(ethersOverride?: any): Promise<DeployedAddress
     protocolTreasury: protocolTreasuryAddress,
     optionsPricer: optionsPricerAddress,
     optionsEngine: optionsEngineAddress,
+    spotEngine: spotEngineAddress,
     agents: agentAddresses
   };
   

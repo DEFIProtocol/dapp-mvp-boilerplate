@@ -1,4 +1,4 @@
-import type { MarginFlowSnapshot, SnapshotDelta } from "./margin-flow-monitor";
+import type { MarginFlowSnapshot, SnapshotDelta } from "./margin-flow-monitor.js";
 
 export type DrainChannel =
   | "none"
@@ -36,12 +36,12 @@ export function analyzeDrainDelta(
   threshold: bigint
 ): DrainAnalysisResult {
   const delta = {
-    protocolFeeIncrease: positive(after.system.protocolTreasuryBalance - before.system.protocolTreasuryBalance),
+    protocolFeeIncrease: positive(BigInt(after.system.protocolTreasuryBalance) - BigInt(before.system.protocolTreasuryBalance)),
     insuranceIncrease:
-      positive(after.system.insuranceTreasuryBalance - before.system.insuranceTreasuryBalance) +
-      positive(after.system.insuranceFundBalance - before.system.insuranceFundBalance),
-    badDebtIncrease: positive(after.system.totalBadDebt - before.system.totalBadDebt),
-    feePoolIncrease: positive(after.system.feePool - before.system.feePool),
+      positive(BigInt(after.system.insuranceTreasuryBalance) - BigInt(before.system.insuranceTreasuryBalance)) +
+      positive(BigInt(after.system.insuranceFundBalance) - BigInt(before.system.insuranceFundBalance)),
+    badDebtIncrease: positive(BigInt(after.system.totalBadDebt) - BigInt(before.system.totalBadDebt)),
+    feePoolIncrease: positive(BigInt(after.system.feePool) - BigInt(before.system.feePool)),
   };
 
   const findings: DrainFinding[] = [];
@@ -50,9 +50,9 @@ export function analyzeDrainDelta(
     const afterTrader = after.traders.find((candidate) => candidate.trader === beforeTrader.trader);
     if (!afterTrader) continue;
 
-    const collateralDelta = afterTrader.accountCollateral - beforeTrader.accountCollateral;
-    const reservedMarginDelta = afterTrader.reservedMargin - beforeTrader.reservedMargin;
-    const realizedPnlDelta = afterTrader.realizedPnl - beforeTrader.realizedPnl;
+    const collateralDelta = BigInt(afterTrader.accountCollateral) - BigInt(beforeTrader.accountCollateral);
+    const reservedMarginDelta = BigInt(afterTrader.reservedMargin) - BigInt(beforeTrader.reservedMargin);
+    const realizedPnlDelta = BigInt(afterTrader.realizedPnl) - BigInt(beforeTrader.realizedPnl);
 
     if (collateralDelta >= 0n || abs(collateralDelta) < threshold) continue;
 

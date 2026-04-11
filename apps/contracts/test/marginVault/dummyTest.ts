@@ -396,11 +396,11 @@ async function main() {
   // Setup clients
   const publicClient = createPublicClient({
     transport: http('YOUR_RPC_URL')
-  });
+  }) as any;
   
   const walletClient = createWalletClient({
     transport: http('YOUR_RPC_URL')
-  });
+  }) as any;
 
   // Initialize debugger
   const drainDebugger = new MarginDrainDebugger(

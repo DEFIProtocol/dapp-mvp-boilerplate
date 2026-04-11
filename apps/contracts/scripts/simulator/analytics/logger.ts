@@ -3,12 +3,12 @@ import * as path from 'path';
 
 import { formatUnits } from 'ethers';
 
-import type { ConsistencySnapshot } from './consistency.ts';
-import type { PositionDetail, ProtocolMetrics } from './metrics.ts';
+import type { ConsistencySnapshot } from './consistency.js';
+import type { PositionDetail, ProtocolMetrics } from './metrics.js';
 
 export interface ExecutionEvent {
   step: number;
-  eventType: 'intent' | 'filled' | 'failed' | 'cancelled' | 'liquidation';
+  eventType: 'intent' | 'filled' | 'failed' | 'cancelled' | 'liquidation' | 'option-filled' | 'option-failed';
   trader: string;
   counterparty?: string;
   agentType: string;
@@ -226,7 +226,7 @@ export class SimulationLogger {
       this.executionCsvInitialized = true;
     }
 
-    const cleanReason = event.reason.replaceAll(',', ';');
+    const cleanReason = event.reason.split(',').join(';');
     const line = [
       event.step,
       event.eventType,

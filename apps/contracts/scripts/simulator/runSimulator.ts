@@ -3,16 +3,16 @@ import { network } from "hardhat";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-import { deployLocal } from "./deployLocal.ts";
-import { collectConsistencySnapshot } from "./analytics/consistency.ts";
-import { evaluateAdlInvariantFailures } from "./analytics/adlInvariants.ts";
-import { MetricsCollector } from "./analytics/metrics.ts";
-import { SimulationLogger } from "./analytics/logger.ts";
-import { ChartGenerator } from "./analytics/charts.ts";
-import { AGENT_CONFIGS } from "./config/agents.ts";
-import { SCENARIOS } from "./config/scenarios.ts";
-import { MarketPriceEngine } from "./core/markPrice.ts";
-import { DeterministicRandom } from "./utils/deterministicRandom.ts";
+import { deployLocal } from "./deployLocal.js";
+import { collectConsistencySnapshot } from "./analytics/consistency.js";
+import { evaluateAdlInvariantFailures } from "./analytics/adlInvariants.js";
+import { MetricsCollector } from "./analytics/metrics.js";
+import { SimulationLogger } from "./analytics/logger.js";
+import { ChartGenerator } from "./analytics/charts.js";
+import { AGENT_CONFIGS } from "./config/agents.js";
+import { SCENARIOS } from "./config/scenarios.js";
+import { MarketPriceEngine } from "./core/markPrice.js";
+import { DeterministicRandom } from "./utils/deterministicRandom.js";
 
 type Signer = any;
 type Contract = any;
@@ -45,6 +45,7 @@ interface CumulativeFlows {
   proactiveAdlSoftEvents: number;
   proactiveAdlHardEvents: number;
   optionsTrades: number;
+  spotTrades: number;
 }
 
 interface TraderBehavior {
@@ -146,6 +147,7 @@ export async function runSimulation(options: SimulationOptions) {
   const settlementEngine = await ethers.getContractAt("SettlementEngine", addresses.settlementEngine);
   const fundingEngine = await ethers.getContractAt("FundingEngine", addresses.fundingEngine);
   const optionsEngine = await ethers.getContractAt("OptionsEngineModule", addresses.optionsEngine);
+  const spotEngine = await ethers.getContractAt("SpotEngine", addresses.spotEngine);
   const insuranceTreasury = await ethers.getContractAt("InsuranceTreasury", addresses.insuranceFund);
   const protocolTreasury = await ethers.getContractAt("ProtocolTreasury", addresses.protocolTreasury);
 
@@ -193,6 +195,7 @@ export async function runSimulation(options: SimulationOptions) {
     proactiveAdlSoftEvents: 0,
     proactiveAdlHardEvents: 0,
     optionsTrades: 0,
+    spotTrades: 0,
   };
 
   const metricsCollector = new MetricsCollector(
@@ -218,6 +221,13 @@ export async function runSimulation(options: SimulationOptions) {
 
   const initialPrice = scenario.priceModel.initialPrice;
   await oracle.setPrice(toOraclePrice(ethers, initialPrice));
+  await seedTraderSpotInventory({
+    perpStorage,
+    traderSigners,
+    agentAddressMap: addresses.agents,
+    marketId: defaultMarketId,
+    referencePrice: await riskManager.getMarkPriceForMarket(defaultMarketId),
+  });
   const optionSeriesIds = await initializeOptionSeries({
     ethers,
     perpStorage,
@@ -259,6 +269,7 @@ export async function runSimulation(options: SimulationOptions) {
 
     let stepTradeCount = 0;
     let stepOptionsTrades = 0;
+    let stepSpotTrades = 0;
     let stepNewOrders = 0;
     let stepFilledOrders = 0;
     let stepCancelledOrders = 0;
@@ -411,6 +422,21 @@ export async function runSimulation(options: SimulationOptions) {
       cumulative.takerFees += takerFee;
     }
 
+    stepSpotTrades = await runStepSpotTrades({
+      step,
+      ethers,
+      spotEngine,
+      matcher,
+      perpStorage,
+      riskManager,
+      traderSigners,
+      traderProfileByAddress,
+      marketId: defaultMarketId,
+      random,
+      logger,
+    });
+    cumulative.spotTrades += stepSpotTrades;
+
     stepOptionsTrades = await runStepOptionTrades({
       step,
       random,
@@ -555,6 +581,51 @@ export async function runSimulation(options: SimulationOptions) {
       });
     }
 
+    const liquidatableSpotBalances = await findLiquidatableSpotBalances(perpStorage, riskManager, traderSigners);
+    for (const spotBalance of liquidatableSpotBalances) {
+      stepLiquidatorOrders++;
+      const liquidator = random.pick(liquidatorSigners);
+
+      const result = await tryLiquidateSpotBalance(
+        liquidationEngine,
+        liquidator,
+        spotBalance.trader,
+        spotBalance.subAccountId,
+        spotBalance.marketId,
+      );
+      if (!result.ok) {
+        continue;
+      }
+
+      stepLiquidations++;
+      cumulative.liquidatorRewards += result.reward;
+      cumulative.liquidationPenalty += result.penaltyCollected;
+
+      if (result.coverAmount > 0n) {
+        cumulative.insuranceOutflow += result.coverAmount;
+      }
+
+      if (result.insuranceInflow > 0n) {
+        cumulative.insuranceInflow += result.insuranceInflow;
+        cumulative.liquidationInsuranceInflow += result.insuranceInflow;
+      }
+
+      cumulative.marginReturned += result.marginReturned;
+
+      const liquidatorProfile = traderProfileByAddress.get(liquidator.address) ?? getDefaultTraderProfile();
+      logger.logExecutionEvent({
+        step,
+        eventType: "liquidation",
+        trader: liquidator.address,
+        counterparty: spotBalance.trader,
+        agentType: liquidatorProfile.agentType,
+        side: "long",
+        exposure: spotBalance.quantity,
+        leverage: 1,
+        reason: `spot:${spotBalance.marketId}`,
+      });
+    }
+
     const adlInvariantFailures = evaluateAdlInvariantFailures({
       step,
       cumulativeRequested: cumulative.adlRequested,
@@ -649,6 +720,7 @@ export async function runSimulation(options: SimulationOptions) {
       stepVolume,
       trades: stepTradeCount,
       optionsTrades: stepOptionsTrades,
+      spotTrades: stepSpotTrades,
       uniqueTraders: positionStats.uniqueTraders,
       openOrders: 0,
       newOrders: stepNewOrders,
@@ -751,6 +823,155 @@ async function seedTraderCollateral(
   }
 }
 
+async function seedTraderSpotInventory(params: {
+  perpStorage: Contract;
+  traderSigners: Signer[];
+  agentAddressMap: Record<string, string[]>;
+  marketId: string;
+  referencePrice: bigint;
+}): Promise<void> {
+  const { perpStorage, traderSigners, agentAddressMap, marketId, referencePrice } = params;
+  const legacySubAccountId = await perpStorage.LEGACY_SUBACCOUNT_ID();
+  const seeded = new Set<string>();
+  const preferredSellers = [
+    ...(agentAddressMap.marketMaker ?? []),
+    ...(agentAddressMap.arbitrageur ?? []),
+    ...(agentAddressMap.whale ?? []),
+  ];
+
+  for (const address of preferredSellers) {
+    if (seeded.size >= 6) break;
+
+    const trader = traderSigners.find((signer) => signer.address.toLowerCase() === address.toLowerCase());
+    if (!trader) continue;
+
+    const currentCollateral = await perpStorage.accountCollateral(trader.address);
+    const quantity = 500_000n; // 0.5 spot using the simulator's 6-decimal quote sizing.
+    const quoteCost = (quantity * BigInt(referencePrice)) / 10n ** 18n;
+    if (currentCollateral <= quoteCost + 1n) continue;
+
+    await (await perpStorage.setAccountCollateral(trader.address, currentCollateral - quoteCost)).wait();
+    await (await perpStorage.setSpotBalance(
+      trader.address,
+      legacySubAccountId,
+      marketId,
+      quantity,
+      referencePrice,
+      0,
+      0,
+      0,
+    )).wait();
+    seeded.add(trader.address.toLowerCase());
+  }
+}
+
+async function runStepSpotTrades(params: {
+  step: number;
+  ethers: any;
+  spotEngine: Contract;
+  matcher: Signer;
+  perpStorage: Contract;
+  riskManager: Contract;
+  traderSigners: Signer[];
+  traderProfileByAddress: Map<string, TraderProfile>;
+  marketId: string;
+  random: DeterministicRandom;
+  logger: SimulationLogger;
+}): Promise<number> {
+  const {
+    step,
+    spotEngine,
+    matcher,
+    perpStorage,
+    riskManager,
+    traderSigners,
+    traderProfileByAddress,
+    marketId,
+    random,
+    logger,
+  } = params;
+
+  if (step % 4 !== 0) {
+    return 0;
+  }
+
+  const legacySubAccountId = await perpStorage.LEGACY_SUBACCOUNT_ID();
+  const markPrice = await riskManager.getMarkPriceForMarket(marketId);
+  const shuffledTraders = shuffleDeterministic(traderSigners, random);
+  let trades = 0;
+
+  for (const seller of shuffledTraders) {
+    const sellerSpot = await perpStorage.getSpotBalance(seller.address, legacySubAccountId, marketId);
+    const freeQuantity = BigInt(sellerSpot.quantity ?? 0n) > BigInt(sellerSpot.reservedBase ?? 0n)
+      ? BigInt(sellerSpot.quantity) - BigInt(sellerSpot.reservedBase)
+      : 0n;
+
+    if (freeQuantity === 0n) {
+      continue;
+    }
+
+    const buyer = shuffledTraders.find((candidate) => candidate.address !== seller.address);
+    if (!buyer) {
+      continue;
+    }
+
+    const quantity = freeQuantity > 100_000n ? 100_000n : freeQuantity;
+    if (quantity === 0n) {
+      continue;
+    }
+
+    try {
+      await (
+        await spotEngine.connect(matcher).settleSpotMatch(
+          buyer.address,
+          legacySubAccountId,
+          seller.address,
+          legacySubAccountId,
+          marketId,
+          quantity,
+          markPrice,
+          true,
+        )
+      ).wait();
+
+      trades += 1;
+
+      const buyerProfile = traderProfileByAddress.get(buyer.address) ?? getDefaultTraderProfile();
+      const sellerProfile = traderProfileByAddress.get(seller.address) ?? getDefaultTraderProfile();
+      logger.logExecutionEvent({
+        step,
+        eventType: "filled",
+        trader: buyer.address,
+        counterparty: seller.address,
+        agentType: buyerProfile.agentType,
+        side: "long",
+        exposure: quantity,
+        leverage: 1,
+        reason: "spot-buy",
+      });
+      logger.logExecutionEvent({
+        step,
+        eventType: "filled",
+        trader: seller.address,
+        counterparty: buyer.address,
+        agentType: sellerProfile.agentType,
+        side: "short",
+        exposure: quantity,
+        leverage: 1,
+        reason: "spot-sell",
+      });
+    } catch {
+      // Skip failed spot matches; simulator keeps running.
+    }
+
+    if (trades >= 3) {
+      break;
+    }
+  }
+
+  return trades;
+}
+
 async function trySettleMatch(
   ethers: any,
   settlementEngine: Contract,
@@ -832,6 +1053,122 @@ async function findLiquidatablePositions(
   }
 
   return positions;
+}
+
+async function findLiquidatableSpotBalances(
+  perpStorage: Contract,
+  riskManager: Contract,
+  traderSigners: Signer[]
+): Promise<Array<{ trader: string; subAccountId: bigint; marketId: string; quantity: bigint }>> {
+  const balances: Array<{ trader: string; subAccountId: bigint; marketId: string; quantity: bigint }> = [];
+  const legacySubAccountId = await perpStorage.LEGACY_SUBACCOUNT_ID();
+
+  for (const trader of traderSigners) {
+    const legacyMarkets: string[] = await perpStorage.getTraderSpotMarketIds(trader.address, legacySubAccountId);
+    for (const marketId of legacyMarkets) {
+      try {
+        const spotBalance = await perpStorage.getSpotBalance(trader.address, legacySubAccountId, marketId);
+        if (!spotBalance.exists || (spotBalance.quantity === 0n && spotBalance.borrowLiability === 0n)) continue;
+
+        const liquidatable = await riskManager.isSpotBalanceLiquidatable(trader.address, legacySubAccountId, marketId);
+        if (liquidatable) {
+          balances.push({
+            trader: trader.address,
+            subAccountId: legacySubAccountId,
+            marketId: String(marketId),
+            quantity: BigInt(spotBalance.quantity),
+          });
+        }
+      } catch {
+        // Ignore stale spot market ids.
+      }
+    }
+
+    const subAccountIds: bigint[] = await perpStorage.getTraderSubAccountIds(trader.address);
+    for (const subAccountId of subAccountIds) {
+      const subMarkets: string[] = await perpStorage.getTraderSpotMarketIds(trader.address, subAccountId);
+      for (const marketId of subMarkets) {
+        try {
+          const spotBalance = await perpStorage.getSpotBalance(trader.address, subAccountId, marketId);
+          if (!spotBalance.exists || (spotBalance.quantity === 0n && spotBalance.borrowLiability === 0n)) continue;
+
+          const liquidatable = await riskManager.isSpotBalanceLiquidatable(trader.address, subAccountId, marketId);
+          if (liquidatable) {
+            balances.push({
+              trader: trader.address,
+              subAccountId: BigInt(subAccountId),
+              marketId: String(marketId),
+              quantity: BigInt(spotBalance.quantity),
+            });
+          }
+        } catch {
+          // Ignore stale spot market ids.
+        }
+      }
+    }
+  }
+
+  return balances;
+}
+
+async function tryLiquidateSpotBalance(
+  liquidationEngine: Contract,
+  liquidator: Signer,
+  trader: string,
+  subAccountId: bigint,
+  marketId: string,
+): Promise<{
+  ok: boolean;
+  reward: bigint;
+  coverAmount: bigint;
+  insuranceInflow: bigint;
+  penaltyCollected: bigint;
+  marginReturned: bigint;
+}> {
+  try {
+    const tx = await liquidationEngine.connect(liquidator).liquidateSpotBalance(trader, subAccountId, marketId);
+    const receipt = await tx.wait();
+    let reward = 0n;
+    let coverAmount = 0n;
+    let insuranceInflow = 0n;
+    let penaltyCollected = 0n;
+    let marginReturned = 0n;
+
+    for (const log of receipt.logs) {
+      try {
+        const parsed = liquidationEngine.interface.parseLog(log);
+        if (parsed.name === "SpotBalanceLiquidated") {
+          reward = BigInt(parsed.args.reward ?? 0n);
+          insuranceInflow = BigInt(parsed.args.insuranceUsed ?? 0n);
+          penaltyCollected = BigInt(parsed.args.penaltyCollected ?? 0n);
+          marginReturned = BigInt(parsed.args.marginReturned ?? 0n);
+        }
+        if (parsed.name === "InsuranceFundUsed") {
+          coverAmount = BigInt(parsed.args.amount ?? 0n);
+        }
+      } catch {
+        // Ignore unrelated logs.
+      }
+    }
+
+    return {
+      ok: true,
+      reward,
+      coverAmount,
+      insuranceInflow,
+      penaltyCollected,
+      marginReturned,
+    };
+  } catch {
+    return {
+      ok: false,
+      reward: 0n,
+      coverAmount: 0n,
+      insuranceInflow: 0n,
+      penaltyCollected: 0n,
+      marginReturned: 0n,
+    };
+  }
 }
 
 async function refreshAdlQueuesOnChain(params: {

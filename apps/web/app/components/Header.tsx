@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAccount, useDisconnect, useSwitchChain } from "wagmi";
 import { useUser } from "@/contexts/UserContext";
 import { updateUserByWallet } from "@/lib/api/users";
-import { NAV_ITEMS } from "@dapp/ui/navigation";
+import { NAV_ITEMS, type NavItem } from "@dapp/ui/navigation";
 import WalletModal from "./WalletModal";
 import WalletAction from "@/components/fundsManager/WalletAction";
 import { useChainContext } from "@/contexts/ChainContext";
@@ -44,6 +44,8 @@ export function Header() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
+  const [openNavMenu, setOpenNavMenu] = useState<string | null>(null);
+  const [mobileExpandedGroups, setMobileExpandedGroups] = useState<Record<string, boolean>>({});
   const chainDropdownRef = useRef<HTMLDivElement>(null);
   const previousChainRef = useRef<number | null>(null);
 
@@ -98,7 +100,11 @@ export function Header() {
 
   // Sync app state when the user switches chains directly in MetaMask
   useEffect(() => {
-    const isRouteManagedChain = pathname?.startsWith("/futures") || pathname?.startsWith("/market");
+    const isRouteManagedChain =
+      pathname?.startsWith("/futures") ||
+      pathname?.startsWith("/options") ||
+      pathname?.startsWith("/spot") ||
+      pathname?.startsWith("/market");
     if (isRouteManagedChain) return;
     if (!chain?.id) return;
     if (chain.id === selectedChain) return;
@@ -107,6 +113,12 @@ export function Header() {
       setSelectedChain(chain.id);
     }
   }, [chain?.id, selectedChain, availableChains, pathname, setSelectedChain]);
+
+  useEffect(() => {
+    setOpenNavMenu(null);
+    setMobileExpandedGroups({});
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleChainSwitch = async (chainId: number) => {
     setChainLoading(true);
@@ -152,6 +164,25 @@ export function Header() {
 
   const currentChainLabel = getChainLabel?.(selectedChain) || "Ethereum";
   const currentChainIcon = getChainIcon(currentChainLabel);
+  const isAdmin = Boolean(
+    (user as { is_admin?: boolean; role?: string } | null)?.is_admin ||
+    (user as { role?: string } | null)?.role === "admin",
+  );
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+
+  const matchesHref = (href: string) => pathname === href || (href !== "/" && pathname?.startsWith(`${href}/`));
+
+  const isNavItemActive = (item: NavItem) => {
+    if (item.matchPaths?.some((path) => pathname === path || pathname?.startsWith(`${path}/`))) {
+      return true;
+    }
+
+    if (item.children?.some((child) => matchesHref(child.href))) {
+      return true;
+    }
+
+    return matchesHref(item.href);
+  };
 
   return (
     <>
@@ -178,8 +209,54 @@ export function Header() {
 
             {/* Desktop Navigation */}
             <nav className={styles.desktopNav}>
-              {NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+              {visibleNavItems.map((item) => {
+                const isActive = isNavItemActive(item);
+
+                if (item.children?.length) {
+                  const isOpen = openNavMenu === item.label;
+
+                  return (
+                    <div
+                      key={item.label}
+                      className={styles.navGroup}
+                      onMouseEnter={() => setOpenNavMenu(item.label)}
+                      onMouseLeave={() => setOpenNavMenu((current) => (current === item.label ? null : current))}
+                    >
+                      <button
+                        type="button"
+                        className={`${styles.navLink} ${styles.navGroupButton} ${isActive ? styles.active : ""}`}
+                        onClick={() => setOpenNavMenu((current) => (current === item.label ? null : item.label))}
+                        aria-expanded={isOpen}
+                      >
+                        <span>{item.label}</span>
+                        <ChevronDown
+                          size={14}
+                          className={`${styles.navGroupChevron} ${isOpen ? styles.rotated : ""}`}
+                        />
+                        {isActive && <span className={styles.navIndicator} />}
+                      </button>
+
+                      {isOpen && (
+                        <div className={styles.navDropdown}>
+                          {item.children.map((child) => {
+                            const isChildActive = matchesHref(child.href);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                className={`${styles.navDropdownLink} ${isChildActive ? styles.navDropdownLinkActive : ""}`}
+                                onClick={() => setOpenNavMenu(null)}
+                              >
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}
@@ -295,8 +372,53 @@ export function Header() {
             </div>
 
             <nav className={styles.mobileNav}>
-              {NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+              {visibleNavItems.map((item) => {
+                const isActive = isNavItemActive(item);
+
+                if (item.children?.length) {
+                  const isOpen = mobileExpandedGroups[item.label] ?? isActive;
+
+                  return (
+                    <div key={item.label} className={styles.mobileNavGroup}>
+                      <button
+                        type="button"
+                        className={`${styles.mobileNavButton} ${isActive ? styles.active : ""}`}
+                        onClick={() =>
+                          setMobileExpandedGroups((current) => ({
+                            ...current,
+                            [item.label]: !isOpen,
+                          }))
+                        }
+                      >
+                        <span>{item.label}</span>
+                        <ChevronDown
+                          size={16}
+                          className={`${styles.mobileNavChevron} ${isOpen ? styles.rotated : ""}`}
+                        />
+                        {isActive && <span className={styles.mobileNavIndicator} />}
+                      </button>
+
+                      {isOpen && (
+                        <div className={styles.mobileSubNav}>
+                          {item.children.map((child) => {
+                            const isChildActive = matchesHref(child.href);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                className={`${styles.mobileSubNavLink} ${isChildActive ? styles.active : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}

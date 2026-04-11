@@ -1,5 +1,6 @@
 import { network } from "hardhat";
-import type { Contract } from "ethers";
+
+type Contract = any;
 
 export type TestOrder = {
   trader: string;
@@ -169,8 +170,8 @@ export async function setupDiagnosticsFixture(): Promise<DiagnosticsFixture> {
     await mockToken.transfer(trader, amount);
     const signer = [owner, ...traders, liquidator].find((candidate) => candidate.address === trader);
     if (!signer) throw new Error(`Signer not found for ${trader}`);
-    await mockToken.connect(signer).approve(await collateralManager.getAddress(), amount);
-    await collateralManager.connect(signer).depositCollateral(amount);
+    await (mockToken.connect(signer) as any).approve(await collateralManager.getAddress(), amount);
+    await (collateralManager.connect(signer) as any).depositCollateral(amount);
   }
 
   async function buildOrder(

@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import type { Contract } from "ethers";
+
+type Contract = any;
 
 type TestOrder = {
   trader: string;
@@ -192,8 +193,8 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
       // Calculate total PnL across all traders
       let totalPnL = 0n;
       for (const trader of traders) {
-        const equity = await riskManager.getAccountEquity(trader.address);
-        const collateral = await perpStorage.accountCollateral(trader.address);
+        const equity = BigInt(await riskManager.getAccountEquity(trader.address));
+        const collateral = BigInt(await perpStorage.accountCollateral(trader.address));
         const pnl = equity - collateral; // PnL = equity - deposited collateral
         totalPnL += pnl;
       }
@@ -231,8 +232,8 @@ describe("PerpSettlement - Comprehensive State Machine Tests", function () {
       // Verify zero-sum
       let totalPnL = 0n;
       for (const trader of traders) {
-        const equity = await riskManager.getAccountEquity(trader.address);
-        const collateral = await perpStorage.accountCollateral(trader.address);
+        const equity = BigInt(await riskManager.getAccountEquity(trader.address));
+        const collateral = BigInt(await perpStorage.accountCollateral(trader.address));
         totalPnL += (equity - collateral);
       }
       
