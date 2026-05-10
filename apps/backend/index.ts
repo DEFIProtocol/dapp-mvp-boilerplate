@@ -20,8 +20,8 @@ import fiatOnRampRouter from "./routes/fiatOnRamp";
 import transfersRouter from "./routes/transfers";
 //import smartContractsRouter from "./routes/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
-import * as perpsHelpers from "./postgres/perps"; // Import your helpers (adjust path if needed)
 import { bigintSerializer } from './middleware/bigintSerializer';
+import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 
 dotenv.config();
 
@@ -56,21 +56,29 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-pool.query('SELECT NOW()', async (err, res) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err.message);
-  } else {
-    console.log('✅ Database connected successfully at:', res.rows[0].now);
-    
-    // Create perps table on startup
-    try {
-      await perpsHelpers.ensurePerpsTokensTable(pool);
-      console.log('✅ Perps tokens table ready');
-    } catch (error) {
-      console.error('❌ Failed to create perps table:', error);
-    }
+void (async () => {
+  try {
+    await ensureDatabaseExists(process.env.DATABASE_URL!);
+  } catch (error) {
+    console.warn('⚠️ Could not auto-create database (it may already exist):', error);
   }
-});
+
+  pool.query('SELECT NOW()', async (err, res) => {
+    if (err) {
+      console.error('❌ Database connection failed:', err.message);
+      return;
+    }
+
+    console.log('✅ Database connected successfully at:', res.rows[0].now);
+
+    try {
+      await ensureCoreTables(pool);
+      console.log('✅ Core tables ready (users, tokens, perps, spot, options)');
+    } catch (error) {
+      console.error('❌ Failed to initialize core tables:', error);
+    }
+  });
+})();
 
 // API Routes (all after middleware)
 app.use("/api/perps", perpsRouter(pool));

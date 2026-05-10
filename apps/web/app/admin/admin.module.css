@@ -5,6 +5,7 @@
     min-height: 100vh;
     background: var(--accent-gradient);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    overflow-y: auto;
 }
 
 /* Header styles */
@@ -134,7 +135,7 @@
     background: var(--surface);
     border-radius: 30px;
     box-shadow: var(--shadow-lg);
-    overflow: hidden;
+    overflow: visible;
     animation: slideIn 0.5s ease;
 }
 
