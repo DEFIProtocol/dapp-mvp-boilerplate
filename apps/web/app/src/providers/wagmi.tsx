@@ -2,12 +2,14 @@
 
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, base, polygon, arbitrum, bsc, avalanche } from "wagmi/chains";
+import { baseSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const config = createConfig({
-  chains: [base, mainnet, polygon, arbitrum, bsc, avalanche],
+  chains: [base, baseSepolia, mainnet, polygon, arbitrum, bsc, avalanche],
   transports: {
     [base.id]: http(),
+    [baseSepolia.id]: http(),
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [arbitrum.id]: http(),

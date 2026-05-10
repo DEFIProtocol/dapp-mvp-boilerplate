@@ -1,0 +1,41 @@
+{
+  "name": "@dcsn/node",
+  "version": "0.1.0",
+  "description": "DCSN headless daemon: routing engine, settlement, verification, governance enforcement",
+  "main": "dist/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "dcsn",
+    "node",
+    "daemon",
+    "routing",
+    "settlement",
+    "verification"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ethers": "^6.9.0",
+    "dotenv": "^16.3.1",
+    "pino": "^8.16.2",
+    "pino-pretty": "^10.2.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@types/express": "^4.17.20",
+    "@types/node": "^20.5.0",
+    "tsx": "^3.14.0"
+  }
+}

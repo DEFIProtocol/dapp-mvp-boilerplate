@@ -2,13 +2,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useAccount, useBalance, useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
+import { useAccount, useBalance, useReadContract, useSendTransaction, useSignMessage, useSwitchChain } from "wagmi";
 import { formatUnits, parseUnits, isAddress, type Address } from "viem";
 import { Plus, ArrowUpRight, ArrowLeftRight, X, ChevronDown, Wallet, Copy, Check } from "lucide-react";
 import { useChainContext } from "@/contexts/ChainContext";
 import {
+  createPaperTradingChallenge,
   createCoinbasePaySession,
   executeTransfer,
+  getPaperTradingStatus,
+  grantPaperTradingFunds,
   getSupportedTokens,
   quoteTransfer,
   type SupportedToken,
@@ -30,6 +33,9 @@ export default function WalletAction({
   onTransfer,
   onConvert 
 }: WalletActionProps) {
+  const PAPER_TRADING_CHAIN_ID = 84532;
+  const PLACEHOLDER_USDC = "0x0000000000000000000000000000000000000000" as const;
+
   const { address: accountAddress, isConnected, chain } = useAccount();
   const { selectedChain, getChainLabel, getChainSlug, availableChains } = useChainContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -53,12 +59,23 @@ export default function WalletAction({
   const [onRampAmount, setOnRampAmount] = useState("100");
   const [onRampAsset, setOnRampAsset] = useState("USDC");
   const [isCreatingOnRampSession, setIsCreatingOnRampSession] = useState(false);
+  const [paperTradingStatus, setPaperTradingStatus] = useState<{
+    eligibleNow: boolean;
+    nextEligibleAt: string | null;
+    grantCount: number;
+  } | null>(null);
+  const [paperTradingMessage, setPaperTradingMessage] = useState<string | null>(null);
+  const [paperTradingError, setPaperTradingError] = useState<string | null>(null);
+  const [isLoadingPaperTradingStatus, setIsLoadingPaperTradingStatus] = useState(false);
+  const [isClaimingPaperTradingFunds, setIsClaimingPaperTradingFunds] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const paperTradingUsdcAddress = (process.env.NEXT_PUBLIC_PAPER_TRADING_USDC_ADDRESS || PLACEHOLDER_USDC) as `0x${string}`;
 
   const USDC_BY_CHAIN: Record<number, `0x${string}`> = {
     1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    84532: paperTradingUsdcAddress,
     137: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
     42161: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     56: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
@@ -68,6 +85,7 @@ export default function WalletAction({
   const NATIVE_SYMBOL_BY_CHAIN: Record<number, string> = {
     1: "ETH",
     8453: "ETH",
+    84532: "ETH",
     137: "MATIC",
     42161: "ETH",
     56: "BNB",
@@ -78,16 +96,26 @@ export default function WalletAction({
   const nativeSymbol = NATIVE_SYMBOL_BY_CHAIN[selectedChain] || symbol;
   const usdcToken = USDC_BY_CHAIN[selectedChain];
   const zeroAddress = "0x0000000000000000000000000000000000000000" as const;
+  const isPaperTradingSelectedChain = selectedChain === PAPER_TRADING_CHAIN_ID;
+  const isPaperTradingConnectedChain = chain?.id === PAPER_TRADING_CHAIN_ID;
+  const paperTradingReady = Boolean(
+    walletAddress &&
+    isConnected &&
+    isPaperTradingSelectedChain &&
+    isPaperTradingConnectedChain &&
+    usdcToken !== PLACEHOLDER_USDC
+  );
 
   const { switchChainAsync } = useSwitchChain();
   const { sendTransactionAsync } = useSendTransaction();
+  const { signMessageAsync } = useSignMessage();
 
   const fromChainTokens = useMemo(
     () => supportedTransferTokens[transferFromChain] || [],
     [supportedTransferTokens, transferFromChain]
   );
 
-  const { data: nativeBalanceData } = useBalance({
+  const { data: nativeBalanceData, refetch: refetchNativeBalance } = useBalance({
     address: walletAddress,
     chainId: selectedChain,
     query: {
@@ -95,7 +123,7 @@ export default function WalletAction({
     },
   });
 
-  const { data: usdcRawBalance } = useReadContract({
+  const { data: usdcRawBalance, refetch: refetchUsdcBalance } = useReadContract({
     address: usdcToken,
     abi: [
       {
@@ -208,6 +236,36 @@ export default function WalletAction({
       setTransferTokenDecimals(selectedToken.decimals);
     }
   }, [transferTokenAddress, fromChainTokens]);
+
+  const refreshPaperTradingStatus = async () => {
+    if (!walletAddress || !isPaperTradingSelectedChain) {
+      setPaperTradingStatus(null);
+      return;
+    }
+
+    setIsLoadingPaperTradingStatus(true);
+    try {
+      const payload = await getPaperTradingStatus(walletAddress, PAPER_TRADING_CHAIN_ID);
+      setPaperTradingStatus(
+        payload.status
+          ? {
+              eligibleNow: payload.status.eligibleNow,
+              nextEligibleAt: payload.status.nextEligibleAt,
+              grantCount: payload.status.grantCount,
+            }
+          : null
+      );
+      setPaperTradingError(null);
+    } catch (error) {
+      setPaperTradingError(error instanceof Error ? error.message : "Failed to load faucet status");
+    } finally {
+      setIsLoadingPaperTradingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshPaperTradingStatus();
+  }, [walletAddress, selectedChain, chain?.id]);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
@@ -358,6 +416,68 @@ export default function WalletAction({
     }
   };
 
+  const handleSwitchToPaperTradingChain = async () => {
+    if (!switchChainAsync) return;
+    try {
+      await switchChainAsync({ chainId: PAPER_TRADING_CHAIN_ID });
+      setPaperTradingError(null);
+    } catch (error) {
+      setPaperTradingError(error instanceof Error ? error.message : "Failed to switch network");
+    }
+  };
+
+  const handleClaimPaperTradingFunds = async () => {
+    if (!walletAddress) {
+      setPaperTradingError("Connect wallet to claim test funds");
+      return;
+    }
+
+    if (usdcToken === PLACEHOLDER_USDC) {
+      setPaperTradingError("Paper trading USDC contract address is not configured yet");
+      return;
+    }
+
+    if (!isPaperTradingConnectedChain) {
+      await handleSwitchToPaperTradingChain();
+      return;
+    }
+
+    setIsClaimingPaperTradingFunds(true);
+    setPaperTradingError(null);
+    setPaperTradingMessage(null);
+
+    try {
+      const challengePayload = await createPaperTradingChallenge({
+        walletAddress,
+        chainId: PAPER_TRADING_CHAIN_ID,
+      });
+
+      if (!challengePayload.challenge) {
+        throw new Error("Challenge payload is missing");
+      }
+
+      const signature = await signMessageAsync({ message: challengePayload.challenge });
+      const grantPayload = await grantPaperTradingFunds({
+        walletAddress,
+        chainId: PAPER_TRADING_CHAIN_ID,
+        signature,
+      });
+
+      const txLabel = grantPayload.usdcTxHash ? `${grantPayload.usdcTxHash.slice(0, 10)}...` : "submitted";
+      setPaperTradingMessage(`Paper trading funds granted (${txLabel})`);
+      if (grantPayload.ethDripError) {
+        setPaperTradingError(`USDC granted, but gas drip failed: ${grantPayload.ethDripError}`);
+      }
+
+      await Promise.all([refetchNativeBalance(), refetchUsdcBalance()]);
+      await refreshPaperTradingStatus();
+    } catch (error) {
+      setPaperTradingError(error instanceof Error ? error.message : "Failed to claim paper trading funds");
+    } finally {
+      setIsClaimingPaperTradingFunds(false);
+    }
+  };
+
   // Calculate estimated receive amount (simplified)
   const getEstimatedReceive = () => {
     if (!convertAmount) return "0";
@@ -455,6 +575,51 @@ export default function WalletAction({
           {/* Add Funds Tab */}
           {activeTab === "add" && (
             <div className={styles.tabContent}>
+              <div className={styles.paperTradingCard}>
+                <h4 className={styles.paperTradingTitle}>Base Sepolia Paper Trading Faucet</h4>
+                <p className={styles.paperTradingDescription}>
+                  Claim test USDC for paper trading. This action is available on Base Sepolia only.
+                </p>
+
+                {!isPaperTradingSelectedChain && (
+                  <p className={styles.infoText}>Select Base Sepolia in the app chain selector to use the faucet.</p>
+                )}
+
+                {isPaperTradingSelectedChain && !isPaperTradingConnectedChain && (
+                  <button
+                    className={styles.actionButton}
+                    onClick={handleSwitchToPaperTradingChain}
+                    disabled={!walletAddress}
+                  >
+                    <span>Switch Wallet To Base Sepolia</span>
+                  </button>
+                )}
+
+                {isPaperTradingSelectedChain && isPaperTradingConnectedChain && (
+                  <button
+                    className={styles.actionButton}
+                    onClick={handleClaimPaperTradingFunds}
+                    disabled={!walletAddress || isClaimingPaperTradingFunds || !paperTradingReady}
+                  >
+                    <span>{isClaimingPaperTradingFunds ? "Claiming Test Funds..." : "Claim 10,000 Test USDC"}</span>
+                  </button>
+                )}
+
+                {isLoadingPaperTradingStatus && <p className={styles.infoText}>Loading faucet status...</p>}
+                {paperTradingStatus && (
+                  <div className={styles.paperTradingStatus}>
+                    <span>Claims used: {paperTradingStatus.grantCount}</span>
+                    <span>
+                      {paperTradingStatus.eligibleNow
+                        ? "Eligible now"
+                        : `Next claim: ${paperTradingStatus.nextEligibleAt || "cooldown active"}`}
+                    </span>
+                  </div>
+                )}
+                {paperTradingMessage && <p className={styles.successText}>{paperTradingMessage}</p>}
+                {paperTradingError && <p className={styles.errorText}>{paperTradingError}</p>}
+              </div>
+
               <p className={styles.contentDescription}>
                 Add funds instantly using your debit card via Coinbase Pay
               </p>

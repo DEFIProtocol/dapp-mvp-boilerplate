@@ -5,6 +5,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 // Define your supported chains
 const CHAINS = [
   { id: 8453, label: "Base", slug: "base" },
+  { id: 84532, label: "Base Sepolia", slug: "base-sepolia" },
   { id: 1, label: "Ethereum", slug: "ethereum" },
   { id: 137, label: "Polygon", slug: "polygon" },
   { id: 42161, label: "Arbitrum", slug: "arbitrum" },

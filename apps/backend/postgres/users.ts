@@ -10,6 +10,14 @@ export interface UserRow {
   preferences?: any;
   watchlist?: any;
   is_verified_by_coinbase?: boolean;
+  paper_trading_grant_count?: number;
+  paper_trading_last_grant_at?: string;
+  paper_trading_last_grant_tx_hash?: string;
+  paper_trading_last_grant_chain_id?: number;
+  paper_trading_challenge_nonce?: string;
+  paper_trading_challenge_expires_at?: string;
+  paper_trading_admin_override_at?: string;
+  paper_trading_admin_override_by?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -77,6 +85,14 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
       preferences JSONB,
       watchlist JSONB,
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
+      paper_trading_grant_count INTEGER DEFAULT 0,
+      paper_trading_last_grant_at TIMESTAMP,
+      paper_trading_last_grant_tx_hash VARCHAR(100),
+      paper_trading_last_grant_chain_id INTEGER,
+      paper_trading_challenge_nonce VARCHAR(128),
+      paper_trading_challenge_expires_at TIMESTAMP,
+      paper_trading_admin_override_at TIMESTAMP,
+      paper_trading_admin_override_by VARCHAR(66),
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )
@@ -86,6 +102,14 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS watchlist JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_grant_count INTEGER DEFAULT 0');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_tx_hash VARCHAR(100)');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_chain_id INTEGER');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_nonce VARCHAR(128)');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_expires_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_by VARCHAR(66)');
 
   tableReady = true;
 }
@@ -105,6 +129,14 @@ export function mapUserRow(row: any): UserRow | null {
     preferences: row.preferences,
     watchlist: row.watchlist,
     is_verified_by_coinbase: row.is_verified_by_coinbase,
+    paper_trading_grant_count: row.paper_trading_grant_count,
+    paper_trading_last_grant_at: row.paper_trading_last_grant_at,
+    paper_trading_last_grant_tx_hash: row.paper_trading_last_grant_tx_hash,
+    paper_trading_last_grant_chain_id: row.paper_trading_last_grant_chain_id,
+    paper_trading_challenge_nonce: row.paper_trading_challenge_nonce,
+    paper_trading_challenge_expires_at: row.paper_trading_challenge_expires_at,
+    paper_trading_admin_override_at: row.paper_trading_admin_override_at,
+    paper_trading_admin_override_by: row.paper_trading_admin_override_by,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -396,4 +428,84 @@ export async function getWatchlist(
   }
   
   return result.rows[0].watchlist;
+}
+
+/**
+ * Set or refresh the paper trading challenge for a wallet.
+ */
+export async function setPaperTradingChallenge(
+  pool: Pool,
+  address: string,
+  nonce: string,
+  expiresAt: Date
+): Promise<UserRow | null> {
+  await ensureUsersTable(pool);
+
+  const walletAddress = normalizeAddress(address);
+  const result = await pool.query(
+    `UPDATE users
+     SET paper_trading_challenge_nonce = $2,
+         paper_trading_challenge_expires_at = $3,
+         updated_at = NOW()
+     WHERE wallet_address = $1
+     RETURNING *`,
+    [walletAddress, nonce, expiresAt]
+  );
+
+  return mapUserRow(result.rows[0]);
+}
+
+/**
+ * Commit a successful paper trading grant after on-chain confirmation.
+ */
+export async function commitPaperTradingGrant(
+  pool: Pool,
+  address: string,
+  txHash: string,
+  chainId: number
+): Promise<UserRow | null> {
+  await ensureUsersTable(pool);
+
+  const walletAddress = normalizeAddress(address);
+  const result = await pool.query(
+    `UPDATE users
+     SET paper_trading_grant_count = COALESCE(paper_trading_grant_count, 0) + 1,
+         paper_trading_last_grant_at = NOW(),
+         paper_trading_last_grant_tx_hash = $2,
+         paper_trading_last_grant_chain_id = $3,
+         paper_trading_challenge_nonce = NULL,
+         paper_trading_challenge_expires_at = NULL,
+         updated_at = NOW()
+     WHERE wallet_address = $1
+     RETURNING *`,
+    [walletAddress, txHash, chainId]
+  );
+
+  return mapUserRow(result.rows[0]);
+}
+
+/**
+ * Set an admin override timestamp for a wallet.
+ */
+export async function setPaperTradingAdminOverride(
+  pool: Pool,
+  address: string,
+  adminAddress: string
+): Promise<UserRow | null> {
+  await ensureUsersTable(pool);
+
+  const walletAddress = normalizeAddress(address);
+  const overrideAddress = normalizeAddress(adminAddress);
+
+  const result = await pool.query(
+    `UPDATE users
+     SET paper_trading_admin_override_at = NOW(),
+         paper_trading_admin_override_by = $2,
+         updated_at = NOW()
+     WHERE wallet_address = $1
+     RETURNING *`,
+    [walletAddress, overrideAddress]
+  );
+
+  return mapUserRow(result.rows[0]);
 }

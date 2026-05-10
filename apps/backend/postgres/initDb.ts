@@ -72,6 +72,14 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
       preferences JSONB,
       watchlist JSONB,
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
+      paper_trading_grant_count INTEGER DEFAULT 0,
+      paper_trading_last_grant_at TIMESTAMP,
+      paper_trading_last_grant_tx_hash VARCHAR(100),
+      paper_trading_last_grant_chain_id INTEGER,
+      paper_trading_challenge_nonce VARCHAR(128),
+      paper_trading_challenge_expires_at TIMESTAMP,
+      paper_trading_admin_override_at TIMESTAMP,
+      paper_trading_admin_override_by VARCHAR(66),
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )
@@ -79,6 +87,14 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS watchlist JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_grant_count INTEGER DEFAULT 0');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_tx_hash VARCHAR(100)');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_chain_id INTEGER');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_nonce VARCHAR(128)');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_expires_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_by VARCHAR(66)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_users_wallet_address ON users(wallet_address)');
 
   // Tokens

@@ -18,8 +18,9 @@ import priceAggregatorRouter from "./routes/pricing/priceAggregator";
 import perpsRouter from "./routes/database/perps"; // Your routes
 import fiatOnRampRouter from "./routes/fiatOnRamp";
 import transfersRouter from "./routes/transfers";
-//import smartContractsRouter from "./routes/smartContracts";
+import smartContractsRouter from "./routes/SmartContracts/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
+import paperTradingRouter from "./routes/paperTrading";
 import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 
@@ -96,7 +97,8 @@ app.use("/api/pyth", pythRouter); // Add Pyth routes
 app.use("/api/aggregator", priceAggregatorRouter); // Validated index+mark prices
 app.use("/api/coinbase-onramp", fiatOnRampRouter);
 app.use("/api/transfers", transfersRouter);
-//app.use("/api/smart-contracts", smartContractsRouter(pool));
+app.use("/api/paper-trading", paperTradingRouter(pool));
+app.use("/api/smart-contracts", smartContractsRouter(pool));
 app.use("/api/contract-sim", contractSimulationRouter());
 
 // Health check

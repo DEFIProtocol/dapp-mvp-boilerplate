@@ -30,6 +30,8 @@ function requireEnv(name: string, value: string | undefined): string {
 export class SettlementService {
 
   private contract: ethers.Contract;
+  private wallet: ethers.Wallet;
+  private provider: ethers.JsonRpcProvider;
 
   constructor() {
     const infuraApiKey = requireEnv(
@@ -47,13 +49,13 @@ export class SettlementService {
     }
 
     const network = process.env.SETTLEMENT_NETWORK || "base-sepolia";
-    const provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
-    const wallet = new ethers.Wallet(privateKey, provider);
+    this.provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
+    this.wallet = new ethers.Wallet(privateKey, this.provider);
 
     this.contract = new ethers.Contract(
       settlementAddress,
       settlementAbi.abi,
-      wallet
+      this.wallet
     );
   }
 
@@ -226,5 +228,59 @@ export class SettlementService {
 
     await tx.wait();
     return tx.hash as string;
+  }
+
+  async grantPaperTradingFunds(recipient: string): Promise<{ usdcTxHash: string; ethTxHash?: string; ethDripError?: string }> {
+    const usdcAddress = requireEnv(
+      "PAPER_TRADING_USDC_ADDRESS or COLLATERAL_TOKEN_ADDRESS",
+      process.env.PAPER_TRADING_USDC_ADDRESS ?? process.env.COLLATERAL_TOKEN_ADDRESS
+    );
+
+    const usdcDecimals = Number.parseInt(process.env.PAPER_TRADING_USDC_DECIMALS ?? "6", 10);
+    const usdcAmount = ethers.parseUnits(process.env.PAPER_TRADING_USDC_AMOUNT ?? "10000", usdcDecimals);
+    const usdcMode = (process.env.PAPER_TRADING_USDC_MODE ?? "mint").toLowerCase();
+    const token = new ethers.Contract(
+      usdcAddress,
+      [
+        "function mint(address to, uint256 amount)",
+        "function transfer(address to, uint256 amount) returns (bool)",
+      ],
+      this.wallet
+    );
+
+    let usdcTxHash: string;
+    if (usdcMode === "transfer") {
+      const transferTx = await token.transfer(recipient, usdcAmount);
+      await transferTx.wait();
+      usdcTxHash = transferTx.hash;
+    } else {
+      const mintTx = await token.mint(recipient, usdcAmount);
+      await mintTx.wait();
+      usdcTxHash = mintTx.hash;
+    }
+
+    const ethDripWeiRaw = process.env.PAPER_TRADING_ETH_DRIP_WEI ?? "0";
+    const ethDripWei = BigInt(ethDripWeiRaw);
+    const minWalletEthWei = BigInt(process.env.PAPER_TRADING_ETH_MIN_BALANCE_WEI ?? "0");
+
+    let ethTxHash: string | undefined;
+    let ethDripError: string | undefined;
+    if (ethDripWei > 0n) {
+      const currentBalance = await this.provider.getBalance(recipient);
+      if (currentBalance < minWalletEthWei) {
+        try {
+          const ethTx = await this.wallet.sendTransaction({
+            to: recipient,
+            value: ethDripWei,
+          });
+          await ethTx.wait();
+          ethTxHash = ethTx.hash;
+        } catch (error) {
+          ethDripError = error instanceof Error ? error.message : "Failed to send ETH drip";
+        }
+      }
+    }
+
+    return { usdcTxHash, ethTxHash, ethDripError };
   }
 }
