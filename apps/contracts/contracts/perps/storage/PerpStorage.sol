@@ -401,6 +401,51 @@ contract PerpStorage is Ownable {
         emit InitializationFinalized(msg.sender);
     }
 
+    /**
+     * @notice Add a new market after initialization has been finalized.
+     * @dev Owner-only, no finalization restriction. Allows adding markets without redeploying.
+     */
+    function addMarketAdmin(
+        bytes32 marketId,
+        bytes32 feedId,
+        uint256 _makerFeeBps,
+        uint256 _takerFeeBps,
+        uint256 _maintenanceMarginBps,
+        uint256 _liquidationRewardBps,
+        uint256 _liquidationPenaltyBps
+    ) external onlyOwner {
+        require(marketId != bytes32(0), "Invalid market");
+        require(feedId != bytes32(0), "Invalid feed");
+        require(!markets[marketId].exists, "Market exists");
+        require(_makerFeeBps <= BPS_DENOMINATOR, "Invalid maker fee");
+        require(_takerFeeBps <= BPS_DENOMINATOR, "Invalid taker fee");
+        require(_maintenanceMarginBps <= BPS_DENOMINATOR, "Invalid maintenance");
+        require(_liquidationPenaltyBps <= BPS_DENOMINATOR, "Invalid penalty");
+        require(_liquidationRewardBps <= _liquidationPenaltyBps, "Reward exceeds penalty");
+
+        markets[marketId] = MarketConfig({
+            exists: true,
+            enabled: true,
+            paused: false,
+            feedId: feedId,
+            maxOracleDeviationBps: 0,
+            makerFeeBps: _makerFeeBps,
+            takerFeeBps: _takerFeeBps,
+            maintenanceMarginBps: _maintenanceMarginBps,
+            liquidationRewardBps: _liquidationRewardBps,
+            liquidationPenaltyBps: _liquidationPenaltyBps,
+            cumulativeFundingLong: 0,
+            cumulativeFundingShort: 0,
+            maxLongExposure: 0,
+            maxShortExposure: 0,
+            spotCollateralHaircutBps: 9000,
+            spotMaintenanceWeightBps: 0
+        });
+
+        marketIds.push(marketId);
+        emit MarketAdded(marketId, feedId);
+    }
+
     function setMarketEnabled(bytes32 marketId, bool enabled) external onlyOwner {
         require(markets[marketId].exists, "Unknown market");
         markets[marketId].enabled = enabled;

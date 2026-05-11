@@ -6,7 +6,7 @@ import AdminAccess from "./components/AdminAccess";
 import PricingManager from "./components/PricingManager";
 import TokenManager from "./components/TokenManager";
 import UserManager from "./components/UserManager";
-import PerpsManager from "./components/PerpsManager"; // Add this import
+import MarketManager from "./components/MarketManager";
 import styles from "./admin.module.css";
 
 function AdminPageContent() {
@@ -48,12 +48,11 @@ function AdminPageContent() {
                     <span>👥</span> Users
                 </button>
 
-                {/* New Perps Tab */}
                 <button
-                    className={`${styles.tabButton} ${activeTab === "perps" ? styles.active : ""}`}
-                    onClick={() => setActiveTab("perps")}
+                    className={`${styles.tabButton} ${activeTab === "markets" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("markets")}
                 >
-                    <span>📈</span> Perpetuals
+                    <span>📈</span> Markets
                 </button>
             </div>
 
@@ -68,8 +67,7 @@ function AdminPageContent() {
 
                 {activeTab === "users" && <UserManager />}
 
-                {/* New Perps Manager */}
-                {activeTab === "perps" && <PerpsManager />}
+                {activeTab === "markets" && <MarketManager />}
             </div>
         </div>
     );

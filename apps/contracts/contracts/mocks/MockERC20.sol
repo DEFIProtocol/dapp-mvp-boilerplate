@@ -42,20 +42,38 @@ contract MockOracle {
     bool private forceStale;
     uint256 private updatedAt;
 
+    // Per-feedId overrides. If set, these take priority over the global price.
+    mapping(bytes32 => uint256) private priceByFeed;
+    mapping(bytes32 => uint256) private updatedAtByFeed;
+
     function setPrice(uint256 _price) external {
         price = _price;
         updatedAt = block.timestamp;
+    }
+
+    /// @notice Set a price specific to one market feedId.
+    function setPriceForFeed(bytes32 feedId, uint256 _price) external {
+        priceByFeed[feedId] = _price;
+        updatedAtByFeed[feedId] = block.timestamp;
     }
 
     function setForceStale(bool stale) external {
         forceStale = stale;
     }
 
-    function getMarkPrice(bytes32) external view returns (uint256) {
-        return price;
+    function _resolvePrice(bytes32 feedId) internal view returns (uint256, uint256) {
+        if (priceByFeed[feedId] != 0) {
+            return (priceByFeed[feedId], updatedAtByFeed[feedId]);
+        }
+        return (price, updatedAt);
     }
 
-    function getPriceBreakdown(bytes32) external view returns (
+    function getMarkPrice(bytes32 feedId) external view returns (uint256) {
+        (uint256 p, ) = _resolvePrice(feedId);
+        return p;
+    }
+
+    function getPriceBreakdown(bytes32 feedId) external view returns (
         uint256 indexPrice,
         uint256 indexUpdatedAt,
         uint256 twapPrice,
@@ -64,11 +82,12 @@ contract MockOracle {
         int256 premiumBps,
         bool indexStale
     ) {
-        indexPrice = price;
-        indexUpdatedAt = updatedAt;
-        twapPrice = price;
+        (uint256 p, uint256 ts) = _resolvePrice(feedId);
+        indexPrice = p;
+        indexUpdatedAt = ts;
+        twapPrice = p;
         twapObservations = 1;
-        markPrice = price;
+        markPrice = p;
         premiumBps = 0;
         indexStale = forceStale;
     }

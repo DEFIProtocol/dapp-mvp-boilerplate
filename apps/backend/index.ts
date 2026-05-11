@@ -21,6 +21,7 @@ import transfersRouter from "./routes/transfers";
 import smartContractsRouter from "./routes/SmartContracts/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
 import paperTradingRouter from "./routes/paperTrading";
+import { adminMarketsRouter } from "./routes/SmartContracts/adminMarkets";
 import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 
@@ -100,6 +101,7 @@ app.use("/api/transfers", transfersRouter);
 app.use("/api/paper-trading", paperTradingRouter(pool));
 app.use("/api/smart-contracts", smartContractsRouter(pool));
 app.use("/api/contract-sim", contractSimulationRouter());
+app.use("/api/admin/markets", adminMarketsRouter(pool));
 
 // Health check
 app.get("/health", (_req, res) => {

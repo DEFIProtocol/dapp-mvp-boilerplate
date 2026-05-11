@@ -1,43 +1,43 @@
 {
   "network": "baseSepolia",
-  "timestamp": "2026-05-11T02:08:12.948Z",
+  "timestamp": "2026-05-11T15:26:00.650Z",
   "deployer": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
   "addresses": {
-    "perpEngine": "0x0602425c159155DC62421d9bEA668EF26420788E",
-    "perpStorage": "0x161057F203424729263e9044a56a91CbB0e253A2",
-    "collateralManager": "0x57AC8250aF7671624f1E579aACe2cB1B36306f77",
-    "positionManager": "0xe2ca4AfF7A7EAd41A7124bb5a3f18381F4D55261",
-    "riskManager": "0x1ea37a66FC0D7a4FA7739710Aa5e8c3baA207458",
-    "liquidationEngine": "0x693b0C7A27b46ccc2dd3f36887949EC71d421c19",
-    "adlEngine": "0x979Fe83d4b71b252157f5cb2c61a2F039f4483bA",
-    "settlementEngine": "0x2b8B00C3815336AD5656aa718f0c0774dd58340c",
-    "fundingEngine": "0x840A31681B46D92083cdc1ADF099089B08C2169f",
-    "crossMargin": "0xC06c9F157dffF77Fd1cb532948Bf1421382fEFEE",
-    "subAccountManager": "0x3eb536aae5e580780e3fC4ae43E00ED8667DD8B6",
-    "optionsPricer": "0x9E2964a97996140896fbEaDFc6f33a351b6791A8",
-    "optionsEngine": "0xC4C812485b2E94d1d084ec4c1116A3B3f5ef59E2",
-    "timelock": "0x231F00d77cFDD34785427bEab6A1e5b655aFa731"
+    "perpEngine": "0x5Fa6C132eB3a689219f0C5613Dcf7312f1C22274",
+    "perpStorage": "0xEe07387d840a3Cc1BDfc0C1ABe8449711dc38b7A",
+    "collateralManager": "0x59D11248C873218e0ab045816DCE142A7f06dF5B",
+    "positionManager": "0x130ff4AAFe1bf91cDDa60786dE9E2F5099085993",
+    "riskManager": "0x2D0014b87740f994ea17ed39e70449883C7C31b1",
+    "liquidationEngine": "0x8d14A0A997783Ff4cA37596683195bb966Ad56Eb",
+    "adlEngine": "0x1935adA2d2c6e3CCe0f98C8587673207000e132f",
+    "settlementEngine": "0x3a5E8928f1655d984FF44562aC4Ad1639D3b65e8",
+    "fundingEngine": "0x07547209802b2E5d196506226d0530D444f2348F",
+    "crossMargin": "0xe4De8Fe2D89E8fBB7Ec645289773676021883278",
+    "subAccountManager": "0x9d9D171FBdA998EFF74896792a2b80b651Ba74CF",
+    "optionsPricer": "0x1d0A8D5796B9131A465eF63A5CF0021E43b2274a",
+    "optionsEngine": "0x1e6cb58e4024acA059b80dB3CD450985989FAA7a",
+    "timelock": "0xFd71B8017132D9fb3230A4aCfaB316E211b9Aa64"
   },
   "initialConfig": {
     "collateralToken": "0xAE676c02591db89fC6a070080387f103Ea5a1101",
     "insuranceFund": "0x68849AFB98449380B02eF9F703a7871c55451634",
     "protocolTreasury": "0xeB079b09c5B68f81b54841482BBD830C9568A1Da",
-    "oracle": "0xCc7aFB6bb481ecB73a89583BFEd80Bd3039FAFf0",
-    "feedId": "0x4554482f55534400000000000000000000000000000000000000000000000000"
+    "oracle": "0x595674c9680cA2270daF4149E6Fda4D8036fa855",
+    "feedId": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"
   },
   "perpEngineConstructorArgs": {
-    "perpStorage": "0x161057F203424729263e9044a56a91CbB0e253A2",
-    "collateralManager": "0x57AC8250aF7671624f1E579aACe2cB1B36306f77",
-    "positionManager": "0xe2ca4AfF7A7EAd41A7124bb5a3f18381F4D55261",
-    "riskManager": "0x1ea37a66FC0D7a4FA7739710Aa5e8c3baA207458",
-    "liquidationEngine": "0x693b0C7A27b46ccc2dd3f36887949EC71d421c19",
-    "settlementEngine": "0x2b8B00C3815336AD5656aa718f0c0774dd58340c",
-    "fundingEngine": "0x840A31681B46D92083cdc1ADF099089B08C2169f",
-    "crossMargin": "0xC06c9F157dffF77Fd1cb532948Bf1421382fEFEE",
-    "subAccountManager": "0x3eb536aae5e580780e3fC4ae43E00ED8667DD8B6",
-    "optionsPricer": "0x9E2964a97996140896fbEaDFc6f33a351b6791A8",
-    "optionsEngine": "0xC4C812485b2E94d1d084ec4c1116A3B3f5ef59E2"
+    "perpStorage": "0xEe07387d840a3Cc1BDfc0C1ABe8449711dc38b7A",
+    "collateralManager": "0x59D11248C873218e0ab045816DCE142A7f06dF5B",
+    "positionManager": "0x130ff4AAFe1bf91cDDa60786dE9E2F5099085993",
+    "riskManager": "0x2D0014b87740f994ea17ed39e70449883C7C31b1",
+    "liquidationEngine": "0x8d14A0A997783Ff4cA37596683195bb966Ad56Eb",
+    "settlementEngine": "0x3a5E8928f1655d984FF44562aC4Ad1639D3b65e8",
+    "fundingEngine": "0x07547209802b2E5d196506226d0530D444f2348F",
+    "crossMargin": "0xe4De8Fe2D89E8fBB7Ec645289773676021883278",
+    "subAccountManager": "0x9d9D171FBdA998EFF74896792a2b80b651Ba74CF",
+    "optionsPricer": "0x1d0A8D5796B9131A465eF63A5CF0021E43b2274a",
+    "optionsEngine": "0x1e6cb58e4024acA059b80dB3CD450985989FAA7a"
   },
-  "transactionHash": "0x7318802f5a83f9018152396860aeea844306070b2cbbca39ba713bd1720e63d5",
-  "blockNumber": 41348499
+  "transactionHash": "0xc2095bf2f37bc56bf54448a07c5638235bb0affc8829f537d8ce1acb90b995f0",
+  "blockNumber": 41372432
 }

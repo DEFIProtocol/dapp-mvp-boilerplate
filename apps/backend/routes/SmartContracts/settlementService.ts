@@ -232,6 +232,65 @@ export class SettlementService {
     return tx.hash as string;
   }
 
+  /**
+   * Register a new market on-chain after deployment finalization.
+   * Calls PerpStorage.addMarketAdmin — owner-only, no finalization restriction.
+   */
+  async addMarket(params: {
+    marketId: string;  // bytes32 hex
+    feedId: string;    // bytes32 hex
+    makerFeeBps: number;
+    takerFeeBps: number;
+    maintenanceMarginBps: number;
+    liquidationRewardBps: number;
+    liquidationPenaltyBps: number;
+  }): Promise<string> {
+    const perpStorageAbi = [
+      "function addMarketAdmin(bytes32,bytes32,uint256,uint256,uint256,uint256,uint256) external",
+    ];
+    const manifest = this.deployment;
+    const deploymentJson = JSON.parse(
+      require("fs").readFileSync(manifest.manifestPath, "utf8")
+    );
+    const perpStorageAddress = deploymentJson?.addresses?.perpStorage;
+    if (!perpStorageAddress) throw new Error("perpStorage address not found in deployment manifest");
+
+    const perpStorage = new ethers.Contract(perpStorageAddress, perpStorageAbi, this.wallet);
+    const tx = await perpStorage.addMarketAdmin(
+      params.marketId,
+      params.feedId,
+      params.makerFeeBps,
+      params.takerFeeBps,
+      params.maintenanceMarginBps,
+      params.liquidationRewardBps,
+      params.liquidationPenaltyBps
+    );
+    await tx.wait();
+    return tx.hash as string;
+  }
+
+  /**
+   * Set the oracle price for a specific feedId on the MockOracle.
+   * Only works when the deployed oracle is MockOracle (testnet).
+   */
+  async setOraclePriceForFeed(feedId: string, priceUsd: number): Promise<string> {
+    const manifest = this.deployment;
+    const deploymentJson = JSON.parse(
+      require("fs").readFileSync(manifest.manifestPath, "utf8")
+    );
+    const oracleAddress = deploymentJson?.initialConfig?.oracle;
+    if (!oracleAddress) throw new Error("oracle address not found in deployment manifest");
+
+    const mockOracleAbi = [
+      "function setPriceForFeed(bytes32 feedId, uint256 price) external",
+    ];
+    const oracle = new ethers.Contract(oracleAddress, mockOracleAbi, this.wallet);
+    const priceWei = ethers.parseUnits(priceUsd.toString(), 18);
+    const tx = await oracle.setPriceForFeed(feedId, priceWei);
+    await tx.wait();
+    return tx.hash as string;
+  }
+
   async grantPaperTradingFunds(recipient: string): Promise<{ usdcTxHash: string; ethTxHash?: string; ethDripError?: string }> {
     const usdcAddress = this.deployment.usdcAddress;
 
