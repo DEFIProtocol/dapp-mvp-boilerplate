@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import settlementAbi from "../../../contracts/artifacts/contracts/PerpSettlement.sol/PerpEngine.json";
+import { loadDeploymentConfig } from "./deploymentConfig";
 
 type PositionSnapshot = {
   positionId: string;
@@ -32,6 +33,7 @@ export class SettlementService {
   private contract: ethers.Contract;
   private wallet: ethers.Wallet;
   private provider: ethers.JsonRpcProvider;
+  private deployment = loadDeploymentConfig();
 
   constructor() {
     const infuraApiKey = requireEnv(
@@ -39,10 +41,6 @@ export class SettlementService {
       process.env.INFURA_PRIVATE_KEY ?? process.env.INFURA_API_KEY
     );
     const privateKey = requireEnv("EVM_PRIVATE_KEY", process.env.EVM_PRIVATE_KEY);
-    const settlementAddress = requireEnv(
-      "SETTLEMENT_ADDRESS or ADMIN_ADDRESS",
-      process.env.SETTLEMENT_ADDRESS ?? process.env.ADMIN_ADDRESS
-    );
 
     if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
       throw new Error("Invalid EVM_PRIVATE_KEY format. Expected a 32-byte hex key prefixed with 0x.");
@@ -52,8 +50,12 @@ export class SettlementService {
     this.provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
     this.wallet = new ethers.Wallet(privateKey, this.provider);
 
+    console.log(`[SettlementService] Loaded deployment manifest: ${this.deployment.manifestPath}`);
+    console.log(`[SettlementService] Using settlement contract: ${this.deployment.settlementAddress}`);
+    console.log(`[SettlementService] Using collateral token: ${this.deployment.usdcAddress}`);
+
     this.contract = new ethers.Contract(
-      settlementAddress,
+      this.deployment.settlementAddress,
       settlementAbi.abi,
       this.wallet
     );
@@ -231,10 +233,7 @@ export class SettlementService {
   }
 
   async grantPaperTradingFunds(recipient: string): Promise<{ usdcTxHash: string; ethTxHash?: string; ethDripError?: string }> {
-    const usdcAddress = requireEnv(
-      "PAPER_TRADING_USDC_ADDRESS or COLLATERAL_TOKEN_ADDRESS",
-      process.env.PAPER_TRADING_USDC_ADDRESS ?? process.env.COLLATERAL_TOKEN_ADDRESS
-    );
+    const usdcAddress = this.deployment.usdcAddress;
 
     const usdcDecimals = Number.parseInt(process.env.PAPER_TRADING_USDC_DECIMALS ?? "6", 10);
     const usdcAmount = ethers.parseUnits(process.env.PAPER_TRADING_USDC_AMOUNT ?? "10000", usdcDecimals);

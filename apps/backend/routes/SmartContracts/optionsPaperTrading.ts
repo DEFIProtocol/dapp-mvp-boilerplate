@@ -64,7 +64,7 @@ export default function optionsPaperTradingRouter() {
       }
 
       const premiumLimitValue = premiumLimitUsd === undefined ? undefined : parseNumeric(premiumLimitUsd);
-      if (premiumLimitUsd !== undefined && (premiumLimitValue === null || premiumLimitValue <= 0)) {
+      if (premiumLimitUsd !== undefined && (premiumLimitValue == null || premiumLimitValue <= 0)) {
         return res.status(400).json({ success: false, error: "premiumLimitUsd must be a positive number when provided" });
       }
 
