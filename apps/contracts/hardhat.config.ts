@@ -45,11 +45,17 @@ export default defineConfig({
       chainType: "op",
       allowUnlimitedContractSize: true,
     },
-     sepolia: {
+    baseSepolia: {
       type: "http",
       chainType: "l1",
-      url: process.env.SEPOLIA_RPC_URL!,
-      accounts: [process.env.SEPOLIA_PRIVATE_KEY!],
+      url: configVariable("BASE_SEPOLIA_RPC_URL"),
+      accounts: [configVariable("BASE_SEPOLIA_PRIVATE_KEY")],
+    },
+    sepolia: {
+      type: "http",
+      chainType: "l1",
+      url: configVariable("SEPOLIA_RPC_URL"),
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
   },
 });

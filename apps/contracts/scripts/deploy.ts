@@ -70,14 +70,99 @@ function assertBytes32(name: string, value: string): string {
   return value;
 }
 
-function loadConfig(networkName: string): DeployConfig {
+function shouldAutoDeployPrereqs(networkName: string): boolean {
+  const explicit = process.env.AUTO_DEPLOY_PREREQS;
+  if (explicit === "true") return true;
+  if (explicit === "false") return false;
+
+  return networkName === "baseSepolia";
+}
+
+async function resolveCoreDependencyAddresses(
+  networkName: string,
+  ethersLike: any,
+  deployerAddress: string,
+): Promise<{
+  collateralToken: string;
+  insuranceFund: string;
+  protocolTreasury: string;
+  oracle: string;
+}> {
+  const autoDeploy = shouldAutoDeployPrereqs(networkName);
+
+  let collateralToken = process.env.COLLATERAL_TOKEN;
+  if (!collateralToken && autoDeploy) {
+    console.log("COLLATERAL_TOKEN not set. Deploying MockERC20...");
+    const MockUSDC = await ethersLike.getContractFactory("MockERC20");
+    const usdc = await MockUSDC.deploy("USD Coin", "USDC", 6);
+    await usdc.waitForDeployment();
+    collateralToken = await usdc.getAddress();
+    console.log(`MockERC20: ${collateralToken}`);
+  }
+  if (!collateralToken) {
+    throw new Error("Missing required env var: COLLATERAL_TOKEN");
+  }
+  collateralToken = assertAddress("COLLATERAL_TOKEN", collateralToken);
+
+  let insuranceFund = process.env.INSURANCE_FUND;
+  if (!insuranceFund && autoDeploy) {
+    console.log("INSURANCE_FUND not set. Deploying InsuranceTreasury...");
+    const InsuranceTreasuryFactory = await ethersLike.getContractFactory("InsuranceTreasury");
+    const treasury = await InsuranceTreasuryFactory.deploy(collateralToken, deployerAddress);
+    await treasury.waitForDeployment();
+    insuranceFund = await treasury.getAddress();
+    console.log(`InsuranceTreasury: ${insuranceFund}`);
+  }
+  if (!insuranceFund) {
+    throw new Error("Missing required env var: INSURANCE_FUND");
+  }
+  insuranceFund = assertAddress("INSURANCE_FUND", insuranceFund);
+
+  let protocolTreasury = process.env.PROTOCOL_TREASURY;
+  if (!protocolTreasury && autoDeploy) {
+    console.log("PROTOCOL_TREASURY not set. Deploying ProtocolTreasury...");
+    const ProtocolTreasuryFactory = await ethersLike.getContractFactory("ProtocolTreasury");
+    const treasury = await ProtocolTreasuryFactory.deploy(collateralToken, deployerAddress);
+    await treasury.waitForDeployment();
+    protocolTreasury = await treasury.getAddress();
+    console.log(`ProtocolTreasury: ${protocolTreasury}`);
+  }
+  if (!protocolTreasury) {
+    throw new Error("Missing required env var: PROTOCOL_TREASURY");
+  }
+  protocolTreasury = assertAddress("PROTOCOL_TREASURY", protocolTreasury);
+
+  let oracle = process.env.MARK_ORACLE;
+  if (!oracle && autoDeploy) {
+    console.log("MARK_ORACLE not set. Deploying MockOracle...");
+    const MockOracleFactory = await ethersLike.getContractFactory("MockOracle");
+    const oracleContract = await MockOracleFactory.deploy();
+    await oracleContract.waitForDeployment();
+    oracle = await oracleContract.getAddress();
+    console.log(`MockOracle: ${oracle}`);
+  }
+  if (!oracle) {
+    throw new Error("Missing required env var: MARK_ORACLE");
+  }
+  oracle = assertAddress("MARK_ORACLE", oracle);
+
+  return {
+    collateralToken,
+    insuranceFund,
+    protocolTreasury,
+    oracle,
+  };
+}
+
+async function loadConfig(networkName: string, ethersLike: any, deployerAddress: string): Promise<DeployConfig> {
   const verify = process.env.VERIFY === "true";
 
-  // No implicit fallback addresses: fail fast instead of silently deploying broken wiring.
-  const collateralToken = assertAddress("COLLATERAL_TOKEN", requiredEnv("COLLATERAL_TOKEN"));
-  const insuranceFund = assertAddress("INSURANCE_FUND", requiredEnv("INSURANCE_FUND"));
-  const protocolTreasury = assertAddress("PROTOCOL_TREASURY", requiredEnv("PROTOCOL_TREASURY"));
-  const oracle = assertAddress("MARK_ORACLE", requiredEnv("MARK_ORACLE"));
+  const {
+    collateralToken,
+    insuranceFund,
+    protocolTreasury,
+    oracle,
+  } = await resolveCoreDependencyAddresses(networkName, ethersLike, deployerAddress);
 
   const feedId = process.env.MARKET_FEED_ID ?? "";
   const resolvedFeedId =
@@ -334,10 +419,10 @@ async function main(): Promise<void> {
   console.log("\nStarting PerpEngine deployment");
   console.log(`Network: ${networkName}`);
 
-  const config = loadConfig(networkName);
-
   const [deployer] = await ethers.getSigners();
   const balance = await ethers.provider.getBalance(deployer.address);
+
+  const config = await loadConfig(networkName, ethers, deployer.address);
 
   console.log(`Deployer: ${deployer.address}`);
   console.log(`Balance:  ${ethers.formatEther(balance)} ETH`);
