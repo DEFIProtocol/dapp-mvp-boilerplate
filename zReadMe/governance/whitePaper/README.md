@@ -29,7 +29,7 @@ A Global, Open‑Source, Crypto‑Settled Infrastructure for Indestructible Supp
 
 
 Abstract
-Modern supply chains depend on centralized financial institutions, corporate logistics networks, and fragile fiat settlement rails. These systems are efficient during stability but brittle during crisis. Economic shocks, banking failures, political instability, or systemic collapse can halt the movement of essential goods — food, fuel, medicine, raw materials — leading to catastrophic human consequences.
+Modern supply chains depend on centralized financial institutions, corporate logistics networks, and fragile fiat settlement rails. These systems are efficient during stability but brittle during crisis. Economic shocks, banking failures, political instability, or systemic collapse can halt the movement of essential goods — food, fuel, and key raw materials — leading to catastrophic human consequences.
 This paper introduces the Decentralized Commodity Settlement Network (DCSN):
 an open‑source, crypto‑settled, globally replicable infrastructure designed to ensure that commodities continue to move even when traditional systems fail. DCSN combines decentralized derivatives, escrow‑based settlement, a permissionless logistics marketplace, and a DAO‑governed incentive model to create a resilient, censorship‑resistant, and economically sustainable alternative to the legacy supply chain.
 
@@ -226,7 +226,7 @@ The DAO can:
 increase incentives
 reroute deliveries
 subsidize transport
-prioritize food and medicine
+prioritize food and fuel
 This prevents catastrophic supply chain failure.
 
 8. Franchise Node Model (Rewritten + Upgraded)
@@ -335,7 +335,7 @@ It is a civilizational safety mechanism.
 A global, open-source, crypto-settled infrastructure designed to ensure that:
 food moves
 fuel moves
-medicine moves
+energy moves
 resources move
 Even if the systems we depend on fail.
 This is not a replacement for the existing world.

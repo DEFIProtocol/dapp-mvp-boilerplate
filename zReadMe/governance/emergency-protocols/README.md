@@ -12,7 +12,7 @@ Emergency powers may be considered when one or more of the following occur:
 - severe regional instability or conflict  
 - natural disaster impacting critical infrastructure  
 - systemic failure of traditional financial or logistics systems  
-- critical backlog of essential goods (food, fuel, medicine, key resources)  
+- critical backlog of essential goods (food, fuel, key resources)  
 
 ---
 
@@ -48,7 +48,7 @@ The DAO may:
 - **Prioritize essential commodities**  
   - food  
   - fuel  
-  - medicine  
+  - key agricultural commodities  
   - critical raw materials  
 
 - **Activate special protocols**  
