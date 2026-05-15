@@ -705,3 +705,63 @@
     font-size: 0.7rem;
   }
 }
+
+/* Stacked card layout for very small screens */
+@media (max-width: 375px) {
+  .tableWrapper {
+    border-radius: 12px;
+    padding: 0.25rem;
+  }
+
+  .tokensTable {
+    width: 100%;
+    min-width: 100% !important;
+    border: none;
+    margin: 0;
+  }
+
+  .tokensTable thead { display: none; }
+
+  .tokensTable tr {
+    display: block;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 0.75rem;
+    margin-bottom: 0.6rem;
+    box-shadow: var(--card-shadow);
+  }
+
+  .tokensTable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0;
+    border: none;
+  }
+
+  .tokensTable td + td {
+    margin-top: 0.25rem;
+  }
+
+  .symbolCell {
+    padding-left: 0 !important;
+  }
+
+  /* Use nth-child to provide small labels for stacked cells */
+  .tokensTable td:nth-child(1)::before { content: "Token"; display: inline-block; color: var(--text-muted); font-size: 0.72rem; margin-right: 0.5rem; }
+  .tokensTable td:nth-child(2)::before { content: "Price"; display: inline-block; color: var(--text-muted); font-size: 0.72rem; margin-right: 0.5rem; }
+  .tokensTable td:nth-child(3)::before { content: "24h"; display: inline-block; color: var(--text-muted); font-size: 0.72rem; margin-right: 0.5rem; }
+  .tokensTable td:nth-child(4)::before { content: "Market Cap"; display: inline-block; color: var(--text-muted); font-size: 0.72rem; margin-right: 0.5rem; }
+  .tokensTable td:nth-child(5)::before { content: ""; }
+
+  .tokenInfo { gap: 0.5rem; padding-left: 0; }
+  .tokenDetails { padding-left: 0; }
+
+  .tokenLogoWrap { width: 40px; height: 40px; }
+  .tokenIcon, .tokenIconFallback { width: 28px; height: 28px; }
+
+  .priceValue { font-size: 0.95rem; }
+  .changeBadge { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+
+  .watchButton { padding: 0.45rem; }
+}

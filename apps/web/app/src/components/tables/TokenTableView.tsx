@@ -72,7 +72,7 @@ export default function TokenTableView({
   };
 
   return (
-    <div className={styles.tableWrapper}>
+    <div className={`${styles.tableWrapper} responsive-scroll`}>
       <table className={styles.tokensTable}>
         <caption className={styles.tableCaption}>Token market overview</caption>
         <colgroup>

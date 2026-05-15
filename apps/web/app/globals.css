@@ -1038,3 +1038,57 @@ pre {
   box-shadow: 0 0 10px var(--glow-secondary);
 }
 
+/* ===== EXTRA-SMALL MOBILE HELPERS ===== */
+/* Dedicated rules for very small devices (iPhone SE and similar) */
+@media (max-width: 375px) {
+  :root {
+    --text-base: 0.95rem;
+    --space-4: 1rem;
+  }
+
+  .tableCard, .holdingsCard, .glass-card {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .container {
+    padding: 0.5rem 0.75rem;
+  }
+
+  button, .navLink, .chainButton, .themeToggle, .accountButton, .btn-primary, .btn-secondary {
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    padding: 0.5rem;
+  }
+
+  .tableCard .toolbar, .tableCard .searchWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 320px) {
+  :root {
+    --text-base: 0.9rem;
+    --space-4: 0.75rem;
+  }
+
+  .title { font-size: 1.6rem; }
+  .searchInput { font-size: 0.85rem; padding: 0.5rem 0.75rem 0.5rem 2rem; }
+
+  html, body { overflow-x: hidden; }
+  .main { padding-left: 0.75rem; padding-right: 0.75rem; }
+}
+
+/* Make long tables horizontally scrollable with native touch panning */
+.responsive-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (pointer: coarse) {
+  a, button, input, select, textarea {
+    touch-action: manipulation;
+  }
+}
+
