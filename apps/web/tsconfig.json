@@ -22,7 +22,13 @@
       "@dapp/contexts": ["./app/src/contexts"],
       "@dapp/contexts/*": ["./app/src/contexts/*"],
       "@dapp/lib": ["./app/src/lib"],
-      "@dapp/lib/*": ["./app/src/lib/*"]
+      "@dapp/lib/*": ["./app/src/lib/*"],
+      "@dapp/trading-api": ["../../packages/trading-api/src"],
+      "@dapp/trading-api/*": ["../../packages/trading-api/src/*"],
+      "@dapp/trading-hooks": ["../../packages/trading-hooks/src"],
+      "@dapp/trading-hooks/*": ["../../packages/trading-hooks/src/*"],
+      "@dapp/trading-types": ["../../packages/trading-types/src"],
+      "@dapp/trading-types/*": ["../../packages/trading-types/src/*"]
     }
   },
   "include": [
