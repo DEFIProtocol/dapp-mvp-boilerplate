@@ -268,6 +268,7 @@ export default function MarketManager() {
                 onEdit={() => {}}
                 onDelete={() => {}}
                 onToggleActive={() => {}}
+                crudLoading={false}
               />
             )
           )}

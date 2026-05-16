@@ -65,3 +65,10 @@ export type TraderPositionsResponse = {
   pendingOrders: PendingPerpOrder[];
   error?: string;
 };
+
+export type OrderBookLevel = {
+  price: number;
+  size: number;
+  total: number;
+  orders: number;
+};
