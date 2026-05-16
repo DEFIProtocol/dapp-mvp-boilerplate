@@ -47,7 +47,7 @@ const corsOptions = {
 
 // Enable CORS for browser calls from approved origins
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 
