@@ -1,6 +1,38 @@
 import { ethers } from "ethers";
-import settlementAbi from "../../../contracts/artifacts/contracts/PerpSettlement.sol/PerpEngine.json";
-import { loadDeploymentConfig } from "./deploymentConfig";
+// This should be the Hardhat/Truffle artifact with the ABI
+import PerpEngineArtifact from "./testnetConData/PerpEngine.json";
+// This should be your deployment addresses JSON
+import deploymentData from "./testnetConData/deployment-addresses.json";
+
+// Define the type for our deployment addresses
+type DeploymentAddresses = {
+  network: string;
+  timestamp: string;
+  deployer: string;
+  addresses: {
+    perpEngine: string;
+    perpStorage: string;
+    collateralManager: string;
+    positionManager: string;
+    riskManager: string;
+    liquidationEngine: string;
+    adlEngine: string;
+    settlementEngine: string;
+    fundingEngine: string;
+    crossMargin: string;
+    subAccountManager: string;
+    optionsPricer: string;
+    optionsEngine: string;
+    timelock: string;
+  };
+  initialConfig: {
+    collateralToken: string;
+    insuranceFund: string;
+    protocolTreasury: string;
+    oracle: string;
+    feedId: string;
+  };
+};
 
 type PositionSnapshot = {
   positionId: string;
@@ -24,16 +56,16 @@ function requireEnv(name: string, value: string | undefined): string {
   if (!value || value.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
-
   return value.trim();
 }
 
 export class SettlementService {
-
   private contract: ethers.Contract;
   private wallet: ethers.Wallet;
   private provider: ethers.JsonRpcProvider;
-  private deployment = loadDeploymentConfig();
+  private settlementAddress: string;
+  private usdcAddress: string;
+  private deployment: DeploymentAddresses;
 
   constructor() {
     const infuraApiKey = requireEnv(
@@ -50,27 +82,31 @@ export class SettlementService {
     this.provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
     this.wallet = new ethers.Wallet(privateKey, this.provider);
 
-    console.log(`[SettlementService] Loaded deployment manifest: ${this.deployment.manifestPath}`);
-    console.log(`[SettlementService] Using settlement contract: ${this.deployment.settlementAddress}`);
-    console.log(`[SettlementService] Using collateral token: ${this.deployment.usdcAddress}`);
+    // Cast the imported JSON data to our DeploymentAddresses type
+    this.deployment = deploymentData as DeploymentAddresses;
+    this.settlementAddress = this.deployment.addresses.perpEngine;
+    this.usdcAddress = this.deployment.initialConfig.collateralToken;
+
+    console.log(`[SettlementService] Loaded deployment from testnetConData`);
+    console.log(`[SettlementService] Network: ${this.deployment.network}`);
+    console.log(`[SettlementService] Using settlement contract: ${this.settlementAddress}`);
+    console.log(`[SettlementService] Using collateral token: ${this.usdcAddress}`);
 
     this.contract = new ethers.Contract(
-      this.deployment.settlementAddress,
-      settlementAbi.abi,
+      this.settlementAddress,
+      PerpEngineArtifact.abi, // Use .abi from the artifact
       this.wallet
     );
   }
 
   async liquidate(positionId: number) {
     const tx = await this.contract.liquidate(positionId);
-
     await tx.wait();
     return tx.hash;
   }
 
   async updateFunding() {
     const tx = await this.contract.updateFunding();
-
     await tx.wait();
     return tx.hash;
   }
@@ -97,7 +133,6 @@ export class SettlementService {
       shortSignature,
       matchSize
     );
-
     await tx.wait();
     return tx.hash;
   }
@@ -120,7 +155,6 @@ export class SettlementService {
       matchSize,
       longIsTaker
     );
-
     await tx.wait();
     return tx.hash;
   }
@@ -198,11 +232,9 @@ export class SettlementService {
       if (options?.marketId && snapshot.marketId.toLowerCase() !== options.marketId.toLowerCase()) {
         return false;
       }
-
       if (options?.subAccountId && snapshot.subAccountId !== options.subAccountId) {
         return false;
       }
-
       return true;
     });
   }
@@ -227,14 +259,13 @@ export class SettlementService {
       liquidationRewardBps,
       liquidationPenaltyBps
     );
-
     await tx.wait();
     return tx.hash as string;
   }
 
   /**
    * Register a new market on-chain after deployment finalization.
-   * Calls PerpStorage.addMarketAdmin — owner-only, no finalization restriction.
+   * Uses perpStorage address from the imported deployment data.
    */
   async addMarket(params: {
     marketId: string;  // bytes32 hex
@@ -248,12 +279,9 @@ export class SettlementService {
     const perpStorageAbi = [
       "function addMarketAdmin(bytes32,bytes32,uint256,uint256,uint256,uint256,uint256) external",
     ];
-    const manifest = this.deployment;
-    const deploymentJson = JSON.parse(
-      require("fs").readFileSync(manifest.manifestPath, "utf8")
-    );
-    const perpStorageAddress = deploymentJson?.addresses?.perpStorage;
-    if (!perpStorageAddress) throw new Error("perpStorage address not found in deployment manifest");
+    
+    const perpStorageAddress = this.deployment.addresses.perpStorage;
+    console.log(`[addMarket] Using perpStorage at: ${perpStorageAddress}`);
 
     const perpStorage = new ethers.Contract(perpStorageAddress, perpStorageAbi, this.wallet);
     const tx = await perpStorage.addMarketAdmin(
@@ -271,15 +299,11 @@ export class SettlementService {
 
   /**
    * Set the oracle price for a specific feedId on the MockOracle.
-   * Only works when the deployed oracle is MockOracle (testnet).
+   * Uses oracle address from the imported deployment data.
    */
   async setOraclePriceForFeed(feedId: string, priceUsd: number): Promise<string> {
-    const manifest = this.deployment;
-    const deploymentJson = JSON.parse(
-      require("fs").readFileSync(manifest.manifestPath, "utf8")
-    );
-    const oracleAddress = deploymentJson?.initialConfig?.oracle;
-    if (!oracleAddress) throw new Error("oracle address not found in deployment manifest");
+    const oracleAddress = this.deployment.initialConfig.oracle;
+    console.log(`[setOraclePriceForFeed] Using oracle at: ${oracleAddress}`);
 
     const mockOracleAbi = [
       "function setPriceForFeed(bytes32 feedId, uint256 price) external",
@@ -292,7 +316,7 @@ export class SettlementService {
   }
 
   async grantPaperTradingFunds(recipient: string): Promise<{ usdcTxHash: string; ethTxHash?: string; ethDripError?: string }> {
-    const usdcAddress = this.deployment.usdcAddress;
+    const usdcAddress = this.usdcAddress;
 
     const usdcDecimals = Number.parseInt(process.env.PAPER_TRADING_USDC_DECIMALS ?? "6", 10);
     const usdcAmount = ethers.parseUnits(process.env.PAPER_TRADING_USDC_AMOUNT ?? "10000", usdcDecimals);

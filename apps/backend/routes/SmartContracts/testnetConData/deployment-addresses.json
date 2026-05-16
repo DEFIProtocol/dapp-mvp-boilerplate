@@ -1,0 +1,43 @@
+{
+  "network": "baseSepolia",
+  "timestamp": "2026-05-11T15:26:00.650Z",
+  "deployer": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
+  "addresses": {
+    "perpEngine": "0x5Fa6C132eB3a689219f0C5613Dcf7312f1C22274",
+    "perpStorage": "0xEe07387d840a3Cc1BDfc0C1ABe8449711dc38b7A",
+    "collateralManager": "0x59D11248C873218e0ab045816DCE142A7f06dF5B",
+    "positionManager": "0x130ff4AAFe1bf91cDDa60786dE9E2F5099085993",
+    "riskManager": "0x2D0014b87740f994ea17ed39e70449883C7C31b1",
+    "liquidationEngine": "0x8d14A0A997783Ff4cA37596683195bb966Ad56Eb",
+    "adlEngine": "0x1935adA2d2c6e3CCe0f98C8587673207000e132f",
+    "settlementEngine": "0x3a5E8928f1655d984FF44562aC4Ad1639D3b65e8",
+    "fundingEngine": "0x07547209802b2E5d196506226d0530D444f2348F",
+    "crossMargin": "0xe4De8Fe2D89E8fBB7Ec645289773676021883278",
+    "subAccountManager": "0x9d9D171FBdA998EFF74896792a2b80b651Ba74CF",
+    "optionsPricer": "0x1d0A8D5796B9131A465eF63A5CF0021E43b2274a",
+    "optionsEngine": "0x1e6cb58e4024acA059b80dB3CD450985989FAA7a",
+    "timelock": "0xFd71B8017132D9fb3230A4aCfaB316E211b9Aa64"
+  },
+  "initialConfig": {
+    "collateralToken": "0xAE676c02591db89fC6a070080387f103Ea5a1101",
+    "insuranceFund": "0x68849AFB98449380B02eF9F703a7871c55451634",
+    "protocolTreasury": "0xeB079b09c5B68f81b54841482BBD830C9568A1Da",
+    "oracle": "0x595674c9680cA2270daF4149E6Fda4D8036fa855",
+    "feedId": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace"
+  },
+  "perpEngineConstructorArgs": {
+    "perpStorage": "0xEe07387d840a3Cc1BDfc0C1ABe8449711dc38b7A",
+    "collateralManager": "0x59D11248C873218e0ab045816DCE142A7f06dF5B",
+    "positionManager": "0x130ff4AAFe1bf91cDDa60786dE9E2F5099085993",
+    "riskManager": "0x2D0014b87740f994ea17ed39e70449883C7C31b1",
+    "liquidationEngine": "0x8d14A0A997783Ff4cA37596683195bb966Ad56Eb",
+    "settlementEngine": "0x3a5E8928f1655d984FF44562aC4Ad1639D3b65e8",
+    "fundingEngine": "0x07547209802b2E5d196506226d0530D444f2348F",
+    "crossMargin": "0xe4De8Fe2D89E8fBB7Ec645289773676021883278",
+    "subAccountManager": "0x9d9D171FBdA998EFF74896792a2b80b651Ba74CF",
+    "optionsPricer": "0x1d0A8D5796B9131A465eF63A5CF0021E43b2274a",
+    "optionsEngine": "0x1e6cb58e4024acA059b80dB3CD450985989FAA7a"
+  },
+  "transactionHash": "0xc2095bf2f37bc56bf54448a07c5638235bb0affc8829f537d8ce1acb90b995f0",
+  "blockNumber": 41372432
+}
