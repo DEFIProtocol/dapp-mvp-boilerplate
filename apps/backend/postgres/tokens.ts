@@ -124,11 +124,21 @@ export async function getTokenAddressMeta(pool: Pool): Promise<TokenAddressMeta>
  * Get token by symbol
  */
 export async function getTokenBySymbol(pool: Pool, symbol: string): Promise<TokenRow | null> {
-  const result = await pool.query<TokenRow>(
-    'SELECT * FROM tokens WHERE LOWER(symbol) = LOWER($1)',
-    [symbol]
-  );
-  return result.rows[0] || null;
+  try {
+    const result = await pool.query<TokenRow>(
+      'SELECT * FROM tokens WHERE LOWER(symbol) = LOWER($1)',
+      [symbol]
+    );
+
+    const token = result.rows[0] || null;
+    if (!token) {
+      console.warn('[tokens] Token not found for symbol:', symbol);
+    }
+    return token;
+  } catch (error) {
+    console.error('[tokens] Error querying token by symbol:', symbol, getErrorMessage(error));
+    throw error;
+  }
 }
 
 /**

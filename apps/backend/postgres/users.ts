@@ -50,6 +50,14 @@ export function isValidAddress(value: string): boolean {
   );
 }
 
+/**
+ * Safely extract error message
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 async function cacheUserRecord(walletAddress: string, user: UserRow | null): Promise<void> {
   if (!redis.isOpen || !user) return;
   try {
@@ -197,6 +205,7 @@ export async function getUserByWallet(pool: Pool, address: string): Promise<User
   await ensureUsersTable(pool);
   const walletAddress = normalizeAddress(address);
   if (!walletAddress || !isValidAddress(walletAddress)) {
+    console.warn('[users] getUserByWallet called with invalid address:', address);
     return null;
   }
 
@@ -211,12 +220,27 @@ export async function getUserByWallet(pool: Pool, address: string): Promise<User
     }
   }
 
-  const result = await pool.query("SELECT * FROM users WHERE wallet_address = $1", [walletAddress]);
-  const user = mapUserRow(result.rows[0]);
-  if (user) {
-    await cacheUserRecord(walletAddress, user);
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE wallet_address = $1", [walletAddress]);
+    const user = mapUserRow(result.rows[0]);
+    if (!user) {
+      console.warn('[users] User not found for wallet:', walletAddress);
+      // Clear any stale cache
+      await clearUserCache(walletAddress);
+      return null;
+    }
+
+    try {
+      await cacheUserRecord(walletAddress, user);
+    } catch (err) {
+      console.warn('[users] Failed to cache user after DB read:', getErrorMessage(err));
+    }
+
+    return user;
+  } catch (error) {
+    console.error('[users] Error reading user by wallet:', walletAddress, getErrorMessage(error));
+    throw error;
   }
-  return user;
 }
 
 /**
@@ -239,6 +263,7 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
   const normalizedWallet = normalizeAddress(wallet_address || '');
 
   if (!normalizedWallet || !isValidAddress(normalizedWallet)) {
+    console.warn('[users] createUser called with invalid wallet_address:', wallet_address);
     throw new Error('Valid wallet_address is required');
   }
 
@@ -274,6 +299,7 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
     await cacheUserRecord(normalizedWallet, user);
     return user;
   } catch (error) {
+    console.error('[users] Error creating user', { wallet: normalizedWallet, payload }, getErrorMessage(error));
     if ((error as any).code === '23505') { // unique_violation
       throw new Error('User already exists');
     }
