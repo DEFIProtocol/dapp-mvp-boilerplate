@@ -104,12 +104,15 @@ export default function usersRouter(pool: Pool) {
       const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
       if (!walletAddress) return;
 
+      console.log('[users][POST /db] create request payload:', { body: req.body, walletAddress });
       const user = await userHelpers.createUser(pool, { ...req.body, wallet_address: walletAddress });
+      console.log('[users][POST /db] create result:', user ? { id: user.id, wallet: user.wallet_address } : null);
       res.status(201).json(user);
     } catch (error: any) {
       if (error?.message === "User already exists") {
         return res.status(409).json({ error: error.message });
       }
+      console.error('[users][POST /db] create error:', error);
       res.status(500).json({ error: "Failed to create user" });
     }
   });
@@ -185,13 +188,15 @@ export default function usersRouter(pool: Pool) {
     try {
       const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
       if (!walletAddress) return;
-
+      console.log('[users][POST /] create request payload:', { body: req.body, walletAddress });
       const user = await userHelpers.createUser(pool, { ...req.body, wallet_address: walletAddress });
+      console.log('[users][POST /] create result:', user ? { id: user.id, wallet: user.wallet_address } : null);
       res.status(201).json({ success: true, data: user });
     } catch (error: any) {
       if (error?.message === "User already exists") {
         return res.status(409).json({ success: false, error: error.message });
       }
+      console.error('[users][POST /] create error:', error);
       res.status(500).json({ success: false, error: "Failed to create user" });
     }
   });
