@@ -54,7 +54,8 @@ app.options(/.*/, cors(corsOptions));
 app.use(express.json({
   verify: (req: any, _res, buf: Buffer, encoding: string) => {
     try {
-      req.rawBody = buf.toString(encoding || 'utf8');
+      const safeEncoding = encoding as BufferEncoding | undefined;
+      req.rawBody = buf.toString(safeEncoding || 'utf8');
     } catch (e) {
       req.rawBody = undefined;
     }
