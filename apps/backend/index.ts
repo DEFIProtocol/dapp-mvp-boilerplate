@@ -50,17 +50,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
-// Capture raw body for diagnostics on malformed JSON (body-parser verify option)
-app.use(express.json({
-  verify: (req: any, _res, buf: Buffer, encoding: string) => {
-    try {
-      const safeEncoding = encoding as BufferEncoding | undefined;
-      req.rawBody = buf.toString(safeEncoding || 'utf8');
-    } catch (e) {
-      req.rawBody = undefined;
-    }
-  },
-}));
+app.use(express.json());
 
 // Add BigInt serializer middleware
 app.use(bigintSerializer);
@@ -146,19 +136,6 @@ app.get("/", (req, res) => {
 // Also keep /dashboard for backward compatibility
 app.get("/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, './public/dashboard.html'));
-});
-
-// JSON parse error handler: return structured JSON and log the raw body for diagnostics
-app.use((err: any, req: any, res: any, next: any) => {
-  if (err && (err.type === 'entity.parse.failed' || err instanceof SyntaxError)) {
-    console.warn('⚠️ Malformed JSON received:', err.message);
-    if (req && req.rawBody) {
-      console.warn('⚠️ Raw request body:', req.rawBody.substring(0, 2000));
-    }
-    res.status(400).json({ success: false, error: 'Malformed JSON in request body' });
-    return;
-  }
-  next(err);
 });
 
 // Update console logs

@@ -40,7 +40,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         console.log('👤 Fetching user for wallet:', address);
         const userData = await getUserByWallet(address);
-        setUser(userData);
+
+        if (userData) {
+          setUser(userData);
+          return;
+        }
+
+        console.log('🆕 No user found for wallet, creating new user:', address);
+        const createdUser = await createUser(address);
+        if (createdUser) {
+          setUser(createdUser);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
         console.error('❌ Error in user fetch:', error);
         setUser(null);
