@@ -1,5 +1,6 @@
 "use client";
 import React, { ReactNode, Dispatch, SetStateAction, useState, useEffect, useCallback, createContext, useContext } from "react";
+import { API_BASE } from "@/lib/api/users";
 
 export interface User {
   id: string | number;
@@ -28,7 +29,7 @@ export function AllUserProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       // Fix: Use the correct endpoint path
-      const res = await fetch("/api/users/db");
+      const res = await fetch(`${API_BASE}/users/db`);
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

@@ -1,6 +1,26 @@
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '') + '/api';
+export const API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '') + '/api';
 
 import type { UserChartPreferences } from "@/lib/chartPreferences";
+
+export function isValidAddress(address: string): boolean {
+  const normalized = String(address || "").trim();
+  return (
+    /^0x[a-fA-F0-9]{40}$/.test(normalized) &&
+    normalized !== "0x0000000000000000000000000000000000000000" &&
+    normalized.toLowerCase() !== "0x1111111111111111111111111111111111111111"
+  );
+}
+
+async function parseApiError(response: Response): Promise<string> {
+  const text = await response.text();
+  if (!text) return `HTTP ${response.status}`;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.error || parsed?.message || text;
+  } catch {
+    return text;
+  }
+}
 
 export interface UserPreferences {
   theme: string;
@@ -56,13 +76,20 @@ export async function updateUserByWallet(
   wallet_address: string,
   data: Partial<User>
 ): Promise<User | null> {
+  if (!isValidAddress(wallet_address)) {
+    console.error("Invalid wallet address in updateUserByWallet:", wallet_address);
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/users/wallet/${wallet_address}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to update user');
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
     const resData = await response.json();
     return unwrapUser(resData);
   } catch (error) {
@@ -91,11 +118,16 @@ export async function patchUserPreferencesByWallet(
 }
 
 export async function getUserByWallet(address: string): Promise<User | null> {
+  if (!isValidAddress(address)) {
+    console.error("Invalid wallet address in getUserByWallet:", address);
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/users/wallet/${address}`);
     if (!response.ok) {
       if (response.status === 404) return null;
-      throw new Error('Failed to fetch user');
+      throw new Error(await parseApiError(response));
     }
     const data = await response.json();
     return unwrapUser(data);
@@ -106,13 +138,20 @@ export async function getUserByWallet(address: string): Promise<User | null> {
 }
 
 export async function createUser(wallet_address: string): Promise<User | null> {
+  if (!isValidAddress(wallet_address)) {
+    console.error("Invalid wallet address in createUser:", wallet_address);
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet_address }),
     });
-    if (!response.ok) throw new Error('Failed to create user');
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
     const data = await response.json();
     return unwrapUser(data);
   } catch (error) {

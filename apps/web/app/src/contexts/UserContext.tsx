@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { getUserByWallet, createUser, User, addToWatchlist, removeFromWatchlist } from "../lib/api/users";
+import { getUserByWallet, createUser, isValidAddress, User, addToWatchlist, removeFromWatchlist } from "../lib/api/users";
 
 interface UserContextType {
   user: User | null;
@@ -32,6 +32,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const fetchUser = async () => {
       try {
         setLoading(true);
+        if (!isValidAddress(address)) {
+          console.error('Invalid wallet address from connector:', address);
+          setUser(null);
+          return;
+        }
+
         console.log('👤 Fetching user for wallet:', address);
         const userData = await getUserByWallet(address);
         setUser(userData);
@@ -60,6 +66,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Expose createUser for manual invocation
   const handleCreateUser = useCallback(async () => {
     if (!address || !isConnected) return;
+    if (!isValidAddress(address)) {
+      console.error('Invalid wallet address when creating user:', address);
+      return;
+    }
     try {
       setLoading(true);
       // Check if user already exists

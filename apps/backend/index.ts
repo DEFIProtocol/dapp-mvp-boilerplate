@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path"; // Add this import
+import { connectRedis } from "./redis";
 import infuraRouter from "./routes/infura";
 import usersRouter from "./routes/database/users";
 import tokensRouter from "./routes/database/tokens";
@@ -68,6 +69,12 @@ const pool = new Pool({
 });
 
 void (async () => {
+  try {
+    await connectRedis();
+  } catch (error) {
+    console.warn('⚠️ Redis connection failed:', error);
+  }
+
   try {
     await ensureDatabaseExists(process.env.DATABASE_URL!);
   } catch (error) {
