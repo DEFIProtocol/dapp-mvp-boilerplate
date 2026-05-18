@@ -30,7 +30,10 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:3001,https://dapp-mvp-boilerplate.onrender.com,https://gridiron-orxe.onrender.com")
+const allowedOrigins = (process.env.CORS_ORIGINS || 
+  "http://localhost:3000,http://localhost:3001,https://dapp-mvp-boilerplate.onrender.com,https://gridiron-orxe.onrender.com,https://ironrelay.org,https://www.ironrelay.org"
+)
+
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
