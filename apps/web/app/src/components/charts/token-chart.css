@@ -1,0 +1,379 @@
+/* Chart Container */
+.chart-container {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg) 70%, transparent);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  clear: both;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.full-chart-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 12px;
+}
+
+.full-chart-toggle {
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border) 75%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface) 90%);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.full-chart-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
+  transform: translateY(-1px);
+}
+
+.full-chart-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.full-chart-section {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border) 82%);
+  border-radius: 16px;
+  margin: 0 0 24px;
+  overflow: hidden;
+  min-height: 440px;
+  height: 520px;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.tradingview-container {
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+}
+
+.full-chart-empty {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 20px;
+}
+
+.chart-container.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.chart-container.error {
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border) 60%);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface) 90%);
+}
+
+/* Chart Header */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.chart-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-title h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.price-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price-stat.positive .price {
+  color: var(--success);
+}
+
+.price-stat.negative .price {
+  color: var(--danger);
+}
+
+.price-stat .price {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.price-stat .change {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.price-stat.positive .change {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface) 88%);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.price-stat.negative .change {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface) 88%);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Period Selector */
+.period-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.period-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.period-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface) 90%);
+}
+
+.period-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Chart Wrapper */
+.chart-wrapper {
+  width: 100%;
+  margin: 20px 0;
+  overflow-x: auto;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 10px 0;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  min-height: 300px;
+  max-width: 100%;
+}
+
+.chart-svg .grid line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-svg .axis-label {
+  font-size: 11px;
+  fill: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Chart Status States */
+.chart-loading,
+.chart-empty,
+.chart-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 15px;
+  color: var(--text-muted);
+}
+
+.chart-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.chart-loading p,
+.chart-empty p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.chart-error p {
+  font-size: 14px;
+  color: var(--danger);
+}
+
+.retry-btn {
+  padding: 8px 16px;
+  background: var(--danger);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: color-mix(in srgb, var(--danger) 80%, #000 20%);
+}
+
+/* Chart Statistics */
+.chart-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-item label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-item .value {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Chart Labels */
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 0 40px;
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.label-time {
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .period-selector {
+    width: 100%;
+  }
+
+  .chart-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-title h3 {
+    font-size: 16px;
+  }
+
+  .price-stat .price {
+    font-size: 18px;
+  }
+
+  .chart-svg {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    padding: 15px;
+  }
+
+  .chart-title h3 {
+    font-size: 14px;
+  }
+
+  .price-stat .price {
+    font-size: 16px;
+  }
+
+  .price-stat .change {
+    font-size: 12px;
+  }
+
+  .period-btn {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .chart-stats {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .stat-item label {
+    font-size: 10px;
+  }
+
+  .stat-item .value {
+    font-size: 14px;
+  }
+
+  .chart-labels {
+    padding: 0 20px;
+    font-size: 10px;
+  }
+}
