@@ -97,7 +97,8 @@ export default function MarketManager() {
   const fetchAllMarkets = async () => {
     setOtherLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/admin/markets`);
+      const base = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+      const res = await fetch(`${base}/api/admin/markets`);
       const data = await res.json();
       if (data.success) {
         setSpotTokens(data.markets.spot ?? []);

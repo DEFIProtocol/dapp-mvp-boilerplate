@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path"; // Add this import
+import { connectRedis } from "./redis";
 import infuraRouter from "./routes/infura";
 import usersRouter from "./routes/database/users";
 import tokensRouter from "./routes/database/tokens";
@@ -29,16 +30,28 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:3001")
+const allowedOrigins = (process.env.CORS_ORIGINS || 
+  "http://localhost:3000,http://localhost:3001,https://dapp-mvp-boilerplate.onrender.com,https://gridiron-orxe.onrender.com,https://ironrelay.org,https://www.ironrelay.org"
+)
+
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-// Enable CORS
-app.use(cors({
-  origin: allowedOrigins,
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
   credentials: true,
-}));
+};
+
+// Enable CORS for browser calls from approved origins
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 
@@ -59,6 +72,12 @@ const pool = new Pool({
 });
 
 void (async () => {
+  try {
+    await connectRedis();
+  } catch (error) {
+    console.warn('⚠️ Redis connection failed:', error);
+  }
+
   try {
     await ensureDatabaseExists(process.env.DATABASE_URL!);
   } catch (error) {

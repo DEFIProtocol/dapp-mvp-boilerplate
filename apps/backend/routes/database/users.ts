@@ -41,6 +41,15 @@ export default function usersRouter(pool: Pool) {
     return output;
   };
 
+  const validateWalletAddress = (value: unknown, res: Response): string | null => {
+    const walletAddress = String(value || "").trim().toLowerCase();
+    if (!userHelpers.isValidAddress(walletAddress)) {
+      res.status(400).json({ success: false, error: "wallet_address must be a valid address" });
+      return null;
+    }
+    return walletAddress;
+  };
+
   const getUserByWalletOr404 = async (walletAddress: string, res: Response) => {
     const user = await userHelpers.getUserByWallet(pool, walletAddress);
     if (!user || !user.id) {
@@ -76,7 +85,10 @@ export default function usersRouter(pool: Pool) {
   // GET user by wallet address
   router.get("/db/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
+      const walletAddress = validateWalletAddress(req.params.address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.getUserByWallet(pool, walletAddress);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -89,9 +101,15 @@ export default function usersRouter(pool: Pool) {
   // POST create user
   router.post("/db", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.createUser(pool, req.body);
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.createUser(pool, { ...req.body, wallet_address: walletAddress });
       res.status(201).json(user);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === "User already exists") {
+        return res.status(409).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to create user" });
     }
   });
@@ -112,7 +130,10 @@ export default function usersRouter(pool: Pool) {
   // PUT update user by wallet address
   router.put("/db/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.updateUserByWallet(pool, getParam(req.params.address), req.body);
+      const walletAddress = validateWalletAddress(req.params.address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.updateUserByWallet(pool, walletAddress, req.body);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -147,7 +168,10 @@ export default function usersRouter(pool: Pool) {
 
   router.get("/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
+      const walletAddress = validateWalletAddress(req.params.address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.getUserByWallet(pool, walletAddress);
       if (!user) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -159,7 +183,10 @@ export default function usersRouter(pool: Pool) {
 
   router.post("/", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.createUser(pool, req.body);
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.createUser(pool, { ...req.body, wallet_address: walletAddress });
       res.status(201).json({ success: true, data: user });
     } catch (error: any) {
       if (error?.message === "User already exists") {
@@ -171,7 +198,10 @@ export default function usersRouter(pool: Pool) {
 
   router.put("/wallet/:address", async (req: Request, res: Response) => {
     try {
-      const user = await userHelpers.updateUserByWallet(pool, getParam(req.params.address), req.body);
+      const walletAddress = validateWalletAddress(req.params.address, res);
+      if (!walletAddress) return;
+
+      const user = await userHelpers.updateUserByWallet(pool, walletAddress, req.body);
       if (!user) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -183,6 +213,9 @@ export default function usersRouter(pool: Pool) {
 
   router.patch("/wallet/:address/preferences", async (req: Request, res: Response) => {
     try {
+      const walletAddress = validateWalletAddress(req.params.address, res);
+      if (!walletAddress) return;
+
       const incoming = req.body?.preferences ?? req.body;
 
       if (!isPlainObject(incoming)) {
@@ -201,7 +234,7 @@ export default function usersRouter(pool: Pool) {
         });
       }
 
-      const existingUser = await userHelpers.getUserByWallet(pool, getParam(req.params.address));
+      const existingUser = await userHelpers.getUserByWallet(pool, walletAddress);
       if (!existingUser) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
@@ -231,11 +264,13 @@ export default function usersRouter(pool: Pool) {
 
   router.post("/watchlist/add", async (req: Request, res: Response) => {
     try {
-      const walletAddress = String(req.body?.wallet_address || "").trim();
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
       const tokenSymbol = String(req.body?.tokenSymbol || "").trim().toUpperCase();
 
-      if (!walletAddress || !tokenSymbol) {
-        return res.status(400).json({ success: false, error: "wallet_address and tokenSymbol are required" });
+      if (!tokenSymbol) {
+        return res.status(400).json({ success: false, error: "tokenSymbol is required" });
       }
 
       const user = await getUserByWalletOr404(walletAddress, res);
@@ -254,11 +289,13 @@ export default function usersRouter(pool: Pool) {
 
   router.post("/watchlist/remove", async (req: Request, res: Response) => {
     try {
-      const walletAddress = String(req.body?.wallet_address || "").trim();
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
       const tokenSymbol = String(req.body?.tokenSymbol || "").trim().toUpperCase();
 
-      if (!walletAddress || !tokenSymbol) {
-        return res.status(400).json({ success: false, error: "wallet_address and tokenSymbol are required" });
+      if (!tokenSymbol) {
+        return res.status(400).json({ success: false, error: "tokenSymbol is required" });
       }
 
       const user = await getUserByWalletOr404(walletAddress, res);

@@ -4,7 +4,7 @@ import type {
   TraderPositionsResponse,
 } from "@/types/perpsTrading";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "/api";
 
 export async function placePerpOrder(input: PlacePerpOrderRequest): Promise<PlacePerpOrderResponse> {
   const response = await fetch(`${API_BASE}/smart-contracts/orders`, {

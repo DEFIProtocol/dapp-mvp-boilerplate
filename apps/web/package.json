@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@dapp/trading-api": "*",
+    "@dapp/trading-hooks": "*",
+    "@dapp/trading-types": "*",
     "@tanstack/react-query": "^5.90.21",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.575.0",

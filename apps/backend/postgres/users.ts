@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { redis } from "../redis";
 
 export interface UserRow {
   id?: string;
@@ -37,7 +38,44 @@ export function normalizeAddress(value: string): string {
  * Validate Ethereum address format
  */
 export function isValidEthAddress(value: string): boolean {
-  return /^0x[a-f0-9]{40}$/i.test(value || '');
+  return isValidAddress(value);
+}
+
+export function isValidAddress(value: string): boolean {
+  const normalized = String(value || "").trim();
+  return (
+    /^0x[a-fA-F0-9]{40}$/.test(normalized) &&
+    normalized !== "0x0000000000000000000000000000000000000000" &&
+    normalized.toLowerCase() !== "0x1111111111111111111111111111111111111111"
+  );
+}
+
+/**
+ * Safely extract error message
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+async function cacheUserRecord(walletAddress: string, user: UserRow | null): Promise<void> {
+  if (!redis.isOpen || !user) return;
+  try {
+    await redis.set(`user:${walletAddress}`, JSON.stringify(user), {
+      EX: 300,
+    });
+  } catch (error) {
+    console.warn("⚠️ Redis cache write failed for user:", error);
+  }
+}
+
+async function clearUserCache(walletAddress: string): Promise<void> {
+  if (!redis.isOpen) return;
+  try {
+    await redis.del(`user:${walletAddress}`);
+  } catch (error) {
+    console.warn("⚠️ Redis cache delete failed for user:", error);
+  }
 }
 
 /**
@@ -166,8 +204,43 @@ export async function getUserById(pool: Pool, id: string): Promise<UserRow | nul
 export async function getUserByWallet(pool: Pool, address: string): Promise<UserRow | null> {
   await ensureUsersTable(pool);
   const walletAddress = normalizeAddress(address);
-  const result = await pool.query("SELECT * FROM users WHERE wallet_address = $1", [walletAddress]);
-  return mapUserRow(result.rows[0]);
+  if (!walletAddress || !isValidAddress(walletAddress)) {
+    console.warn('[users] getUserByWallet called with invalid address:', address);
+    return null;
+  }
+
+  if (redis.isOpen) {
+    try {
+      const cached = await redis.get(`user:${walletAddress}`);
+      if (cached) {
+        return JSON.parse(cached) as UserRow;
+      }
+    } catch (error) {
+      console.warn("⚠️ Redis cache read failed for user:", error);
+    }
+  }
+
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE wallet_address = $1", [walletAddress]);
+    const user = mapUserRow(result.rows[0]);
+    if (!user) {
+      console.warn('[users] User not found for wallet:', walletAddress);
+      // Clear any stale cache
+      await clearUserCache(walletAddress);
+      return null;
+    }
+
+    try {
+      await cacheUserRecord(walletAddress, user);
+    } catch (err) {
+      console.warn('[users] Failed to cache user after DB read:', getErrorMessage(err));
+    }
+
+    return user;
+  } catch (error) {
+    console.error('[users] Error reading user by wallet:', walletAddress, getErrorMessage(error));
+    throw error;
+  }
 }
 
 /**
@@ -189,7 +262,8 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
   
   const normalizedWallet = normalizeAddress(wallet_address || '');
 
-  if (!normalizedWallet || !isValidEthAddress(normalizedWallet)) {
+  if (!normalizedWallet || !isValidAddress(normalizedWallet)) {
+    console.warn('[users] createUser called with invalid wallet_address:', wallet_address);
     throw new Error('Valid wallet_address is required');
   }
 
@@ -221,8 +295,11 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
       ]
     );
 
-    return mapUserRow(result.rows[0]);
+    const user = mapUserRow(result.rows[0]);
+    await cacheUserRecord(normalizedWallet, user);
+    return user;
   } catch (error) {
+    console.error('[users] Error creating user', { wallet: normalizedWallet, payload }, getErrorMessage(error));
     if ((error as any).code === '23505') { // unique_violation
       throw new Error('User already exists');
     }
@@ -289,7 +366,7 @@ export async function updateUserByWallet(
   
   const walletAddress = normalizeAddress(address);
   
-  if (!walletAddress || !isValidEthAddress(walletAddress)) {
+  if (!walletAddress || !isValidAddress(walletAddress)) {
     throw new Error('Valid wallet_address is required');
   }
 
@@ -327,7 +404,14 @@ export async function updateUserByWallet(
     ]
   );
 
-  return mapUserRow(result.rows[0]);
+  const user = mapUserRow(result.rows[0]);
+  if (user) {
+    await cacheUserRecord(walletAddress, user);
+  } else {
+    await clearUserCache(walletAddress);
+  }
+
+  return user;
 }
 
 /**
@@ -357,7 +441,11 @@ export async function deleteUserByWallet(pool: Pool, address: string): Promise<U
     [walletAddress]
   );
   
-  return mapUserRow(result.rows[0]);
+  const user = mapUserRow(result.rows[0]);
+  if (user) {
+    await clearUserCache(walletAddress);
+  }
+  return user;
 }
 
 /**

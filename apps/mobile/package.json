@@ -11,6 +11,9 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@dapp/trading-api": "*",
+    "@dapp/trading-hooks": "*",
+    "@dapp/trading-types": "*",
     "@expo/vector-icons": "^15.0.3",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",

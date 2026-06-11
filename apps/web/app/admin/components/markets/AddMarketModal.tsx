@@ -89,7 +89,7 @@ export default function AddMarketModal({ onClose, onSuccess }: AddMarketModalPro
     setError("");
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/admin/markets/register`,
+        `${(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '')}/api/admin/markets/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

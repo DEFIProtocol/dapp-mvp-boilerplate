@@ -37,7 +37,7 @@ export default function PricingManager() {
                 <h3>⚠️ Error Loading Pricing Data</h3>
                 <p>{error}</p>
                 <p>Make sure your backend server is running at:</p>
-                <code>{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}</code>
+                <code>{process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}</code>
                 <button 
                     onClick={() => window.location.reload()} 
                     className={styles.retryButton}
