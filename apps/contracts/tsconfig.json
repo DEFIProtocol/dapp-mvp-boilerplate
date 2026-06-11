@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "outDir": "dist",
     "target": "ES2020",
     "module": "NodeNext",

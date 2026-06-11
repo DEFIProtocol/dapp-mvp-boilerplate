@@ -1,6 +1,5 @@
 import styles from "./page.module.css";
-import fs from "node:fs";
-import path from "node:path";
+import DocListClient from "./DocListClient";
 
 const principles = [
   {
@@ -39,86 +38,33 @@ const architecture = [
 	},
 ];
 
-const repoRoots = [
-	process.cwd(),
-	path.resolve(process.cwd(), ".."),
-	path.resolve(process.cwd(), "..", ".."),
-];
-
-function resolveRepoRoot() {
-	for (const candidate of repoRoots) {
-		if (fs.existsSync(path.join(candidate, "zReadMe"))) {
-			return candidate;
-		}
-	}
-	return path.resolve(process.cwd(), "..", "..");
-}
-
-const repoRoot = resolveRepoRoot();
-
-function readDoc(relativePath) {
-	const absolutePath = path.join(repoRoot, relativePath);
-	try {
-		return fs.readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n").trim();
-	} catch {
-		return `Unable to load ${relativePath}`;
-	}
-}
+// PDFs will be served from the web app `public/docs/` directory.
+// Place files like `apps/web/public/docs/WhitePaper.pdf` and others there.
 
 const docs = [
 	{
 		id: "whitepaper",
 		title: "White Paper",
 		subtitle: "Full protocol vision and design",
-		content: readDoc("zReadMe/governance/whitePaper/README.md"),
+		url: "/docs/WhitePaper.pdf",
 	},
 	{
 		id: "constitution",
 		title: "DAO Constitution",
 		subtitle: "Core governance authority and boundaries",
-		content: readDoc("zReadMe/governance/DAOConstitution/README.md"),
-	},
-	{
-		id: "governance-process",
-		title: "Governance Process",
-		subtitle: "How ideas become executed protocol decisions",
-		content: readDoc("zReadMe/governance/governance-process/README.md"),
-	},
-	{
-		id: "roles",
-		title: "Roles and Permissions",
-		subtitle: "Operational classes, approvals, and revocation",
-		content: readDoc("zReadMe/governance/roles-and-permissions/README.md"),
-	},
-	{
-		id: "emergency-protocols",
-		title: "Emergency Protocols",
-		subtitle: "Article VII operationalized",
-		content: readDoc("zReadMe/governance/emergency-protocols/README.md"),
+		url: "/docs/DAOConstitution.pdf",
 	},
 	{
 		id: "foundation-charter",
 		title: "Foundation Charter",
 		subtitle: "Legal and operational support framework",
-		content: readDoc("zReadMe/governance/foundation-charter.md/README.md"),
+		url: "/docs/FoundationCharter.pdf",
 	},
 	{
-		id: "smart-contract-roadmap",
-		title: "Smart Contract Roadmap",
-		subtitle: "Current contract and non-contract follow-ups",
-		content: readDoc("zReadMe/smartContractToDo.md"),
-	},
-	{
-		id: "proof-pack",
-		title: "Proof Pack",
-		subtitle: "Risk parameter evidence from deterministic simulations",
-		content: readDoc("zReadMe/ProofPack.md"),
-	},
-	{
-		id: "sim-runs",
-		title: "Simulation Run Commands",
-		subtitle: "Canonical simulator command reference",
-		content: readDoc("zReadMe/.simRun.md"),
+		id: "executive-summary",
+		title: "Executive Summary",
+		subtitle: "Top-line protocol overview and direction",
+		url: "/docs/ExecutiveSummary.pdf",
 	},
 ];
 
@@ -136,30 +82,18 @@ export default function HomeMissionPage() {
 
 				<p className={styles.subtitle}>
 					When the systems break — fuel, natural gas, wheat, livestock, copper, corn —
-					the world doesn't stop. It just loses its coordination layer.
-				</p>
+				the world doesn&apos;t stop. It just loses its coordination layer.
+			</p>
 
-				<p className={styles.subtext}>
-					DCSN is that coordination layer. Open infrastructure for the movement of real commodities.
-					Built to operate when the old rails don't.
-				</p>
+			<p className={styles.subtext}>
+				DCSN is that coordination layer. Open infrastructure for the movement of real commodities.
+				Built to operate when the old rails don&apos;t.
+			</p>
 
-				<div className={styles.actions}>
-					<a href="#docs" className={styles.primaryBtn}>Read the White Paper</a>
-					<a href="/futures" className={styles.secondaryBtn}>Enter Markets</a>
-				</div>
-			</section>
-
-			<section className={styles.principlesSection}>
-				<h2>What moves us?</h2>
-				<div className={styles.principleGrid}>
-					{principles.map((item) => (
-						<article key={item.title} className={styles.principleCard}>
-							<h3>{item.title}</h3>
-							<p>{item.body}</p>
-						</article>
-					))}
-				</div>
+			<div className={styles.actions}>
+				<a href="#docs" className={styles.primaryBtn}>Read the White Paper</a>
+				<a href="/futures" className={styles.secondaryBtn}>Enter Markets</a>
+			</div>
 			</section>
 
 			<section className={styles.architectureSection}>
@@ -183,20 +117,7 @@ export default function HomeMissionPage() {
 				</div>
 
 				<div className={styles.docsList}>
-					{docs.map((doc) => (
-						<details key={doc.id} className={styles.docItem}>
-							<summary>
-								<div>
-									<h3>{doc.title}</h3>
-									<p>{doc.subtitle}</p>
-								</div>
-								<span className={styles.expandLabel}>Open</span>
-							</summary>
-							<div className={styles.docBody}>
-								<pre>{doc.content}</pre>
-							</div>
-						</details>
-					))}
+					<DocListClient docs={docs} />
 				</div>
 			</section>
 

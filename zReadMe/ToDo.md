@@ -3,24 +3,6 @@
 Frontend:
 
 CRITICAL PRIORITY (P0)
-1.) Base Sepolia paper trading completion (must finish first)
-
-Wire full paper-trading execution for both perps and options (not just queued intents)
-Finalize Base Sepolia test USDC faucet config and env wiring
-Enforce chain gating to Base Sepolia for faucet + paper trade actions
-Add end-to-end smoke tests: claim faucet, open/close perp, open/settle option
-
-P0 Deployment Env Checklist (replace placeholders):
-- PAPER_TRADING_USDC_ADDRESS
-- PAPER_TRADING_USDC_MODE (mint or transfer)
-- PAPER_TRADING_USDC_DECIMALS
-- PAPER_TRADING_USDC_AMOUNT
-- PAPER_TRADING_ETH_DRIP_WEI
-- PAPER_TRADING_ETH_MIN_BALANCE_WEI
-- PAPER_TRADING_OPTIONS_ENGINE_ADDRESS
-- PAPER_TRADING_PERPS_ENGINE_ADDRESS
-- PAPER_TRADING_ADMIN_OVERRIDE_ALLOWLIST
-
 
 1.) Orderflow component for perps page.
 1a.) Add options component/spot on admin similar to perps component.

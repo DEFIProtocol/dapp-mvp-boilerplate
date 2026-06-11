@@ -159,6 +159,33 @@
   gap: 0.8rem;
 }
 
+.docsInner {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.docItemBlock {
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: clip;
+  padding: 1rem;
+}
+
+.docItemRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.docViewer {
+  margin-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 1rem;
+}
+
 .docItem {
   border: 1px solid var(--glass-border);
   border-radius: 14px;
