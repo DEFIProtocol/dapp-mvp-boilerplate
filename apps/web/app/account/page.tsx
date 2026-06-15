@@ -11,6 +11,7 @@ import { useTokens } from "../src/contexts/TokenContext";
 import { WalletBalance } from "./components/WalletBalance";
 import { Holdings } from "./components/Holdings";
 import { Watchlist } from "./components/Watchlist";
+import KycCompetencyPortal from "./KycCompetencyPortal";
 import styles from "./page.module.css";
 
 export default function AccountPage() {
@@ -71,19 +72,30 @@ export default function AccountPage() {
 
   return (
     <div className={styles.pageContainer}>
+      <KycCompetencyPortal />
+
       {/* Header */}
       <div className={styles.headerCard}>
         <div className={styles.headerLeft}>
           <h1>Account</h1>
           <p>Connected to {getChainLabel(selectedChain)}</p>
         </div>
-        <button
-          onClick={() => router.push("/account/settings")}
-          className={styles.settingsButton}
-          aria-label="Account settings"
-        >
-          <span className={styles.settingsGlyph} aria-hidden="true">⚙</span>
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            onClick={() => router.push("/account/kyc-registration/start")}
+            className={styles.kvcButton}
+            aria-label="KYC registration"
+          >
+            KYC
+          </button>
+          <button
+            onClick={() => router.push("/account/settings")}
+            className={styles.settingsButton}
+            aria-label="Account settings"
+          >
+            <span className={styles.settingsGlyph} aria-hidden="true">⚙</span>
+          </button>
+        </div>
       </div>
 
       {/* Wallet Balance */}

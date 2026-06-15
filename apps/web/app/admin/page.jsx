@@ -7,6 +7,7 @@ import PricingManager from "./components/PricingManager";
 import TokenManager from "./components/TokenManager";
 import UserManager from "./components/UserManager";
 import MarketManager from "./components/MarketManager";
+import AdminKeyManager from "./AdminKeyManager";
 import styles from "./admin.module.css";
 
 function AdminPageContent() {
@@ -54,6 +55,13 @@ function AdminPageContent() {
                 >
                     <span>📈</span> Markets
                 </button>
+
+                <button
+                    className={`${styles.tabButton} ${activeTab === "developer" ? styles.active : ""}`}
+                    onClick={() => setActiveTab("developer")}
+                >
+                    <span>🛠️</span> Developer Keys
+                </button>
             </div>
 
             <div className={styles.adminContent}>
@@ -68,6 +76,7 @@ function AdminPageContent() {
                 {activeTab === "users" && <UserManager />}
 
                 {activeTab === "markets" && <MarketManager />}
+                {activeTab === "developer" && <AdminKeyManager />}
             </div>
         </div>
     );

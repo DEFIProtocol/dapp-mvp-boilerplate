@@ -25,5 +25,6 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Account", href: "/account", matchPaths: ["/account"] },
+  { label: "Developer", href: "/developer", matchPaths: ["/developer"] },
   { label: "Admin", href: "/admin", adminOnly: true, matchPaths: ["/admin"] },
 ];
