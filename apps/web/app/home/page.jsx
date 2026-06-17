@@ -73,20 +73,20 @@ export default function HomeMissionPage() {
 		<main className={styles.page}>
 			<section className={styles.hero}>
 				<div className={styles.heroGlow} />
-				<p className={styles.kicker}>Decentralized Commodity Settlement Network</p>
+				<p className={styles.kicker}>ironRelay</p>
 
 				<h1 className={styles.title}>
-					When the banks fail,
-					<span>the grain still needs to move.</span>
-				</h1>
+        When traditional systems fail and borders close, 
+        <span> the food must still move. The fuel must still flow.</span>
+      </h1>
 
-				<p className={styles.subtitle}>
-					When the systems break — fuel, natural gas, wheat, livestock, copper, corn —
-				the world doesn&apos;t stop. It just loses its coordination layer.
-			</p>
-
+      <p className={styles.subtitle}>
+        Whether it is wheat, livestock, copper, or corn—the world doesn&apos;t stop. 
+        ironRelay is the quiet, decentralized network beneath, ensuring vital 
+        commodities keep moving even when our infrastructure breaks.
+      </p>
 			<p className={styles.subtext}>
-				DCSN is that coordination layer. Open infrastructure for the movement of real commodities.
+				ironRelay is that coordination layer. Open infrastructure for the movement of real commodities.
 				Built to operate when the old rails don&apos;t.
 			</p>
 
