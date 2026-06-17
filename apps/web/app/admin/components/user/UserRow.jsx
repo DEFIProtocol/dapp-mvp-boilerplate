@@ -114,6 +114,15 @@ export default function UserRow({ user, selectedUsers, setSelectedUsers, updateU
             >
               ✓
             </button>
+            {user.wallet_address ? (
+              <button
+                onClick={() => (window.location.href = `/admin/kyc/${user.wallet_address}`)}
+                className={`${styles.actionBtn} ${styles.secondary} ${styles.small}`}
+                title="View KYC"
+              >
+                👁️
+              </button>
+            ) : null}
           </>
         )}
       </td>

@@ -1,0 +1,72 @@
+.actionPageShell {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+}
+
+.actionCard {
+  width: min(760px, 100%);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border-radius: 28px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+}
+
+.actionTitle {
+  margin: 0;
+  font-size: 2rem;
+  color: var(--text-strong);
+}
+
+.actionInfo {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.actionButton {
+  width: fit-content;
+  padding: 1rem 1.5rem;
+  border-radius: 18px;
+  border: none;
+  background: var(--neon-cyan);
+  color: var(--bg);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+}
+
+.actionNote {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-strong);
+  font-family: inherit;
+}
+
+@media (max-width: 720px) {
+  .actionCard {
+    padding: 1.5rem;
+  }
+
+  .actionTitle {
+    font-size: 1.65rem;
+  }
+}

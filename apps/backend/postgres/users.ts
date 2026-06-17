@@ -11,6 +11,8 @@ export interface UserRow {
   preferences?: any;
   watchlist?: any;
   is_verified_by_coinbase?: boolean;
+  kyc_status?: string;
+  competency_status?: string;
   paper_trading_grant_count?: number;
   paper_trading_last_grant_at?: string;
   paper_trading_last_grant_tx_hash?: string;
@@ -122,6 +124,8 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
       chain_addresses JSONB,
       preferences JSONB,
       watchlist JSONB,
+      kyc_status VARCHAR(20) DEFAULT 'UNVERIFIED',
+      competency_status VARCHAR(20) DEFAULT 'NOT_STARTED',
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
       paper_trading_grant_count INTEGER DEFAULT 0,
       paper_trading_last_grant_at TIMESTAMP,
@@ -139,6 +143,8 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
   // Add watchlist column if it doesn't exist (for backward compatibility)
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS watchlist JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB');
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'UNVERIFIED'");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS competency_status VARCHAR(20) DEFAULT 'NOT_STARTED'");
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_grant_count INTEGER DEFAULT 0');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMP');
@@ -167,6 +173,8 @@ export function mapUserRow(row: any): UserRow | null {
     preferences: row.preferences,
     watchlist: row.watchlist,
     is_verified_by_coinbase: row.is_verified_by_coinbase,
+    kyc_status: row.kyc_status,
+    competency_status: row.competency_status,
     paper_trading_grant_count: row.paper_trading_grant_count,
     paper_trading_last_grant_at: row.paper_trading_last_grant_at,
     paper_trading_last_grant_tx_hash: row.paper_trading_last_grant_tx_hash,
@@ -255,6 +263,8 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
     email_verified,
     username, 
     is_verified_by_coinbase, 
+    kyc_status,
+    competency_status,
     chain_addresses, 
     preferences,
     watchlist 
@@ -273,6 +283,8 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
     email_verified: email_verified === true,
     username: username || null,
     is_verified_by_coinbase: is_verified_by_coinbase === true,
+    kyc_status: kyc_status || 'UNVERIFIED',
+    competency_status: competency_status || 'NOT_STARTED',
     chain_addresses: normalizeJsonb(chain_addresses),
     preferences: normalizeJsonb(preferences),
     watchlist: normalizeJsonb(watchlist)
@@ -280,18 +292,20 @@ export async function createUser(pool: Pool, data: Partial<UserRow>): Promise<Us
 
   try {
     const result = await pool.query(
-      `INSERT INTO users (wallet_address, email, email_verified, username, chain_addresses, preferences, watchlist, is_verified_by_coinbase)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+      `INSERT INTO users (wallet_address, email, email_verified, username, is_verified_by_coinbase, kyc_status, competency_status, chain_addresses, preferences, watchlist)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb)
        RETURNING *`,
       [
         payload.wallet_address,
         payload.email,
         payload.email_verified,
         payload.username,
+        payload.is_verified_by_coinbase,
+        payload.kyc_status,
+        payload.competency_status,
         payload.chain_addresses,
         payload.preferences,
-        payload.watchlist,
-        payload.is_verified_by_coinbase
+        payload.watchlist
       ]
     );
 
@@ -322,6 +336,8 @@ export async function updateUser(
     email_verified,
     username, 
     is_verified_by_coinbase, 
+    kyc_status,
+    competency_status,
     chain_addresses, 
     preferences,
     watchlist 
@@ -336,6 +352,8 @@ export async function updateUser(
          preferences = COALESCE($6::jsonb, preferences),
          watchlist = COALESCE($7::jsonb, watchlist),
          is_verified_by_coinbase = COALESCE($8, is_verified_by_coinbase),
+         kyc_status = COALESCE($9, kyc_status),
+         competency_status = COALESCE($10, competency_status),
          updated_at = NOW()
      WHERE id = $1
      RETURNING *`,
@@ -347,7 +365,9 @@ export async function updateUser(
       normalizeJsonb(chain_addresses),
       normalizeJsonb(preferences),
       normalizeJsonb(watchlist),
-      is_verified_by_coinbase
+      is_verified_by_coinbase,
+      kyc_status ?? null,
+      competency_status ?? null
     ]
   );
 
@@ -375,6 +395,8 @@ export async function updateUserByWallet(
     email_verified,
     username, 
     is_verified_by_coinbase, 
+    kyc_status,
+    competency_status,
     chain_addresses, 
     preferences,
     watchlist 
@@ -389,6 +411,8 @@ export async function updateUserByWallet(
          preferences = COALESCE($6::jsonb, preferences),
          watchlist = COALESCE($7::jsonb, watchlist),
          is_verified_by_coinbase = COALESCE($8, is_verified_by_coinbase),
+         kyc_status = COALESCE($9, kyc_status),
+         competency_status = COALESCE($10, competency_status),
          updated_at = NOW()
      WHERE wallet_address = $1
      RETURNING *`,
@@ -400,7 +424,9 @@ export async function updateUserByWallet(
       normalizeJsonb(chain_addresses),
       normalizeJsonb(preferences),
       normalizeJsonb(watchlist),
-      is_verified_by_coinbase
+      is_verified_by_coinbase,
+      kyc_status ?? null,
+      competency_status ?? null
     ]
   );
 

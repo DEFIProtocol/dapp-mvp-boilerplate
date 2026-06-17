@@ -60,6 +60,8 @@ export interface User {
   preferences?: Partial<UserPreferences>;
   watchlist?: string[];
   is_verified_by_coinbase?: boolean;
+  kyc_status?: string;
+  competency_status?: string;
   created_at?: string;
   updated_at?: string;
 }

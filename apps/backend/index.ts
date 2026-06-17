@@ -22,6 +22,9 @@ import transfersRouter from "./routes/transfers";
 import smartContractsRouter from "./routes/SmartContracts/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
 import paperTradingRouter from "./routes/paperTrading";
+import onboardingRouter from "./routes/onboarding";
+import apiKeysRouter from "./routes/apiKeys";
+import apiKeyAuth from "./middleware/apiKeyAuth";
 import { adminMarketsRouter } from "./routes/SmartContracts/adminMarkets";
 import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
@@ -106,18 +109,20 @@ app.use("/api/perps", perpsRouter(pool));
 app.use("/api/infura", infuraRouter(pool));
 app.use("/api/users", usersRouter(pool));
 app.use("/api/tokens", tokensRouter(pool));
-app.use("/api/binance", binancePricingRouter);
-app.use("/api/coinbase", coinbasePricingRouter);
-app.use("/api/coinranking", coinRankingRouter);
-app.use("/api/1inch", oneInchRouter);
+app.use("/api/binance", apiKeyAuth(pool), binancePricingRouter);
+app.use("/api/coinbase", apiKeyAuth(pool), coinbasePricingRouter);
+app.use("/api/coinranking", apiKeyAuth(pool), coinRankingRouter);
+app.use("/api/1inch", apiKeyAuth(pool), oneInchRouter);
 app.use("/api", pricesRouter);
-app.use('/api/klines', klineRoutes);
-app.use("/api/oracle", oracleRouter);
-app.use("/api/pyth", pythRouter); // Add Pyth routes
-app.use("/api/aggregator", priceAggregatorRouter); // Validated index+mark prices
+app.use('/api/klines', apiKeyAuth(pool), klineRoutes);
+app.use("/api/oracle", apiKeyAuth(pool), oracleRouter);
+app.use("/api/pyth", apiKeyAuth(pool), pythRouter); // Add Pyth routes
+app.use("/api/aggregator", apiKeyAuth(pool), priceAggregatorRouter); // Validated index+mark prices
 app.use("/api/coinbase-onramp", fiatOnRampRouter);
 app.use("/api/transfers", transfersRouter);
 app.use("/api/paper-trading", paperTradingRouter(pool));
+app.use("/api/onboarding", onboardingRouter(pool));
+app.use("/api/api-keys", apiKeysRouter(pool));
 app.use("/api/smart-contracts", smartContractsRouter(pool));
 app.use("/api/contract-sim", contractSimulationRouter());
 app.use("/api/admin/markets", adminMarketsRouter(pool));

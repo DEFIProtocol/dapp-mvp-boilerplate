@@ -1,4 +1,6 @@
 import { Client, Pool } from "pg";
+import { ensureOnboardingTables } from "./onboarding";
+import { ensureApiKeysTable } from "./apiKeys";
 
 interface ParsedDbUrl {
   dbName: string;
@@ -71,6 +73,8 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
       chain_addresses JSONB,
       preferences JSONB,
       watchlist JSONB,
+      kyc_status VARCHAR(20) DEFAULT 'UNVERIFIED',
+      competency_status VARCHAR(20) DEFAULT 'NOT_STARTED',
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
       paper_trading_grant_count INTEGER DEFAULT 0,
       paper_trading_last_grant_at TIMESTAMP,
@@ -86,6 +90,8 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
   `);
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS watchlist JSONB');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB');
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'UNVERIFIED'");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS competency_status VARCHAR(20) DEFAULT 'NOT_STARTED'");
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_grant_count INTEGER DEFAULT 0');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMP');
@@ -96,6 +102,8 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_at TIMESTAMP');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_by VARCHAR(66)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_users_wallet_address ON users(wallet_address)');
+  await ensureOnboardingTables(pool);
+  await ensureApiKeysTable(pool);
 
   // Tokens
   await pool.query(`
