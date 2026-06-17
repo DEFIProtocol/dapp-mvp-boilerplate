@@ -5,7 +5,7 @@ const principles = [
   {
     title: "Shelter from the storm",
     body:
-      "When banks fail and borders close, the food still needs to move. The fuel still needs to flow. DCSN is the quiet layer beneath—ensuring nothing stops, even when the systems we trust do not.",
+      "When traditional systems fail and borders close, the food must still move. The fuel must still flow. ironRelay is the quiet, decentralized supply network beneath—ensuring global commodities never stop, even when infrastructure does."
   },
   {
     title: "A promise to the future",
