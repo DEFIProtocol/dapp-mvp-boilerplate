@@ -9,6 +9,7 @@ import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
 import PerpsTable from "./perps/PerpsTable";
 import PriceCard from "./perps/PriceCard";
 import AddMarketModal from "./markets/AddMarketModal";
+import EditMarketModal from "./markets/EditMarketModal";
 import styles from "./styles/PerpsManager.module.css";
 import type { PerpsToken } from "@/types/perps";
 
@@ -28,7 +29,7 @@ const ORACLE_TOKENS = [
   { symbol: "LINK", chain: "ethereum", token: "link", feedId: "0x8ac0c70fff57e9aefdf5edf44b51d62c2d433653cbb2cf5cc06bb115af04d221" },
 ];
 
-function SpotTable({ rows }: { rows: any[] }) {
+function SpotTable({ rows, onToggle, onDelete, loading }: { rows: any[]; onToggle: (symbol: string, isActive: boolean) => void; onDelete: (symbol: string) => void; loading: boolean }) {
   if (!rows.length) return <p style={{ color: "#64748b", padding: "1rem" }}>No spot markets registered yet.</p>;
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", color: "#e2e8f0", fontSize: "0.875rem" }}>
@@ -38,23 +39,64 @@ function SpotTable({ rows }: { rows: any[] }) {
           <th style={{ textAlign: "left", padding: "0.5rem" }}>Name</th>
           <th style={{ textAlign: "left", padding: "0.5rem" }}>Quote</th>
           <th style={{ textAlign: "center", padding: "0.5rem" }}>Active</th>
+          <th style={{ textAlign: "center", padding: "0.5rem" }}>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => (
-          <tr key={r.symbol} style={{ borderBottom: "1px solid #1e293b" }}>
-            <td style={{ padding: "0.5rem", fontWeight: 600 }}>{r.symbol}</td>
-            <td style={{ padding: "0.5rem" }}>{r.name}</td>
-            <td style={{ padding: "0.5rem" }}>{r.quote_asset ?? "USDC"}</td>
-            <td style={{ textAlign: "center", padding: "0.5rem" }}>{r.is_active ? "✅" : "❌"}</td>
-          </tr>
-        ))}
+        {rows.map((r) => {
+          const isActive = r.is_active !== false;
+          return (
+            <tr key={r.symbol} style={{ borderBottom: "1px solid #1e293b" }}>
+              <td style={{ padding: "0.5rem", fontWeight: 600 }}>{r.symbol}</td>
+              <td style={{ padding: "0.5rem" }}>{r.name}</td>
+              <td style={{ padding: "0.5rem" }}>{r.quote_asset ?? "USDC"}</td>
+              <td style={{ textAlign: "center", padding: "0.5rem" }}>{isActive ? "✅" : "❌"}</td>
+              <td style={{ textAlign: "center", padding: "0.5rem" }}>
+                <button
+                  onClick={() => onToggle(r.symbol, isActive)}
+                  disabled={loading}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    marginRight: "0.25rem",
+                    fontSize: "0.75rem",
+                    border: "1px solid #334155",
+                    borderRadius: 4,
+                    background: isActive ? "#7f1d1d" : "#14532d",
+                    color: "#e2e8f0",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                  title={isActive ? "Deactivate" : "Activate"}
+                >
+                  {isActive ? "🔴" : "🟢"}
+                </button>
+                <button
+                  onClick={() => onDelete(r.symbol)}
+                  disabled={loading}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    fontSize: "0.75rem",
+                    border: "1px solid #334155",
+                    borderRadius: 4,
+                    background: "#7f1d1d",
+                    color: "#e2e8f0",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                  title="Delete"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
 }
 
-function OptionsTable({ rows }: { rows: any[] }) {
+function OptionsTable({ rows, onToggle, onDelete, loading }: { rows: any[]; onToggle: (symbol: string, isActive: boolean) => void; onDelete: (symbol: string) => void; loading: boolean }) {
   if (!rows.length) return <p style={{ color: "#64748b", padding: "1rem" }}>No options underlyings registered yet.</p>;
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", color: "#e2e8f0", fontSize: "0.875rem" }}>
@@ -64,17 +106,58 @@ function OptionsTable({ rows }: { rows: any[] }) {
           <th style={{ textAlign: "left", padding: "0.5rem" }}>Name</th>
           <th style={{ textAlign: "left", padding: "0.5rem" }}>Underlying</th>
           <th style={{ textAlign: "center", padding: "0.5rem" }}>Active</th>
+          <th style={{ textAlign: "center", padding: "0.5rem" }}>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => (
-          <tr key={r.symbol} style={{ borderBottom: "1px solid #1e293b" }}>
-            <td style={{ padding: "0.5rem", fontWeight: 600 }}>{r.symbol}</td>
-            <td style={{ padding: "0.5rem" }}>{r.name}</td>
-            <td style={{ padding: "0.5rem" }}>{r.underlying_symbol}</td>
-            <td style={{ textAlign: "center", padding: "0.5rem" }}>{r.is_active ? "✅" : "❌"}</td>
-          </tr>
-        ))}
+        {rows.map((r) => {
+          const isActive = r.is_active !== false;
+          return (
+            <tr key={r.symbol} style={{ borderBottom: "1px solid #1e293b" }}>
+              <td style={{ padding: "0.5rem", fontWeight: 600 }}>{r.symbol}</td>
+              <td style={{ padding: "0.5rem" }}>{r.name}</td>
+              <td style={{ padding: "0.5rem" }}>{r.underlying_symbol}</td>
+              <td style={{ textAlign: "center", padding: "0.5rem" }}>{isActive ? "✅" : "❌"}</td>
+              <td style={{ textAlign: "center", padding: "0.5rem" }}>
+                <button
+                  onClick={() => onToggle(r.symbol, isActive)}
+                  disabled={loading}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    marginRight: "0.25rem",
+                    fontSize: "0.75rem",
+                    border: "1px solid #334155",
+                    borderRadius: 4,
+                    background: isActive ? "#7f1d1d" : "#14532d",
+                    color: "#e2e8f0",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                  title={isActive ? "Deactivate" : "Activate"}
+                >
+                  {isActive ? "🔴" : "🟢"}
+                </button>
+                <button
+                  onClick={() => onDelete(r.symbol)}
+                  disabled={loading}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    fontSize: "0.75rem",
+                    border: "1px solid #334155",
+                    borderRadius: 4,
+                    background: "#7f1d1d",
+                    color: "#e2e8f0",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                  title="Delete"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -86,8 +169,11 @@ export default function MarketManager() {
   const [domain, setDomain] = useState<Domain>("perps");
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingToken, setEditingToken] = useState<PerpsToken | null>(null);
   const [showSimulator, setShowSimulator] = useState(false);
   const [status, setStatus] = useState({ type: "" as "success" | "error" | "", message: "" });
+  const [crudLoading, setCrudLoading] = useState(false);
 
   // Spot + options markets fetched from admin API
   const [spotTokens, setSpotTokens] = useState<any[]>([]);
@@ -155,6 +241,98 @@ export default function MarketManager() {
     refreshTokens();
     fetchAllMarkets();
     setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+  };
+
+  const handleEdit = (token: PerpsToken) => {
+    setEditingToken(token);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    setStatus({ type: "success", message: "✅ Market updated successfully!" });
+    refreshTokens();
+    setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+  };
+
+  const handleToggleActive = async (symbol: string, currentActive: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentActive ? 'deactivate' : 'activate'} ${symbol}?`)) {
+      return;
+    }
+
+    setCrudLoading(true);
+    try {
+      const base = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+      
+      // Use appropriate endpoint based on current domain
+      let endpoint: string;
+      if (domain === 'perps') {
+        endpoint = `${base}/api/perps/db/${symbol}/toggle`;
+      } else {
+        endpoint = `${base}/api/admin/markets/${domain}/${symbol}/toggle`;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !currentActive }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Toggle failed');
+      }
+
+      setStatus({ 
+        type: "success", 
+        message: `✅ ${symbol} ${!currentActive ? 'activated' : 'deactivated'} successfully!` 
+      });
+      refreshTokens();
+      fetchAllMarkets();
+      setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+    } catch (err: any) {
+      setStatus({ type: "error", message: `❌ ${err.message}` });
+      setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+    } finally {
+      setCrudLoading(false);
+    }
+  };
+
+  const handleDelete = async (symbol: string) => {
+    if (!confirm(`Are you sure you want to DELETE ${symbol}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setCrudLoading(true);
+    try {
+      const base = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+      
+      // Use appropriate endpoint based on current domain
+      let endpoint: string;
+      if (domain === 'perps') {
+        endpoint = `${base}/api/perps/db/${symbol}`;
+      } else {
+        endpoint = `${base}/api/admin/markets/${domain}/${symbol}`;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Delete failed');
+      }
+
+      setStatus({ type: "success", message: `✅ ${symbol} deleted successfully!` });
+      refreshTokens();
+      fetchAllMarkets();
+      setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+    } catch (err: any) {
+      setStatus({ type: "error", message: `❌ ${err.message}` });
+      setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+    } finally {
+      setCrudLoading(false);
+    }
   };
 
   const domainTabs: { id: Domain; label: string }[] = [
@@ -266,10 +444,10 @@ export default function MarketManager() {
             ) : (
               <PerpsTable
                 tokens={filteredPerps}
-                onEdit={() => {}}
-                onDelete={() => {}}
-                onToggleActive={() => {}}
-                crudLoading={false}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggleActive={handleToggleActive}
+                crudLoading={crudLoading}
               />
             )
           )}
@@ -278,7 +456,12 @@ export default function MarketManager() {
             otherLoading ? (
               <div className={styles.loading}>Loading spot markets…</div>
             ) : (
-              <SpotTable rows={spotTokens} />
+              <SpotTable 
+                rows={spotTokens} 
+                onToggle={handleToggleActive}
+                onDelete={handleDelete}
+                loading={crudLoading}
+              />
             )
           )}
 
@@ -286,7 +469,12 @@ export default function MarketManager() {
             otherLoading ? (
               <div className={styles.loading}>Loading options underlyings…</div>
             ) : (
-              <OptionsTable rows={optionsTokens} />
+              <OptionsTable 
+                rows={optionsTokens}
+                onToggle={handleToggleActive}
+                onDelete={handleDelete}
+                loading={crudLoading}
+              />
             )
           )}
         </>
@@ -296,6 +484,17 @@ export default function MarketManager() {
         <AddMarketModal
           onClose={() => setShowAddModal(false)}
           onSuccess={handleSuccess}
+        />
+      )}
+
+      {showEditModal && editingToken && (
+        <EditMarketModal
+          token={editingToken}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingToken(null);
+          }}
+          onSuccess={handleEditSuccess}
         />
       )}
     </div>

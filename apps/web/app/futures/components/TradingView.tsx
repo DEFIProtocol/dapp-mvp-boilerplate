@@ -63,6 +63,10 @@ export default function TradingView({
   interval: timeframeMap[selectedTimeframe as keyof typeof timeframeMap],
   limit: 1000
 });
+
+console.log("Selected Symbol:", selectedSymbol);
+
+
   return (
     <>
       <MarketHeader

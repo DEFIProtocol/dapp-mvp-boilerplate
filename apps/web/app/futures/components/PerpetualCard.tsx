@@ -140,6 +140,7 @@ export default function PerpetualCard({
     try {
       const exposureUsd = positionSize * leverage;
       const response = await placePerpOrder({
+        chainId: 84532, // Base Sepolia testnet
         symbol,
         perpAddress,
         trader: address,

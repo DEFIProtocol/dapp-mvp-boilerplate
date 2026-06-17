@@ -66,6 +66,104 @@ export function adminMarketsRouter(pool: Pool): Router {
   });
 
   /**
+   * POST /api/admin/markets/migrate-perp-addresses
+   * Updates all existing perp markets with the PerpStorage contract address
+   */
+  router.post("/migrate-perp-addresses", async (_req, res) => {
+    try {
+      const perpStorageAddress = process.env.PERP_STORAGE_ADDRESS || '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
+      
+      const result = await pool.query(
+        `UPDATE perps_tokens 
+         SET token_address = $1, updated_at = NOW() 
+         WHERE token_address IS NULL OR token_address = ''`,
+        [perpStorageAddress]
+      );
+
+      res.json({
+        success: true,
+        message: `Updated ${result.rowCount} perp market(s) with PerpStorage address`,
+        address: perpStorageAddress,
+        updatedCount: result.rowCount
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  /**
+   * PATCH /api/admin/markets/:domain/:symbol/toggle
+   * Toggle active status for any market type
+   */
+  router.patch("/:domain/:symbol/toggle", async (req, res) => {
+    try {
+      const { domain, symbol } = req.params;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ success: false, error: "isActive boolean required" });
+      }
+
+      let tableName: string;
+      if (domain === 'perps') tableName = 'perps_tokens';
+      else if (domain === 'spot') tableName = 'spot_tokens';
+      else if (domain === 'options') tableName = 'options_tokens';
+      else return res.status(400).json({ success: false, error: "Invalid domain" });
+
+      const result = await pool.query(
+        `UPDATE ${tableName} 
+         SET is_active = $1, updated_at = NOW() 
+         WHERE LOWER(symbol) = LOWER($2) 
+         RETURNING *`,
+        [isActive, symbol]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, error: "Market not found" });
+      }
+
+      res.json({ success: true, market: result.rows[0] });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  /**
+   * DELETE /api/admin/markets/:domain/:symbol
+   * Delete a market from any domain
+   */
+  router.delete("/:domain/:symbol", async (req, res) => {
+    try {
+      const { domain, symbol } = req.params;
+
+      let tableName: string;
+      if (domain === 'perps') tableName = 'perps_tokens';
+      else if (domain === 'spot') tableName = 'spot_tokens';
+      else if (domain === 'options') tableName = 'options_tokens';
+      else return res.status(400).json({ success: false, error: "Invalid domain" });
+
+      const result = await pool.query(
+        `DELETE FROM ${tableName} 
+         WHERE LOWER(symbol) = LOWER($1) 
+         RETURNING *`,
+        [symbol]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, error: "Market not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `${domain} market deleted`, 
+        deleted: result.rows[0] 
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  /**
    * POST /api/admin/markets/register
    * Registers a new market on-chain and in DB.
    */
@@ -93,19 +191,33 @@ export function adminMarketsRouter(pool: Pool): Router {
     // ── 1. DB inserts ────────────────────────────────────────────────────────
     if (domains.includes("perps")) {
       try {
+        // Use PerpStorage contract address for all perp markets
+        const perpStorageAddress = process.env.PERP_STORAGE_ADDRESS || '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
+        
         await pool.query(
           `INSERT INTO perps_tokens
              (symbol, name, uuid, token_address, pair_standard, min_leverage, max_leverage,
               min_position_size, max_position_size, maintenance_margin, funding_rate_coefficient,
               is_active, icon_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true,$12)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
            ON CONFLICT (symbol) DO UPDATE SET
              name = EXCLUDED.name,
+             uuid = EXCLUDED.uuid,
+             token_address = EXCLUDED.token_address,
+             pair_standard = EXCLUDED.pair_standard,
+             min_leverage = EXCLUDED.min_leverage,
+             max_leverage = EXCLUDED.max_leverage,
+             min_position_size = EXCLUDED.min_position_size,
+             max_position_size = EXCLUDED.max_position_size,
+             maintenance_margin = EXCLUDED.maintenance_margin,
+             funding_rate_coefficient = EXCLUDED.funding_rate_coefficient,
+             icon_url = EXCLUDED.icon_url,
              updated_at = NOW()`,
           [
-            symbol, name,
+            symbol,
+            name,
             body.uuid ?? null,
-            null, // token_address — not needed for perps (contract is the PerpEngine)
+            perpStorageAddress, // PerpStorage contract address - shared by all perp markets
             `${symbol}USDC`,
             body.minLeverage ?? 1,
             body.maxLeverage ?? 50,
@@ -113,6 +225,7 @@ export function adminMarketsRouter(pool: Pool): Router {
             body.maxPositionSize ?? 1_000_000,
             body.maintenanceMarginBps ? body.maintenanceMarginBps / 10000 : 0.0075,
             body.fundingRateCoefficient ?? 0.0001,
+            true, // is_active
             body.iconUrl ?? null,
           ]
         );
@@ -127,11 +240,14 @@ export function adminMarketsRouter(pool: Pool): Router {
         await pool.query(
           `INSERT INTO spot_tokens
              (symbol, name, token_address, quote_asset, is_active, icon_url)
-           VALUES ($1,$2,$3,'USDC',true,$4)
+           VALUES ($1,$2,$3,$4,$5,$6)
            ON CONFLICT (symbol) DO UPDATE SET
              name = EXCLUDED.name,
+             token_address = EXCLUDED.token_address,
+             quote_asset = EXCLUDED.quote_asset,
+             icon_url = EXCLUDED.icon_url,
              updated_at = NOW()`,
-          [symbol, name, null, body.iconUrl ?? null]
+          [symbol, name, null, 'USDC', true, body.iconUrl ?? null]
         );
         results.spot = { db: "ok" };
       } catch (err: any) {
@@ -145,11 +261,14 @@ export function adminMarketsRouter(pool: Pool): Router {
         await pool.query(
           `INSERT INTO options_tokens
              (symbol, name, underlying_symbol, option_type, is_active, icon_url)
-           VALUES ($1,$2,$3,'CALL',true,$4)
+           VALUES ($1,$2,$3,$4,$5,$6)
            ON CONFLICT (symbol) DO UPDATE SET
              name = EXCLUDED.name,
+             underlying_symbol = EXCLUDED.underlying_symbol,
+             option_type = EXCLUDED.option_type,
+             icon_url = EXCLUDED.icon_url,
              updated_at = NOW()`,
-          [`${symbol}-UNDERLYING`, name, symbol, body.iconUrl ?? null]
+          [`${symbol}-UNDERLYING`, name, symbol, 'CALL', true, body.iconUrl ?? null]
         );
         results.options = { db: "ok" };
       } catch (err: any) {

@@ -2,6 +2,7 @@ export type OrderSide = "LONG" | "SHORT";
 export type OrderType = "market" | "limit";
 
 export type PlacePerpOrderRequest = {
+  chainId?: number;
   symbol: string;
   perpAddress: string;
   trader: string;

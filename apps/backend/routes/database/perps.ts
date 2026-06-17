@@ -42,7 +42,13 @@ export default function perpsTokensRouter(pool: Pool) {
   // POST create new perps token
   router.post("/db", async (req, res) => {
     try {
-      const token = await perpsHelpers.createPerpsToken(pool, req.body);
+      // Normalize the contract address field to ensure Postgres maps it correctly
+      const data = {
+        ...req.body,
+        token_address: req.body.token_address || req.body.perpAddress || req.body.address
+      };
+
+      const token = await perpsHelpers.createPerpsToken(pool, data);
       res.status(201).json(token);
     } catch (error: any) {
       if (error.message === 'Perps token with this symbol already exists') {
@@ -56,7 +62,13 @@ export default function perpsTokensRouter(pool: Pool) {
   // PUT update perps token
   router.put("/db/:symbol", async (req, res) => {
     try {
-      const token = await perpsHelpers.updatePerpsToken(pool, req.params.symbol, req.body);
+      // Normalize the contract address field here too
+      const data = {
+        ...req.body,
+        token_address: req.body.token_address || req.body.perpAddress || req.body.address
+      };
+
+      const token = await perpsHelpers.updatePerpsToken(pool, req.params.symbol, data);
       if (!token) {
         return res.status(404).json({ error: "Perps token not found" });
       }
