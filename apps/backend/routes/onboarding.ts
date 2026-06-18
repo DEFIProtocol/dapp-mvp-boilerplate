@@ -187,6 +187,15 @@ export default function onboardingRouter(pool: Pool) {
         return res.status(403).json({ success: false, error: "Competency submission requires KYC_VERIFIED status" });
       }
 
+      // Check attempt count (max 3 attempts total)
+      const attemptCount = await onboardingHelpers.getCompetencyAttemptCount(pool, user.id);
+      if (attemptCount >= 3) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Maximum attempts (3) reached. Contact support for reset." 
+        });
+      }
+
       const { score, passed } = onboardingHelpers.evaluateCompetencyAnswers(answers);
       await onboardingHelpers.createCompetencySubmission(pool, user.id, answers, score, passed);
       await onboardingHelpers.updateUserCompetencyStatus(
@@ -195,7 +204,14 @@ export default function onboardingRouter(pool: Pool) {
         passed ? "COMPETENCY_PASSED" : "COMPETENCY_FAILED"
       );
 
-      return res.json({ success: true, score, passed, status: passed ? "COMPETENCY_PASSED" : "COMPETENCY_FAILED" });
+      return res.json({ 
+        success: true, 
+        score, 
+        passed, 
+        status: passed ? "COMPETENCY_PASSED" : "COMPETENCY_FAILED",
+        attempts_used: attemptCount + 1,
+        attempts_remaining: Math.max(0, 2 - attemptCount)
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(500).json({ success: false, error: message });
@@ -208,15 +224,19 @@ export default function onboardingRouter(pool: Pool) {
       if (!walletAddress) return;
 
       const user = await userHelpers.getUserByWallet(pool, walletAddress);
-      if (!user) {
+      if (!user || !user.id) {
         return res.status(404).json({ success: false, error: "User not found" });
       }
+
+      const attemptCount = await onboardingHelpers.getCompetencyAttemptCount(pool, user.id);
 
       res.json({
         success: true,
         data: {
           kyc_status: user.kyc_status,
           competency_status: user.competency_status,
+          attempt_count: attemptCount,
+          attempts_remaining: Math.max(0, 3 - attemptCount),
         },
       });
     } catch (error: unknown) {

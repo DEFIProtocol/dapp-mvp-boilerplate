@@ -71,7 +71,7 @@ export default function AdminKeyManager() {
     setNewApiKey(null);
     try {
       const headers = await getAdminHeaders();
-      const res = await fetch(`${API_BASE}/api/api-keys`, {
+      const res = await fetch(`${API_BASE}/api-keys`, {
         method: "GET",
         headers,
       });
@@ -106,7 +106,7 @@ export default function AdminKeyManager() {
         .filter(Boolean);
       const rateLimitValue = Number(rateLimit) || 120;
 
-      const res = await fetch(`${API_BASE}/api/api-keys`, {
+      const res = await fetch(`${API_BASE}/api-keys`, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -138,7 +138,7 @@ export default function AdminKeyManager() {
     setLoading(true);
     try {
       const headers = await getAdminHeaders();
-      const res = await fetch(`${API_BASE}/api/api-keys/${id}`, {
+      const res = await fetch(`${API_BASE}/api-keys/${id}`, {
         method: "PATCH",
         headers,
         body: JSON.stringify({ status }),

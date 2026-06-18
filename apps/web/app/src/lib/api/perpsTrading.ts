@@ -4,20 +4,27 @@ import type {
   TraderPositionsResponse,
 } from "@/types/perpsTrading";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "/api";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export async function placePerpOrder(input: PlacePerpOrderRequest): Promise<PlacePerpOrderResponse> {
-  const response = await fetch(`${API_BASE}/smart-contracts/orders`, {
+  const response = await fetch(`${API_BASE}/api/smart-contracts/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
 
-  const data = (await response.json()) as PlacePerpOrderResponse;
   if (!response.ok) {
-    throw new Error(data.error || "Failed to place perp order");
+    // Try to parse error response
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      throw new Error(data.error || "Failed to place perp order");
+    } catch {
+      throw new Error(`Failed to place perp order: ${response.status} ${response.statusText}`);
+    }
   }
 
+  const data = (await response.json()) as PlacePerpOrderResponse;
   return data;
 }
 
@@ -26,15 +33,25 @@ export async function getTraderPerpPositions(
   symbol: string,
   perpAddress: string,
 ): Promise<TraderPositionsResponse> {
-  const query = new URLSearchParams({ symbol, perpAddress });
-  const response = await fetch(`${API_BASE}/smart-contracts/positions/${trader}?${query.toString()}`, {
+  const query = new URLSearchParams({ 
+    chainId: '84532', // Base Sepolia
+    symbol, 
+    perpAddress 
+  });
+  const response = await fetch(`${API_BASE}/api/smart-contracts/positions/${trader}?${query.toString()}`, {
     cache: "no-store",
   });
 
-  const data = (await response.json()) as TraderPositionsResponse;
   if (!response.ok) {
-    throw new Error(data.error || "Failed to fetch trader positions");
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      throw new Error(data.error || "Failed to fetch trader positions");
+    } catch {
+      throw new Error(`Failed to fetch trader positions: ${response.status} ${response.statusText}`);
+    }
   }
 
+  const data = (await response.json()) as TraderPositionsResponse;
   return data;
 }

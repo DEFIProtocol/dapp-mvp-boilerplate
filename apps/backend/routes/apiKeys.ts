@@ -5,6 +5,7 @@ import * as userHelpers from "../postgres/users";
 import * as onboardingHelpers from "../postgres/onboarding";
 
 const ADMIN_API_ACTION = process.env.ADMIN_API_ACTION || "ADMIN_API_KEY_MANAGEMENT";
+const ADMIN_TIMESTAMP_TOLERANCE_SECONDS = Number(process.env.ADMIN_TIMESTAMP_TOLERANCE_SECONDS || 300); // 5 minutes
 
 function getParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
@@ -43,6 +44,43 @@ function validateSignedAdminProof(
   const sig = String(signature || "").trim();
   if (!msg || !sig) {
     res.status(400).json({ success: false, error: "admin message and signature are required" });
+    return false;
+  }
+
+  // Parse and validate timestamp to prevent replay attacks
+  try {
+    const payload = JSON.parse(msg);
+    const timestamp = Number(payload.timestamp);
+    const currentTime = Math.floor(Date.now() / 1000);
+    
+    if (!timestamp || isNaN(timestamp)) {
+      res.status(400).json({ success: false, error: "Invalid or missing timestamp in message" });
+      return false;
+    }
+
+    // Check if timestamp is within acceptable range (prevent replay attacks)
+    const timeDiff = Math.abs(currentTime - timestamp);
+    if (timeDiff > ADMIN_TIMESTAMP_TOLERANCE_SECONDS) {
+      res.status(401).json({ 
+        success: false, 
+        error: "Request timestamp expired or invalid. Please try again." 
+      });
+      return false;
+    }
+
+    // Verify the action matches
+    if (payload.action !== ADMIN_API_ACTION) {
+      res.status(401).json({ success: false, error: "Invalid action in signed message" });
+      return false;
+    }
+
+    // Verify wallet address matches
+    if (payload.wallet_address?.toLowerCase() !== walletAddress.toLowerCase()) {
+      res.status(401).json({ success: false, error: "Wallet address mismatch" });
+      return false;
+    }
+  } catch (error: unknown) {
+    res.status(400).json({ success: false, error: "Invalid message format" });
     return false;
   }
 

@@ -496,25 +496,27 @@ export async function createVoucherIssuance(
 }
 
 export function evaluateCompetencyAnswers(
-  answers: Record<string, string>
+  answers: Record<string, number>
 ): { score: number; passed: boolean } {
-  const answerKey: Record<string, string> = {
-    q1: "A",
-    q2: "A",
-    q3: "A",
-    q4: "A",
-    q5: "A",
-    q6: "A",
-    q7: "A",
-    q8: "A",
-    q9: "A",
-    q10: "A",
+  // Answer key: maps question ID to the index of the correct answer (0-3)
+  // All correct answers are at index 0 in the original question array
+  const answerKey: Record<string, number> = {
+    q1: 0,  // "The US Dollar and Eurodollar markets"
+    q2: 0,  // "It temporarily suppresses market prices..."
+    q3: 0,  // "They lack sovereign debt-printing capacity..."
+    q4: 0,  // "It minimizes trust by using an immutable..."
+    q5: 0,  // "They utilize distributed validation..."
+    q6: 0,  // "To hedge risks and transfer price volatility..."
+    q7: 0,  // "It distorts price discovery..."
+    q8: 0,  // "To provide Sybil resistance..."
+    q9: 0,  // "It breaks supply-demand balance..."
+    q10: 0, // "They eliminate buffers and consolidate lanes..."
   };
 
   let score = 0;
-  for (const [question, correctAnswer] of Object.entries(answerKey)) {
-    const submitted = String(answers[question] || "").trim().toUpperCase();
-    if (submitted === correctAnswer) {
+  for (const [question, correctAnswerIndex] of Object.entries(answerKey)) {
+    const submittedIndex = answers[question];
+    if (submittedIndex === correctAnswerIndex) {
       score += 1;
     }
   }
@@ -523,6 +525,18 @@ export function evaluateCompetencyAnswers(
     score,
     passed: score === Object.keys(answerKey).length,
   };
+}
+
+export async function getCompetencyAttemptCount(
+  pool: Pool,
+  userId: string
+): Promise<number> {
+  await ensureOnboardingTables(pool);
+  const result = await pool.query(
+    `SELECT COUNT(*) as count FROM competency_submissions WHERE user_id = $1`,
+    [userId]
+  );
+  return parseInt(result.rows[0]?.count || "0", 10);
 }
 
 export async function approveKycReview(

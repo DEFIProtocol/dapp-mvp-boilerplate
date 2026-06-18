@@ -27,7 +27,7 @@ export default function PerpetualCard({
   const [isEditingLeverage, setIsEditingLeverage] = useState(false);
   const [leverageInput, setLeverageInput] = useState('10');
   const [positionSize, setPositionSize] = useState<number | null>(null);
-  const [orderType, setOrderType] = useState<OrderType>('limit');
+  const [orderType, setOrderType] = useState<OrderType>('market');
   const [limitPrice, setLimitPrice] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -139,7 +139,9 @@ export default function PerpetualCard({
 
     try {
       const exposureUsd = positionSize * leverage;
-      const response = await placePerpOrder({
+      
+      // Build the order request
+      const orderRequest: any = {
         chainId: 84532, // Base Sepolia testnet
         symbol,
         perpAddress,
@@ -148,8 +150,14 @@ export default function PerpetualCard({
         orderType,
         exposureUsd,
         leverage,
-        limitPrice: orderType === 'limit' ? (limitPrice ?? undefined) : undefined,
-      });
+      };
+      
+      // Only include limitPrice if it's a limit order AND has a valid price
+      if (orderType === 'limit' && limitPrice !== null && limitPrice > 0) {
+        orderRequest.limitPrice = limitPrice;
+      }
+      
+      const response = await placePerpOrder(orderRequest);
 
       setApiMessage(`Order queued at mark $${(response.onChain?.markPriceUsd ?? 0).toFixed(2)}`);
       await refreshPositions();

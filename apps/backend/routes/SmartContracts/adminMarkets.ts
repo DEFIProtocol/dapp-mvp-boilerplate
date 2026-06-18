@@ -12,6 +12,7 @@ import { Router } from "express";
 import { Pool } from "pg";
 import { ethers } from "ethers";
 import { SettlementService } from "./settlementService";
+import { globalPriceStore } from "../../utils/globalPriceStore";
 
 export type Domain = "perps" | "options" | "spot";
 
@@ -294,14 +295,46 @@ export function adminMarketsRouter(pool: Pool): Router {
         });
         results.perps = { ...results.perps, onChain: { status: "registered", txHash } };
 
-        // ── 3. Set oracle price if provided ──────────────────────────────────
-        if (body.initialPriceUsd && body.initialPriceUsd > 0) {
-          try {
-            const oracleTx = await svc.setOraclePriceForFeed(feedId, body.initialPriceUsd);
-            results.perps = { ...results.perps, oracle: { status: "price set", txHash: oracleTx } };
-          } catch (oErr: any) {
-            results.perps = { ...results.perps, oracle: { status: "warning", error: oErr.message } };
+        // ── 3. Auto-fetch current price and set oracle ──────────────────────
+        try {
+          let priceToSet = body.initialPriceUsd;
+          
+          // If no price provided, fetch from globalPriceStore
+          if (!priceToSet || priceToSet <= 0) {
+            const allPrices = globalPriceStore.getAllPrices();
+            const priceEntry = allPrices.find(p => p.symbol.toUpperCase() === symbol);
+            
+            if (priceEntry && priceEntry.price > 0) {
+              priceToSet = priceEntry.price;
+              console.log(`[AdminMarkets] Auto-fetched ${symbol} price from globalPriceStore: $${priceToSet}`);
+            } else {
+              console.warn(`[AdminMarkets] No price found for ${symbol} in globalPriceStore`);
+            }
           }
+          
+          // Set oracle price if we have a valid price
+          if (priceToSet && priceToSet > 0) {
+            const oracleTx = await svc.setOraclePriceForFeed(feedId, priceToSet);
+            results.perps = { 
+              ...results.perps, 
+              oracle: { 
+                status: "price set", 
+                txHash: oracleTx,
+                price: priceToSet,
+                source: body.initialPriceUsd ? "manual" : "auto-fetched"
+              } 
+            };
+          } else {
+            results.perps = { 
+              ...results.perps, 
+              oracle: { 
+                status: "warning", 
+                error: "No price available - oracle not initialized" 
+              } 
+            };
+          }
+        } catch (oErr: any) {
+          results.perps = { ...results.perps, oracle: { status: "error", error: oErr.message } };
         }
       } catch (err: any) {
         // On-chain failed — log but don't fail the whole request since DB already succeeded

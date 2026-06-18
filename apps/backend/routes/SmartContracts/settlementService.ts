@@ -307,12 +307,35 @@ export class SettlementService {
 
     const mockOracleAbi = [
       "function setPriceForFeed(bytes32 feedId, uint256 price) external",
+      "function setPrice(uint256 price) external",
     ];
     const oracle = new ethers.Contract(oracleAddress, mockOracleAbi, this.wallet);
     const priceWei = ethers.parseUnits(priceUsd.toString(), 18);
-    const tx = await oracle.setPriceForFeed(feedId, priceWei);
-    await tx.wait();
-    return tx.hash as string;
+    
+    // Try both methods - setPrice (global) and setPriceForFeed (per-feed)
+    try {
+      // First try the global setPrice (for contracts that don't use feedId)
+      const tx1 = await oracle.setPrice(priceWei);
+      await tx1.wait();
+      console.log(`[setOraclePriceForFeed] Set global price: ${priceUsd}`);
+      
+      // Also set per-feed price for compatibility
+      try {
+        const tx2 = await oracle.setPriceForFeed(feedId, priceWei);
+        await tx2.wait();
+        console.log(`[setOraclePriceForFeed] Set feedId price: ${priceUsd}`);
+      } catch (feedErr) {
+        console.warn(`[setOraclePriceForFeed] setPriceForFeed not available, using global only`);
+      }
+      
+      return tx1.hash as string;
+    } catch (err) {
+      // Fallback to feedId-specific if global doesn't exist
+      console.log(`[setOraclePriceForFeed] Using setPriceForFeed only`);
+      const tx = await oracle.setPriceForFeed(feedId, priceWei);
+      await tx.wait();
+      return tx.hash as string;
+    }
   }
 
   async grantPaperTradingFunds(recipient: string): Promise<{ usdcTxHash: string; ethTxHash?: string; ethDripError?: string }> {

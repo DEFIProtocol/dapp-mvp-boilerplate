@@ -22,7 +22,7 @@ export default function CompetencyTestPage() {
         </p>
         <button
           className={styles.actionButton}
-          onClick={() => router.push(isComplete ? "/account" : "/account/settings")}
+          onClick={() => router.push(isComplete ? "/account" : "/account/competency-test/quiz")}
         >
           {isComplete ? "Return to account" : "Start competency test"}
         </button>

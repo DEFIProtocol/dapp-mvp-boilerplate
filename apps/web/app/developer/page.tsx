@@ -59,18 +59,65 @@ export default function DeveloperPage() {
       </section>
 
       <section className={styles.card}>
-        <h2>Example request</h2>
+        <h2>Example requests</h2>
+        <p><strong>Using x-api-key header:</strong></p>
         <pre className={styles.codeBlock}>
           <code>
 {`GET /api/binance/prices HTTP/1.1
 Host: api.example.com
-x-api-key: <your_api_key>`}
+x-api-key: <your_api_key>
+
+# Example with curl:
+curl -H "x-api-key: YOUR_API_KEY" \\
+  https://api.example.com/api/binance/prices`}
           </code>
         </pre>
-        <p>Or using the authorization header:</p>
+        <p><strong>Using Authorization header:</strong></p>
         <pre className={styles.codeBlock}>
           <code>
-{`Authorization: ApiKey <your_api_key>`}
+{`GET /api/coinbase/prices HTTP/1.1
+Host: api.example.com
+Authorization: ApiKey <your_api_key>
+
+# Example with curl:
+curl -H "Authorization: ApiKey YOUR_API_KEY" \\
+  https://api.example.com/api/coinbase/prices`}
+          </code>
+        </pre>
+      </section>
+
+      <section className={styles.card}>
+        <h2>Rate limiting</h2>
+        <p>
+          All API responses include rate limit headers to help you track your usage:
+        </p>
+        <ul>
+          <li><code>X-RateLimit-Limit</code>: Maximum requests allowed per window</li>
+          <li><code>X-RateLimit-Remaining</code>: Requests remaining in current window</li>
+          <li><code>X-RateLimit-Reset</code>: Window duration in seconds</li>
+        </ul>
+        <p>
+          If you exceed your rate limit, you'll receive a <code>429 Too Many Requests</code> response.
+          Wait for the window to reset before making additional requests.
+        </p>
+      </section>
+
+      <section className={styles.card}>
+        <h2>Error responses</h2>
+        <p>The API uses standard HTTP status codes:</p>
+        <ul>
+          <li><code>401 Unauthorized</code>: Missing or invalid API key</li>
+          <li><code>403 Forbidden</code>: Endpoint not authorized for your key</li>
+          <li><code>429 Too Many Requests</code>: Rate limit exceeded</li>
+          <li><code>500 Internal Server Error</code>: Server-side error</li>
+        </ul>
+        <p>All error responses include a JSON body with details:</p>
+        <pre className={styles.codeBlock}>
+          <code>
+{`{
+  "success": false,
+  "error": "Rate limit exceeded"
+}`}
           </code>
         </pre>
       </section>

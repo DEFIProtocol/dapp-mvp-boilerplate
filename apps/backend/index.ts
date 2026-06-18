@@ -28,6 +28,7 @@ import apiKeyAuth from "./middleware/apiKeyAuth";
 import { adminMarketsRouter } from "./routes/SmartContracts/adminMarkets";
 import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
+import { initializeOracleKeeper, getOracleKeeper } from "./services/oracleKeeperService";
 
 dotenv.config();
 
@@ -98,6 +99,14 @@ void (async () => {
     try {
       await ensureCoreTables(pool);
       console.log('✅ Core tables ready (users, tokens, perps, spot, options)');
+      
+      // Initialize Oracle Keeper Service (updates prices every 30 seconds)
+      try {
+        initializeOracleKeeper(pool, 30);
+        console.log('🔮 Oracle Keeper Service started (30s interval)');
+      } catch (keeperError) {
+        console.warn('⚠️ Oracle Keeper failed to start:', keeperError);
+      }
     } catch (error) {
       console.error('❌ Failed to initialize core tables:', error);
     }
@@ -109,15 +118,15 @@ app.use("/api/perps", perpsRouter(pool));
 app.use("/api/infura", infuraRouter(pool));
 app.use("/api/users", usersRouter(pool));
 app.use("/api/tokens", tokensRouter(pool));
-app.use("/api/binance", apiKeyAuth(pool), binancePricingRouter);
-app.use("/api/coinbase", apiKeyAuth(pool), coinbasePricingRouter);
-app.use("/api/coinranking", apiKeyAuth(pool), coinRankingRouter);
-app.use("/api/1inch", apiKeyAuth(pool), oneInchRouter);
+app.use("/api/binance", apiKeyAuth(pool, { optional: true }), binancePricingRouter);
+app.use("/api/coinbase", apiKeyAuth(pool, { optional: true }), coinbasePricingRouter);
+app.use("/api/coinranking", apiKeyAuth(pool, { optional: true }), coinRankingRouter);
+app.use("/api/1inch", apiKeyAuth(pool, { optional: true }), oneInchRouter);
 app.use("/api", pricesRouter);
-app.use('/api/klines', apiKeyAuth(pool), klineRoutes);
-app.use("/api/oracle", apiKeyAuth(pool), oracleRouter);
-app.use("/api/pyth", apiKeyAuth(pool), pythRouter); // Add Pyth routes
-app.use("/api/aggregator", apiKeyAuth(pool), priceAggregatorRouter); // Validated index+mark prices
+app.use('/api/klines', apiKeyAuth(pool, { optional: true }), klineRoutes);
+app.use("/api/oracle", apiKeyAuth(pool, { optional: true }), oracleRouter);
+app.use("/api/pyth", apiKeyAuth(pool, { optional: true }), pythRouter); // Add Pyth routes
+app.use("/api/aggregator", apiKeyAuth(pool, { optional: true }), priceAggregatorRouter); // Validated index+mark prices
 app.use("/api/coinbase-onramp", fiatOnRampRouter);
 app.use("/api/transfers", transfersRouter);
 app.use("/api/paper-trading", paperTradingRouter(pool));

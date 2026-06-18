@@ -78,38 +78,70 @@ function parseRawApiKey(rawKey: string): { id: string; secret: string } | null {
   return { id, secret };
 }
 
-export default function apiKeyAuth(pool: Pool) {
+function isEndpointAllowed(requestPath: string, allowedEndpoints: string[]): boolean {
+  // If no endpoints specified, allow all developer endpoints
+  if (!allowedEndpoints || allowedEndpoints.length === 0) {
+    return true;
+  }
+
+  // Check if the request path matches any allowed endpoint
+  for (const endpoint of allowedEndpoints) {
+    const normalizedEndpoint = endpoint.trim();
+    // Support both exact match and prefix match (e.g., /api/binance matches /api/binance/prices)
+    if (requestPath === normalizedEndpoint || requestPath.startsWith(normalizedEndpoint + '/')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export default function apiKeyAuth(pool: Pool, options: { optional?: boolean } = {}) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const rawKey = parseApiKeyFromRequest(req);
+    
+    // If no API key provided and optional mode is enabled, allow the request
     if (!rawKey) {
-      return res.status(401).json({ success: false, error: "Missing API key" });
+      if (options.optional) {
+        return next();
+      }
+      return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     const parsedKey = parseRawApiKey(rawKey);
     if (!parsedKey) {
-      return res.status(401).json({ success: false, error: "Invalid API key format" });
+      return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     const apiKeyRecord = await apiKeyHelpers.getApiKeyById(pool, parsedKey.id);
     if (!apiKeyRecord || apiKeyRecord.status !== "ACTIVE" || !apiKeyRecord.api_key_salt || !apiKeyRecord.api_key_hash) {
-      return res.status(401).json({ success: false, error: "Invalid or inactive API key" });
+      return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     const expectedHash = apiKeyHelpers.getApiKeyHash(parsedKey.secret, apiKeyRecord.api_key_salt);
     if (expectedHash !== apiKeyRecord.api_key_hash) {
-      return res.status(401).json({ success: false, error: "Invalid or inactive API key" });
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    // Check if the requested endpoint is allowed for this API key
+    const requestPath = req.path;
+    if (!isEndpointAllowed(requestPath, apiKeyRecord.allowed_endpoints || [])) {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied: This endpoint is not authorized for your API key",
+      });
     }
 
     const limit = apiKeyRecord.rate_limit_per_minute ?? DEFAULT_API_RATE_LIMIT_PER_MINUTE;
     const { allowed, remaining } = await trackApiKeyRateLimit(apiKeyRecord.id!, limit);
-    res.setHeader("x-rate-limit-limit", limit.toString());
-    res.setHeader("x-rate-limit-remaining", remaining.toString());
-    res.setHeader("x-rate-limit-window", RATE_LIMIT_WINDOW_SECONDS.toString());
+    res.setHeader("X-RateLimit-Limit", limit.toString());
+    res.setHeader("X-RateLimit-Remaining", remaining.toString());
+    res.setHeader("X-RateLimit-Reset", RATE_LIMIT_WINDOW_SECONDS.toString());
 
     if (!allowed) {
       return res.status(429).json({
         success: false,
-        error: `Rate limit exceeded. Max ${limit} requests per ${RATE_LIMIT_WINDOW_SECONDS} seconds.`,
+        error: "Rate limit exceeded",
       });
     }
 
