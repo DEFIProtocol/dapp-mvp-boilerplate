@@ -1,9 +1,14 @@
 import Link from "next/link";
+import DeveloperApiKeys from "./components/DeveloperApiKeys";
 import styles from "./developer.module.css";
 
 export default function DeveloperPage() {
   return (
     <main className={styles.page}>
+      {/* Self-Service API Keys Section */}
+      <DeveloperApiKeys />
+
+      {/* Documentation Section */}
       <div className={styles.hero}>
         <div>
           <p className={styles.label}>Developer Portal</p>

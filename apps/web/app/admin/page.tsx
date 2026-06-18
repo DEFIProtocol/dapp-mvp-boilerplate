@@ -7,6 +7,8 @@ import TokenManager from "./components/TokenManager";
 import UserManager from "./components/UserManager";
 import MarketManager from "./components/MarketManager";
 import AdminKeyManager from "./AdminKeyManager";
+import KycReviewManager from "./components/KycReviewManager";
+import AdminApiKeysManager from "./components/AdminApiKeysManager";
 import styles from "./admin.module.css";
 
 function AdminPageContent() {
@@ -60,6 +62,13 @@ function AdminPageContent() {
         >
           <span>🛠️</span> Developer Keys
         </button>
+
+        <button
+          className={`${styles.tabButton} ${activeTab === "kyc" ? styles.active : ""}`}
+          onClick={() => setActiveTab("kyc")}
+        >
+          <span>📋</span> KYC Review
+        </button>
       </div>
 
       <div className={styles.adminContent}>
@@ -75,7 +84,9 @@ function AdminPageContent() {
 
         {activeTab === "markets" && <MarketManager />}
 
-        {activeTab === "developer" && <AdminKeyManager />}
+        {activeTab === "developer" && <AdminApiKeysManager />}
+
+        {activeTab === "kyc" && <KycReviewManager />}
       </div>
     </div>
   );
