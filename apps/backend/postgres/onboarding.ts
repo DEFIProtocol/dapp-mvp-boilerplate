@@ -305,11 +305,30 @@ export async function ensureOnboardingTables(pool: Pool): Promise<void> {
       UNIQUE (user_id)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      admin_identifier TEXT NOT NULL,
+      action VARCHAR(50) NOT NULL,
+      target_user_id UUID REFERENCES users(id),
+      target_wallet_address VARCHAR(66),
+      ip_address INET,
+      user_agent TEXT,
+      request_payload JSONB,
+      response_payload JSONB,
+      success BOOLEAN DEFAULT true,
+      error_message TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON kyc_documents(user_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_kyc_identities_user_id ON kyc_identities(user_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_kyc_review_tasks_user_id ON kyc_review_tasks(user_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_competency_submissions_user_id ON competency_submissions(user_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_voucher_issuances_identity_hash ON voucher_issuances(identity_hash)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_admin_audit_log_admin ON admin_audit_log(admin_identifier)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_admin_audit_log_target_user ON admin_audit_log(target_user_id)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created_at ON admin_audit_log(created_at DESC)');
 }
 
 export async function createKycDocument(
@@ -317,7 +336,7 @@ export async function createKycDocument(
   userId: string,
   encryptedPayload: Buffer,
   metadata: { algorithm: string; iv: string; tag: string },
-  expiresAt: Date
+  expiresAt: Date | null = null
 ): Promise<void> {
   await ensureOnboardingTables(pool);
   await pool.query(
@@ -595,4 +614,96 @@ export async function rejectKycReview(
   );
 
   return getUserByWallet(pool, user.wallet_address);
+}
+
+/**
+ * Log admin action to audit trail
+ */
+export async function logAdminAction(
+  pool: Pool,
+  adminIdentifier: string,
+  action: string,
+  targetUserId: string | null,
+  targetWalletAddress: string | null,
+  ipAddress: string | null,
+  userAgent: string | null,
+  requestPayload: any,
+  responsePayload: any,
+  success: boolean,
+  errorMessage: string | null = null
+): Promise<void> {
+  await ensureOnboardingTables(pool);
+  await pool.query(
+    `INSERT INTO admin_audit_log (
+      admin_identifier, action, target_user_id, target_wallet_address,
+      ip_address, user_agent, request_payload, response_payload,
+      success, error_message
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10)`,
+    [
+      adminIdentifier,
+      action,
+      targetUserId,
+      targetWalletAddress,
+      ipAddress,
+      userAgent,
+      requestPayload,
+      responsePayload,
+      success,
+      errorMessage
+    ]
+  );
+}
+
+/**
+ * Get admin audit logs with optional filters
+ */
+export async function getAdminAuditLogs(
+  pool: Pool,
+  filters?: {
+    adminIdentifier?: string;
+    targetUserId?: string;
+    action?: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<any[]> {
+  await ensureOnboardingTables(pool);
+  
+  let query = 'SELECT * FROM admin_audit_log WHERE 1=1';
+  const params: any[] = [];
+  let paramCount = 1;
+
+  if (filters?.adminIdentifier) {
+    query += ` AND admin_identifier = $${paramCount}`;
+    params.push(filters.adminIdentifier);
+    paramCount++;
+  }
+
+  if (filters?.targetUserId) {
+    query += ` AND target_user_id = $${paramCount}`;
+    params.push(filters.targetUserId);
+    paramCount++;
+  }
+
+  if (filters?.action) {
+    query += ` AND action = $${paramCount}`;
+    params.push(filters.action);
+    paramCount++;
+  }
+
+  query += ' ORDER BY created_at DESC';
+
+  if (filters?.limit) {
+    query += ` LIMIT $${paramCount}`;
+    params.push(filters.limit);
+    paramCount++;
+  }
+
+  if (filters?.offset) {
+    query += ` OFFSET $${paramCount}`;
+    params.push(filters.offset);
+  }
+
+  const result = await pool.query(query, params);
+  return result.rows;
 }

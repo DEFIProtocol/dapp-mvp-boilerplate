@@ -1,0 +1,351 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card {
+  max-width: 800px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.subtitle {
+  color: #718096;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.125rem;
+}
+
+.connectPrompt {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 12px;
+  color: #4a5568;
+  font-size: 1.125rem;
+}
+
+/* Progress Bar */
+.progressBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+  padding: 0 2rem;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.stepNumber {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #a0aec0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  transition: all 0.3s;
+}
+
+.step.active .stepNumber {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.stepLabel {
+  font-size: 0.875rem;
+  color: #a0aec0;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.step.active .stepLabel {
+  color: #667eea;
+}
+
+.stepLine {
+  flex: 1;
+  height: 3px;
+  background: #e2e8f0;
+  margin: 0 1rem;
+  transition: all 0.3s;
+}
+
+.stepLine.active {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Form Sections */
+.formSection {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 1.5rem 0;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.required {
+  color: #e53e3e;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  color: #2d3748;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input::placeholder {
+  color: #cbd5e0;
+}
+
+.select {
+  cursor: pointer;
+}
+
+.fileInput {
+  width: 100%;
+  padding: 0.875rem;
+  border: 2px dashed #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fileInput:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.fileList {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fileItem {
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: #667eea;
+  font-size: 0.875rem;
+}
+
+.infoBox {
+  background: linear-gradient(135deg, rgba(72, 187, 120, 0.1) 0%, rgba(56, 178, 172, 0.1) 100%);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.infoBox p {
+  margin: 0 0 0.75rem 0;
+  color: #2f855a;
+  font-weight: 600;
+}
+
+.infoBox ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #38a169;
+}
+
+.infoBox li {
+  margin-bottom: 0.5rem;
+}
+
+/* Buttons */
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.backButton,
+.nextButton,
+.submitButton {
+  flex: 1;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.backButton {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.backButton:hover:not(:disabled) {
+  background: #cbd5e0;
+  transform: translateY(-2px);
+}
+
+.nextButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.nextButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.submitButton {
+  background: linear-gradient(135deg, #48bb78 0%, #38b2ac 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.submitButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+}
+
+.backButton:disabled,
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Messages */
+.successMessage,
+.errorMessage {
+  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.successMessage {
+  background: rgba(72, 187, 120, 0.1);
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  color: #2f855a;
+}
+
+.errorMessage {
+  background: rgba(245, 101, 101, 0.1);
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  color: #c53030;
+}
+
+.walletInfo {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e2e8f0;
+  text-align: center;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.walletInfo code {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 2rem 1.5rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .progressBar {
+    padding: 0;
+  }
+
+  .stepLabel {
+    font-size: 0.75rem;
+  }
+
+  .stepNumber {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+  }
+}

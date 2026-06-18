@@ -2,6 +2,13 @@ import { Router, Request, Response } from "express";
 import { Pool } from "pg";
 import * as userHelpers from "../postgres/users";
 import * as onboardingHelpers from "../postgres/onboarding";
+import {
+  kycSubmissionLimiter,
+  statusCheckLimiter,
+  adminActionLimiter,
+  competencySubmitLimiter,
+  documentRetrievalLimiter
+} from "../middleware/rateLimiter";
 
 export default function onboardingRouter(pool: Pool) {
   const router = Router();
@@ -54,7 +61,7 @@ export default function onboardingRouter(pool: Pool) {
     return true;
   };
 
-  router.post("/kyc/register", async (req: Request, res: Response) => {
+  router.post("/kyc/register", kycSubmissionLimiter, async (req: Request, res: Response) => {
     try {
       const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
       if (!walletAddress) return;
@@ -78,8 +85,8 @@ export default function onboardingRouter(pool: Pool) {
 
       const identityHash = onboardingHelpers.deriveIdentityHash(identityData);
       const encrypted = onboardingHelpers.encryptKycPayload(identityData);
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await onboardingHelpers.createKycDocument(pool, user.id, encrypted.payload, encrypted.metadata, expiresAt);
+      // Store documents permanently for audit trail and duplicate verification
+      await onboardingHelpers.createKycDocument(pool, user.id, encrypted.payload, encrypted.metadata, null);
 
       const duplicate = await onboardingHelpers.findKycIdentityByHash(pool, identityHash);
       if (!duplicate) {
@@ -110,7 +117,7 @@ export default function onboardingRouter(pool: Pool) {
     }
   });
 
-  router.get("/kyc/status/:address", async (req: Request, res: Response) => {
+  router.get("/kyc/status/:address", statusCheckLimiter, async (req: Request, res: Response) => {
     try {
       const walletAddress = validateWalletAddress(getParam(req.params.address), res);
       if (!walletAddress) return;
@@ -135,7 +142,7 @@ export default function onboardingRouter(pool: Pool) {
     }
   });
 
-  router.get("/kyc/document/:address", async (req: Request, res: Response) => {
+  router.get("/kyc/document/:address", documentRetrievalLimiter, async (req: Request, res: Response) => {
     try {
       if (!requireAdmin(req, res)) return;
       const walletAddress = validateWalletAddress(getParam(req.params.address), res);
@@ -165,7 +172,7 @@ export default function onboardingRouter(pool: Pool) {
     }
   });
 
-  router.post("/competency/submit", async (req: Request, res: Response) => {
+  router.post("/competency/submit", competencySubmitLimiter, async (req: Request, res: Response) => {
     try {
       const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
       if (!walletAddress) return;
@@ -303,6 +310,36 @@ export default function onboardingRouter(pool: Pool) {
     }
   });
 
+  router.get("/kyc/reviews/pending", async (req: Request, res: Response) => {
+    try {
+      if (!requireAdmin(req, res)) return;
+
+      const result = await pool.query(`
+        SELECT 
+          rt.id as review_task_id,
+          rt.user_id,
+          rt.identity_hash,
+          rt.duplicate_of_user_id,
+          rt.status,
+          rt.created_at,
+          u.wallet_address,
+          u.kyc_status,
+          u.created_at as user_created_at,
+          dup_u.wallet_address as duplicate_wallet_address
+        FROM kyc_review_tasks rt
+        JOIN users u ON rt.user_id = u.id
+        LEFT JOIN users dup_u ON rt.duplicate_of_user_id = dup_u.id
+        WHERE rt.status = 'PENDING'
+        ORDER BY rt.created_at ASC
+      `);
+
+      res.json({ success: true, pending_reviews: result.rows });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
   router.get("/kyc/review/:address", async (req: Request, res: Response) => {
     try {
       if (!requireAdmin(req, res)) return;
@@ -322,43 +359,99 @@ export default function onboardingRouter(pool: Pool) {
     }
   });
 
-  router.post("/kyc/review/:address/approve", async (req: Request, res: Response) => {
+  router.post("/kyc/review/:address/approve", adminActionLimiter, async (req: Request, res: Response) => {
+    const adminKey = String(req.headers["x-admin-api-key"] || "").trim();
+    const ipAddress = req.ip || req.socket.remoteAddress || null;
+    const userAgent = req.headers["user-agent"] || null;
+    let walletAddress: string | null = null;
+    let userId: string | null = null;
+
     try {
       if (!requireAdmin(req, res)) return;
-      const walletAddress = validateWalletAddress(getParam(req.params.address), res);
+      walletAddress = validateWalletAddress(getParam(req.params.address), res);
       if (!walletAddress) return;
 
       const user = await userHelpers.getUserByWallet(pool, walletAddress);
       if (!user || !user.id) {
+        await onboardingHelpers.logAdminAction(
+          pool, adminKey, 'APPROVE_KYC', null, walletAddress,
+          ipAddress, userAgent, req.body, null, false, 'User not found'
+        );
         return res.status(404).json({ success: false, error: "User not found" });
       }
 
+      userId = user.id;
       const secondarySalt = req.body?.secondary_salt ? String(req.body.secondary_salt) : null;
       const reviewNotes = req.body?.review_notes ? String(req.body.review_notes) : undefined;
       const updatedUser = await onboardingHelpers.approveKycReview(pool, user.wallet_address, secondarySalt, reviewNotes);
+      
+      // Log successful approval
+      await onboardingHelpers.logAdminAction(
+        pool, adminKey, 'APPROVE_KYC', userId, walletAddress,
+        ipAddress, userAgent,
+        { secondary_salt: secondarySalt, review_notes: reviewNotes },
+        { kyc_status: updatedUser?.kyc_status },
+        true, null
+      );
+
       res.json({ success: true, user: updatedUser });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
+      
+      // Log failed approval
+      await onboardingHelpers.logAdminAction(
+        pool, adminKey, 'APPROVE_KYC', userId, walletAddress,
+        ipAddress, userAgent, req.body, null, false, message
+      );
+
       res.status(500).json({ success: false, error: message });
     }
   });
 
-  router.post("/kyc/review/:address/reject", async (req: Request, res: Response) => {
+  router.post("/kyc/review/:address/reject", adminActionLimiter, async (req: Request, res: Response) => {
+    const adminKey = String(req.headers["x-admin-api-key"] || "").trim();
+    const ipAddress = req.ip || req.socket.remoteAddress || null;
+    const userAgent = req.headers["user-agent"] || null;
+    let walletAddress: string | null = null;
+    let userId: string | null = null;
+
     try {
       if (!requireAdmin(req, res)) return;
-      const walletAddress = validateWalletAddress(getParam(req.params.address), res);
+      walletAddress = validateWalletAddress(getParam(req.params.address), res);
       if (!walletAddress) return;
 
       const user = await userHelpers.getUserByWallet(pool, walletAddress);
       if (!user || !user.id) {
+        await onboardingHelpers.logAdminAction(
+          pool, adminKey, 'REJECT_KYC', null, walletAddress,
+          ipAddress, userAgent, req.body, null, false, 'User not found'
+        );
         return res.status(404).json({ success: false, error: "User not found" });
       }
 
+      userId = user.id;
       const reviewNotes = req.body?.review_notes ? String(req.body.review_notes) : undefined;
       const updatedUser = await onboardingHelpers.rejectKycReview(pool, user.wallet_address, reviewNotes);
+      
+      // Log successful rejection
+      await onboardingHelpers.logAdminAction(
+        pool, adminKey, 'REJECT_KYC', userId, walletAddress,
+        ipAddress, userAgent,
+        { review_notes: reviewNotes },
+        { kyc_status: updatedUser?.kyc_status },
+        true, null
+      );
+
       res.json({ success: true, user: updatedUser });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
+      
+      // Log failed rejection
+      await onboardingHelpers.logAdminAction(
+        pool, adminKey, 'REJECT_KYC', userId, walletAddress,
+        ipAddress, userAgent, req.body, null, false, message
+      );
+
       res.status(500).json({ success: false, error: message });
     }
   });
