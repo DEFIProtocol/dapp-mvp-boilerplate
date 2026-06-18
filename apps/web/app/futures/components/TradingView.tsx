@@ -1,11 +1,15 @@
 // app/crypto/components/TradingView.tsx
 "use client";
+import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
 import { useKlinesStore } from "@/hooks/candles/useKlineStore";
 import { usePythPriceWithConfidence } from "@/hooks/pyth/usePythPriceWithConfidence";
 import { usePythFundingRate } from "@/hooks/pyth/usePythFundingRate";
 import { UnifiedPriceChart } from "@/components/charts";
 import PerpetualCard from "./PerpetualCard";
 import MarketHeader from "./MarketHeader";
+import TradingTabs from "./TradingTabs";
+import { getTraderPerpPositions } from "@/lib/api/perpsTrading";
 import styles from "./styles/TradingView.module.css";
 
 interface TradingViewProps {
@@ -47,12 +51,34 @@ export default function TradingView({
   selectedTimeframe,
   onTimeframeChange
 }: TradingViewProps) {
+  const { address } = useAccount();
+  const [positions, setPositions] = useState<any[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   
   const feedId = PYTH_FEED_IDS[selectedSymbol];
 
   // Fetch Pyth data once at the parent level (400ms updates)
   const { data: priceData } = usePythPriceWithConfidence(feedId, 400);
   const { data: fundingData } = usePythFundingRate(feedId, 400);
+
+  // Fetch positions
+  useEffect(() => {
+    if (!address || !selectedToken.token_address) return;
+
+    const fetchPositions = async () => {
+      try {
+        const snapshot = await getTraderPerpPositions(address, selectedSymbol, selectedToken.token_address!);
+        setPositions(snapshot.positions ?? []);
+        setPendingOrders(snapshot.pendingOrders ?? []);
+      } catch (error) {
+        console.error('Error fetching positions:', error);
+      }
+    };
+
+    fetchPositions();
+    const interval = setInterval(fetchPositions, 15000);
+    return () => clearInterval(interval);
+  }, [address, selectedSymbol, selectedToken.token_address]);
   
   // Chart data
  const { 
@@ -102,6 +128,15 @@ console.log("Selected Symbol:", selectedSymbol);
               fundingRate={fundingData?.funding_rate || 0.0085}
             />
           </div>
+        </div>
+
+        <div className={styles.bottomRow}>
+          <TradingTabs 
+            address={address}
+            symbol={selectedSymbol}
+            positions={positions}
+            pendingOrders={pendingOrders}
+          />
         </div>
       </div>
     </>

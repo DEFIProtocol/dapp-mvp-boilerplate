@@ -3,6 +3,7 @@ import { ethers, isAddress } from "ethers";
 import { Pool } from "pg";
 import { SettlementService } from "./settlementService";
 import * as perpsHelpers from "../../postgres/perps";
+import * as orderHelpers from "../../postgres/perpOrders";
 import { ensurePaperTradingChain, parseNumeric } from "./paperTradingGuards";
 
 type OrderSide = "LONG" | "SHORT";
@@ -137,12 +138,41 @@ export default function perpsPaperTradingRouter(pool: Pool) {
       }
 
       const markPrice = await settlement.getMarkPrice();
+      const resolvedMarketId = resolveMarketId(symbol, typeof marketId === "string" ? marketId : undefined);
+      const orderId = ethers.id(`${trader}-${Date.now()}-${Math.random()}`);
 
-      const intent: OrderIntent = {
-        id: `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`,
-        createdAt: new Date().toISOString(),
+      // Save order to database
+      const dbOrder = await orderHelpers.createOrder(pool, {
+        order_id: orderId,
+        trader_address: trader.toLowerCase(),
         symbol: symbol.toUpperCase(),
-        marketId: resolveMarketId(symbol, typeof marketId === "string" ? marketId : undefined),
+        market_id: resolvedMarketId,
+        side,
+        order_type: orderType,
+        original_size: exposureValue.toString(),
+        remaining_size: exposureValue.toString(),
+        filled_size: '0',
+        leverage: leverageValue.toString(),
+        limit_price: limitPriceValue?.toString(),
+        status: orderType === 'market' ? 'pending' : 'pending',
+      });
+
+      // Log order creation
+      await orderHelpers.logOrderHistory(pool, orderId, 'created', {
+        symbol: symbol.toUpperCase(),
+        side,
+        orderType,
+        exposureUsd: exposureValue,
+        leverage: leverageValue,
+        limitPrice: limitPriceValue,
+      });
+
+      // Also keep in memory for backward compatibility
+      const intent: OrderIntent = {
+        id: orderId,
+        createdAt: dbOrder.created_at,
+        symbol: symbol.toUpperCase(),
+        marketId: resolvedMarketId,
         subAccountId: typeof subAccountId === "string" ? subAccountId : undefined,
         perpAddress,
         trader,
@@ -158,12 +188,17 @@ export default function perpsPaperTradingRouter(pool: Pool) {
 
       res.json({
         success: true,
-        order: intent,
+        order: {
+          ...intent,
+          dbOrderId: dbOrder.id,
+        },
         onChain: {
           markPrice: markPrice.toString(),
           markPriceUsd: Number(markPrice) / 1e18,
-          engineExecution: "queued-for-matching",
-          note: "Order intent is accepted by backend and linked to this perp contract address. On-chain matching/settlement occurs when counterparties are available.",
+          engineExecution: orderType === 'market' ? 'immediate' : 'queued-for-matching',
+          note: orderType === 'market' 
+            ? "Market order will execute immediately at current price"
+            : "Limit order saved to database and will be matched when price conditions are met.",
         },
       });
     } catch (routeError) {
@@ -248,6 +283,91 @@ export default function perpsPaperTradingRouter(pool: Pool) {
       res.status(500).json({
         success: false,
         error: routeError instanceof Error ? routeError.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get orders for a trader
+  router.get("/orders/:trader", async (req, res) => {
+    try {
+      const { trader } = req.params;
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+
+      if (!isAddress(trader)) {
+        return res.status(400).json({ success: false, error: "trader must be a valid EVM address" });
+      }
+
+      const orders = await orderHelpers.getOrdersByTrader(pool, trader.toLowerCase(), status);
+
+      res.json({
+        success: true,
+        trader,
+        orders,
+      });
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Cancel an order
+  router.delete("/orders/:orderId", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+
+      const cancelled = await orderHelpers.cancelOrder(pool, orderId);
+
+      if (!cancelled) {
+        return res.status(404).json({
+          success: false,
+          error: "Order not found or already filled/cancelled",
+        });
+      }
+
+      // Log cancellation
+      await orderHelpers.logOrderHistory(pool, orderId, 'cancelled', {
+        cancelledAt: new Date().toISOString(),
+      });
+
+      res.json({
+        success: true,
+        orderId,
+        status: 'cancelled',
+      });
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Get order history for a trader
+  router.get("/history/:trader", async (req, res) => {
+    try {
+      const { trader } = req.params;
+      const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : 50;
+
+      if (!isAddress(trader)) {
+        return res.status(400).json({ success: false, error: "trader must be a valid EVM address" });
+      }
+
+      const history = await orderHelpers.getOrderHistory(pool, trader.toLowerCase(), limit);
+
+      res.json({
+        success: true,
+        trader,
+        history,
+      });
+    } catch (error) {
+      console.error("Error fetching order history:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });

@@ -381,44 +381,6 @@ export default function PerpetualCard({
           <span>Liquidation at ${calculateLiquidationPrice().toFixed(2)}</span>
         </div>
       )}
-
-      <div className={styles.positionsPanel}>
-        <div className={styles.positionsHeader}>
-          <h4>Positions</h4>
-          <span>{refreshing ? '⟳' : `$${markPriceUsd.toFixed(2)}`}</span>
-        </div>
-        {!address && <div className={styles.emptyText}>Connect wallet to view positions</div>}
-        {address && positions.length === 0 && <div className={styles.emptyText}>No open positions</div>}
-        {positions.map((position) => (
-          <div key={position.positionId} className={styles.positionRow}>
-            <div className={styles.positionTopRow}>
-              <span>#{position.positionId.slice(0, 8)}</span>
-              <span className={position.side === 'LONG' ? styles.positive : styles.negative}>{position.side}</span>
-            </div>
-            <div className={styles.positionGrid}>
-              <span>Entry: ${Number(position.entryPriceUsd).toFixed(2)}</span>
-              <span>Exposure: ${Number(position.exposureUsd).toFixed(2)}</span>
-              <span>Margin: ${Number(position.marginUsd).toFixed(2)}</span>
-              <span className={Number(position.unrealizedPnlUsd) >= 0 ? styles.positive : styles.negative}>
-                PnL: {formatSigned(position.unrealizedPnlUsd)}
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {pendingOrders.length > 0 && (
-          <div className={styles.pendingPanel}>
-            <div className={styles.pendingTitle}>Pending Orders</div>
-            {pendingOrders.slice(0, 3).map((order) => (
-              <div key={order.id} className={styles.pendingRow}>
-                <span>{order.side}</span>
-                <span>${order.exposureUsd.toFixed(2)}</span>
-                <span className={styles.pendingStatus}>{order.status}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

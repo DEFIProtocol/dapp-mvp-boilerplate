@@ -1,0 +1,115 @@
+.container {
+  width: 100%;
+  background: var(--surface-1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--surface-3);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.tab.active {
+  background: var(--neon-cyan);
+  color: var(--background);
+}
+
+.content {
+  padding: 16px;
+  min-height: 300px;
+}
+
+.positionsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.positionRow {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 3px solid var(--neon-cyan);
+}
+
+.positionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.long {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.short {
+  color: var(--error);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.symbol {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.positionDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.profit {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.loss {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.emptyText {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

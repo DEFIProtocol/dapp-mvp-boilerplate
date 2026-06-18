@@ -1,0 +1,104 @@
+.container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 900px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 80px 60px 60px 100px 100px 100px 80px 100px 150px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 80px 60px 60px 100px 100px 100px 80px 100px 150px;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--surface-3);
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.row:hover {
+  background: var(--surface-2);
+}
+
+.symbol {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.long {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.short {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.pending {
+  color: var(--warning);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.partial {
+  color: var(--info);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.filled {
+  color: var(--success);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cancelled {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.event {
+  font-size: 11px;
+  color: var(--neon-cyan);
+  text-transform: capitalize;
+  background: rgba(0, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.emptyState {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 14px;
+}

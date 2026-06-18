@@ -36,6 +36,12 @@
   align-self: start;
 }
 
+.bottomRow {
+  max-width: 1400px;
+  margin: 0 auto 2rem;
+  padding: 0 2rem;
+}
+
 /* Responsive breakpoints */
 @media (max-width: 1200px) {
   .topRow {

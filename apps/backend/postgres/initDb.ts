@@ -1,6 +1,7 @@
 import { Client, Pool } from "pg";
 import { ensureOnboardingTables } from "./onboarding";
 import { ensureApiKeysTable } from "./apiKeys";
+import { ensurePerpOrderTables } from "./perpOrders";
 
 interface ParsedDbUrl {
   dbName: string;
@@ -104,6 +105,7 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_users_wallet_address ON users(wallet_address)');
   await ensureOnboardingTables(pool);
   await ensureApiKeysTable(pool);
+  await ensurePerpOrderTables(pool);
 
   // Tokens
   await pool.query(`

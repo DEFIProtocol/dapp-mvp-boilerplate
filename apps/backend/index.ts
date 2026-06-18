@@ -29,6 +29,7 @@ import { adminMarketsRouter } from "./routes/SmartContracts/adminMarkets";
 import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 import { initializeOracleKeeper, getOracleKeeper } from "./services/oracleKeeperService";
+import { initializeMatchingEngine, getMatchingEngine } from "./services/orderMatchingService";
 
 dotenv.config();
 
@@ -106,6 +107,14 @@ void (async () => {
         console.log('🔮 Oracle Keeper Service started (30s interval)');
       } catch (keeperError) {
         console.warn('⚠️ Oracle Keeper failed to start:', keeperError);
+      }
+
+      // Initialize Order Matching Engine (matches orders every 10 seconds)
+      try {
+        initializeMatchingEngine(pool, 10);
+        console.log('⚡ Order Matching Engine started (10s interval)');
+      } catch (matchingError) {
+        console.warn('⚠️ Order Matching Engine failed to start:', matchingError);
       }
     } catch (error) {
       console.error('❌ Failed to initialize core tables:', error);
