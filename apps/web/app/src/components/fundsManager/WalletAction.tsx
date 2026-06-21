@@ -596,13 +596,25 @@ export default function WalletAction({
                 )}
 
                 {isPaperTradingSelectedChain && isPaperTradingConnectedChain && (
-                  <button
-                    className={styles.actionButton}
-                    onClick={handleClaimPaperTradingFunds}
-                    disabled={!walletAddress || isClaimingPaperTradingFunds || !paperTradingReady}
-                  >
-                    <span>{isClaimingPaperTradingFunds ? "Claiming Test Funds..." : "Claim 10,000 Test USDC"}</span>
-                  </button>
+                  <>
+                    {!paperTradingReady && (
+                      <div className={styles.errorText}>
+                        <strong>Faucet not ready:</strong>
+                        {!walletAddress && " No wallet connected."}
+                        {!isConnected && " Wallet not connected."}
+                        {!isPaperTradingSelectedChain && " App chain selector not on Base Sepolia."}
+                        {!isPaperTradingConnectedChain && " MetaMask not connected to Base Sepolia."}
+                        {usdcToken === PLACEHOLDER_USDC && " USDC contract address not configured in environment."}
+                      </div>
+                    )}
+                    <button
+                      className={styles.actionButton}
+                      onClick={handleClaimPaperTradingFunds}
+                      disabled={!walletAddress || isClaimingPaperTradingFunds || !paperTradingReady}
+                    >
+                      <span>{isClaimingPaperTradingFunds ? "Claiming Test Funds..." : "Claim 10,000 Test USDC"}</span>
+                    </button>
+                  </>
                 )}
 
                 {isLoadingPaperTradingStatus && <p className={styles.infoText}>Loading faucet status...</p>}
