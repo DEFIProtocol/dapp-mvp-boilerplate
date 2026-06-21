@@ -118,34 +118,94 @@
   letter-spacing: -0.01em;
 }
 
-.principleGrid,
-.archGrid {
+.principleGrid {
   margin-top: 1rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 0.9rem;
 }
 
-.principleCard,
-.archCard {
+.archList {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.archRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.archRow.reverse {
+  direction: rtl;
+}
+
+.archRow.reverse > * {
+  direction: ltr;
+}
+
+.archContent h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-strong);
+  margin-bottom: 0.5rem;
+}
+
+.archSubtitle {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: var(--neon-cyan);
+  font-weight: 600;
+  font-style: italic;
+}
+
+.archText {
+  margin: 0;
+  color: var(--text-muted-strong);
+  line-height: 1.65;
+  font-size: 0.95rem;
+  white-space: pre-line;
+}
+
+.principleCard {
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   padding: 0.9rem;
   background: rgba(255, 255, 255, 0.03);
 }
 
-.principleCard h3,
-.archCard h3 {
+.principleCard h3 {
   margin: 0;
   font-size: 1rem;
   color: var(--text-strong);
 }
 
-.principleCard p,
-.archCard p {
+.principleCard p {
   margin: 0.55rem 0 0;
   color: var(--text-muted-strong);
   line-height: 1.55;
+}
+
+.diagramContainer {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+}
+
+.diagram {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .docsHeader p {
@@ -265,5 +325,27 @@
   .docsSection,
   .ctaSection {
     border-radius: 14px;
+  }
+
+  .archList {
+    gap: 2rem;
+  }
+
+  .archRow {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .archRow.reverse {
+    direction: ltr;
+  }
+
+  .archContent h3 {
+    font-size: 1.25rem;
+  }
+
+  .archContent p {
+    font-size: 0.95rem;
   }
 }

@@ -21,20 +21,61 @@ const principles = [
 
 const architecture = [
 	{
-		title: "Financial Layer",
-		text: "Decentralized derivatives, unified margin, and escrow-based settlement to clear markets without centralized clearinghouses.",
-	},
-	{
-		title: "Logistics Layer",
-		text: "Permissionless load routing where approved operators can accept jobs by proximity, equipment, urgency, and price.",
-	},
-	{
-		title: "Verification Layer",
-		text: "Multi-party proofs of delivery and inventory backed by signatures, attestations, and auditability.",
-	},
-	{
 		title: "Governance Layer",
-		text: "DAO-controlled incentives, emergency protocols, role approvals, and transparent proposal execution.",
+		subtitle: "The Capture‑Resistant Judiciary & Legislative Network",
+		text: `The Governance Layer forms a permanent, self‑governing digital republic designed to resist corporate or governmental capture and preserve ironRelay as a neutral public good.
+
+The Congress (House of Representatives)
+Composed of humans who pass the Competency Gate. Each holds a non‑transferable, identity‑bound ERC‑1155 token granting exactly one vote per human. Enforces absolute Sybil resistance, prevents whale/bot/cartel capture. No identity may hold more than 1% of total congressional voting power.
+
+The Senate (Chamber of Contributors)
+Composed of transferable ERC‑20 Contributor Tokens representing capital and development contributors. DAO treasury cannot sell these tokens—distributed only via retroactive public‑good grants to reward active protocol builders.
+
+The Executive & Node Veto
+Bills require approval from both chambers and a 7‑day timelock. Active node operators may issue a Physical Software Veto if 66% reject the bill client‑side, protecting real‑world infrastructure from unsafe code changes.
+
+The Optimistic Oracle Court (Judicial Branch)
+Fraud accusations undergo a 48‑hour Probable Cause Review by randomly drafted cryptographic jurors. If verified: toxic identities are permanently revoked, governance rights are burned, and malicious actors are slashed.`,
+		diagram: "/diagrams/GovernanceStructure.jpg",
+		alt: "Governance Structure Diagram"
+	},
+	{
+		title: "Node Layer",
+		subtitle: "The Real‑World Translation Layer: Asynchronous State Oracles & Franchise Nodes",
+		text: `The Node Infrastructure Layer is the foundation that differentiates ironRelay from purely digital DeFi protocols, transforming open‑source servers and client apps into a decentralized delivery network.
+
+Asynchronous State Oracles
+Instead of consuming corporate API price feeds, franchise nodes evaluate, sign, and emit cryptographic proofs of real‑world physical states—crop processing milestones, warehouse inventories, transit completions, and more.
+
+Zero‑Trust Multi‑Party Verification
+Settlement cannot be triggered by a single party. Escrow release requires a multi‑party web of signatures combining GPS telemetry, IoT sensor logs, and manual operator verification to prevent physical‑digital decoupling.
+
+Immutable Role Permissions
+Anyone may spin up a franchise node, but executing real‑world operations requires DAO‑approved role credentials (Farmers, Transporters, Processors, Warehouses), each tied to verified operational standards.
+
+Read‑Only Treasury Boundary
+Node infrastructure is strictly isolated from treasury execution rights. Nodes post proofs that trigger smart‑contract events, but cannot directly debit protocol funds, eliminating rogue‑oracle drainage vectors.`,
+		diagram: "/diagrams/RealWorldFlow.jpg",
+		alt: "Real World Flow Diagram"
+	},
+	{
+		title: "Smart Contract Layer",
+		subtitle: "The Core Execution Engine: Isolated Financial Clearinghouse & Underwritten Asset Vaults",
+		text: `The Smart Contract Layer functions as the hyper‑resilient, crypto‑settled clearinghouse of the ironRelay network, executing perpetual futures, options, and unified cross‑margin accounts without reliance on banks or centralized financial institutions.
+
+EVM Modular Isolation
+To comply with Ethereum/Base size constraints (EIP‑170) and minimize attack surface, the financial engines are decoupled into independent, interacting smart contracts (PerpetualsEngine.sol, OptionsMarket.sol).
+
+Underwritten Capital & Cross‑Margin Pools
+Options operate via an order‑book model requiring writers to lock substantial upfront collateral, avoiding the fragility of peer‑to‑pool systems during volatility.
+
+Systemic Contagion Shields
+A centralized Treasury.sol and InsuranceFund.sol framework governs solvency. Automated Auto‑Deleveraging (ADL) scripts force‑close toxic liabilities during extreme (e.g., 90% instant gap‑down) market events, preventing bad‑debt cascades.
+
+Strict Asset Structuring
+All physical commodities are represented via immutable data structs defining assetId, qualityGrade, and custodial ownership, binding physical reality directly to digital escrow.`,
+		diagram: "/diagrams/SmartContract.jpg",
+		alt: "Smart Contract Layer Diagram"
 	},
 ];
 
@@ -96,17 +137,29 @@ export default function HomeMissionPage() {
 			</div>
 			</section>
 
-			<section className={styles.architectureSection}>
-				<h2>System Architecture</h2>
-				<div className={styles.archGrid}>
-					{architecture.map((layer) => (
-						<article key={layer.title} className={styles.archCard}>
+		<section className={styles.architectureSection}>
+			<h2>System Architecture</h2>
+			<div className={styles.archList}>
+				{architecture.map((layer, index) => (
+					<article key={layer.title} className={`${styles.archRow} ${index % 2 === 1 ? styles.reverse : ''}`}>
+						<div className={styles.archContent}>
 							<h3>{layer.title}</h3>
-							<p>{layer.text}</p>
-						</article>
-					))}
-				</div>
-			</section>
+							{layer.subtitle && <h4 className={styles.archSubtitle}>{layer.subtitle}</h4>}
+							<p className={styles.archText}>{layer.text}</p>
+						</div>
+						{layer.diagram && (
+							<div className={styles.diagramContainer}>
+								<img 
+									src={layer.diagram} 
+									alt={layer.alt} 
+									className={styles.diagram}
+								/>
+							</div>
+						)}
+					</article>
+				))}
+			</div>
+		</section>
 
 			<section id="docs" className={styles.docsSection}>
 				<div className={styles.docsHeader}>
