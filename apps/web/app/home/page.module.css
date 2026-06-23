@@ -64,6 +64,14 @@
   color: var(--text-muted-strong);
 }
 
+.subtext {
+  max-width: 70ch;
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.6;
+  margin: 0.8rem 0 0;
+  color: var(--text-muted);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -310,6 +318,23 @@
   max-width: 68ch;
 }
 
+/* Tablet breakpoint */
+@media (max-width: 1024px) {
+  .archRow {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .archRow.reverse {
+    direction: ltr;
+  }
+
+  .diagramContainer {
+    max-width: 100%;
+  }
+}
+
+/* Mobile breakpoint */
 @media (max-width: 720px) {
   .page {
     padding: 0.75rem;
@@ -318,6 +343,47 @@
 
   .hero {
     border-radius: 14px;
+    padding: 1.5rem 1rem;
+  }
+
+  .heroGlow {
+    width: clamp(180px, 60vw, 300px);
+    height: clamp(180px, 60vw, 300px);
+    inset: auto -20% -40% auto;
+  }
+
+  .kicker {
+    font-size: 0.7rem;
+  }
+
+  .title {
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
+    line-height: 1.1;
+    margin: 0.6rem 0 0;
+  }
+
+  .subtitle {
+    font-size: clamp(0.9rem, 3.5vw, 1.05rem);
+    margin: 1rem 0 0;
+  }
+
+  .subtext {
+    font-size: 0.9rem;
+    margin: 0.8rem 0 0;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: 100%;
+    text-align: center;
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
   }
 
   .principlesSection,
@@ -325,10 +391,38 @@
   .docsSection,
   .ctaSection {
     border-radius: 14px;
+    padding: 1.25rem 1rem;
+  }
+
+  .principlesSection h2,
+  .architectureSection h2,
+  .docsSection h2,
+  .ctaSection h2 {
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+  }
+
+  .principleGrid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    margin-top: 0.8rem;
+  }
+
+  .principleCard {
+    padding: 1rem;
+  }
+
+  .principleCard h3 {
+    font-size: 1.05rem;
+  }
+
+  .principleCard p {
+    font-size: 0.9rem;
+    line-height: 1.6;
   }
 
   .archList {
-    gap: 2rem;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .archRow {
@@ -342,10 +436,174 @@
   }
 
   .archContent h3 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
   }
 
-  .archContent p {
+  .archSubtitle {
     font-size: 0.95rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .archText {
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .diagramContainer {
+    order: -1;
+    margin-bottom: 0.5rem;
+  }
+
+  .diagram {
+    max-height: 250px;
+    object-fit: contain;
+  }
+
+  .docsHeader p {
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0;
+  }
+
+  .docsList {
+    margin-top: 0.8rem;
+  }
+
+  .docItem summary {
+    padding: 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  .docItem summary h3 {
+    font-size: 0.95rem;
+  }
+
+  .docItem summary p {
+    font-size: 0.85rem;
+  }
+
+  .expandLabel {
+    align-self: flex-end;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .docBody {
+    padding: 0.8rem;
+    max-height: 60vh;
+  }
+
+  .docBody pre {
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .ctaSection p {
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .page {
+    padding: 0.5rem;
+    gap: 1.2rem;
+  }
+
+  .hero {
+    padding: 1.25rem 0.85rem;
+  }
+
+  .title {
+    font-size: clamp(1.5rem, 9vw, 2rem);
+    line-height: 1.15;
+  }
+
+  .subtitle {
+    font-size: 0.88rem;
+  }
+
+  .subtext {
+    font-size: 0.85rem;
+  }
+
+  .principlesSection,
+  .architectureSection,
+  .docsSection,
+  .ctaSection {
+    padding: 1rem 0.85rem;
+  }
+
+  .archRow {
+    padding: 0.85rem;
+  }
+
+  .archContent h3 {
+    font-size: 1.1rem;
+  }
+
+  .archSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .archText {
+    font-size: 0.85rem;
+  }
+
+  .diagram {
+    max-height: 200px;
+  }
+
+  .docItem summary {
+    padding: 0.75rem;
+  }
+
+  .docBody {
+    padding: 0.7rem;
+  }
+
+  .docBody pre {
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .hero {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin: 0.6rem 0 0;
+  }
+
+  .actions {
+    flex-direction: row;
+    margin-top: 0.8rem;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .archRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .diagram {
+    max-height: 180px;
   }
 }
