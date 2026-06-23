@@ -5,54 +5,99 @@
 
 if (typeof window !== "undefined") {
   const memoryStorage = new Map<string, string>();
-  let isLocalStorageAvailable = false;
-
-  // Test if localStorage is actually available
+  let nativeLocalStorage: Storage | null = null;
+  
+  // Try to get a reference to the native localStorage
   try {
+    nativeLocalStorage = window.localStorage;
+    // Test if it actually works
     const testKey = "__ls_test__";
-    window.localStorage.setItem(testKey, "test");
-    window.localStorage.removeItem(testKey);
-    isLocalStorageAvailable = true;
+    nativeLocalStorage.setItem(testKey, "test");
+    nativeLocalStorage.removeItem(testKey);
   } catch (e) {
-    console.warn("localStorage is not available, using memory fallback");
-    isLocalStorageAvailable = false;
+    // localStorage is blocked, we'll use memory storage
+    nativeLocalStorage = null;
+    console.warn("localStorage is blocked, using memory fallback");
   }
+  
+  // Create safe localStorage implementation
+  const safeLocalStorage = {
+    getItem(key: string): string | null {
+      if (nativeLocalStorage) {
+        try {
+          return nativeLocalStorage.getItem(key);
+        } catch (e) {
+          return memoryStorage.get(key) ?? null;
+        }
+      }
+      return memoryStorage.get(key) ?? null;
+    },
+    setItem(key: string, value: string): void {
+      if (nativeLocalStorage) {
+        try {
+          nativeLocalStorage.setItem(key, value);
+          return;
+        } catch (e) {
+          // Fall through to memory storage
+        }
+      }
+      memoryStorage.set(key, value);
+    },
+    removeItem(key: string): void {
+      if (nativeLocalStorage) {
+        try {
+          nativeLocalStorage.removeItem(key);
+          return;
+        } catch (e) {
+          // Fall through to memory storage
+        }
+      }
+      memoryStorage.delete(key);
+    },
+    clear(): void {
+      if (nativeLocalStorage) {
+        try {
+          nativeLocalStorage.clear();
+          return;
+        } catch (e) {
+          // Fall through to memory storage
+        }
+      }
+      memoryStorage.clear();
+    },
+    key(index: number): string | null {
+      if (nativeLocalStorage) {
+        try {
+          return nativeLocalStorage.key(index);
+        } catch (e) {
+          // Fall through to memory storage
+        }
+      }
+      const keys = Array.from(memoryStorage.keys());
+      return keys[index] ?? null;
+    },
+    get length(): number {
+      if (nativeLocalStorage) {
+        try {
+          return nativeLocalStorage.length;
+        } catch (e) {
+          // Fall through to memory storage
+        }
+      }
+      return memoryStorage.size;
+    },
+  };
 
-  // If localStorage is not available, replace it with a safe implementation
-  if (!isLocalStorageAvailable) {
-    const safeLocalStorage = {
-      getItem(key: string): string | null {
-        return memoryStorage.get(key) ?? null;
-      },
-      setItem(key: string, value: string): void {
-        memoryStorage.set(key, value);
-      },
-      removeItem(key: string): void {
-        memoryStorage.delete(key);
-      },
-      clear(): void {
-        memoryStorage.clear();
-      },
-      key(index: number): string | null {
-        const keys = Array.from(memoryStorage.keys());
-        return keys[index] ?? null;
-      },
-      get length(): number {
-        return memoryStorage.size;
-      },
-    };
-
-    // Replace the native localStorage with our safe implementation
-    try {
-      Object.defineProperty(window, "localStorage", {
-        value: safeLocalStorage,
-        writable: false,
-        configurable: true,
-      });
-    } catch (e) {
-      // If we can't redefine, at least log it
-      console.error("Could not polyfill localStorage:", e);
-    }
+  // Replace localStorage immediately, before any access attempts
+  try {
+    Object.defineProperty(window, "localStorage", {
+      value: safeLocalStorage,
+      writable: false,
+      configurable: true,
+    });
+    console.log("localStorage polyfill installed successfully");
+  } catch (e) {
+    console.error("Could not polyfill localStorage:", e);
   }
 }
 
