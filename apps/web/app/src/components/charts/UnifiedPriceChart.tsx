@@ -17,7 +17,6 @@ import { useAccount } from "wagmi";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUser } from "@/contexts/UserContext";
 import { patchUserPreferencesByWallet } from "@/lib/api/users";
-import { safeStorage } from "@/lib/safeStorage";
 import {
   type ChartIndicatorId,
   type ChartSurface,
@@ -513,7 +512,7 @@ export function UnifiedPriceChart({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setDrawings(parseStoredDrawings(safeStorage.getItem(drawingStorageKey)));
+    setDrawings(parseStoredDrawings(localStorage.getItem(drawingStorageKey)));
     setSelectedDrawingId(null);
     setDraftStart(null);
     setDraftPoint(null);
@@ -522,7 +521,7 @@ export function UnifiedPriceChart({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    safeStorage.setItem(drawingStorageKey, JSON.stringify(drawings));
+    localStorage.setItem(drawingStorageKey, JSON.stringify(drawings));
   }, [drawingStorageKey, drawings]);
 
   useEffect(() => {

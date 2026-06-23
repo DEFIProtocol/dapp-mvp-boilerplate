@@ -1,3 +1,4 @@
+import "./src/lib/localStoragePolyfill";
 import "./globals.css";
 import { AppProvider } from "./src/providers/AppProvider";
 import { Header } from "./components/Header";
