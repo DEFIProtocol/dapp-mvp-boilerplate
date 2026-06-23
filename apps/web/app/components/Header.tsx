@@ -220,7 +220,7 @@ export function Header() {
                       key={item.label}
                       className={styles.navGroup}
                       onMouseEnter={() => setOpenNavMenu(item.label)}
-                      onMouseLeave={() => setOpenNavMenu((current) => (current === item.label ? null : current))}
+                      onMouseLeave={() => setOpenNavMenu(null)}
                     >
                       <button
                         type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { safeStorage } from "@/lib/safeStorage";
 
 
 export type ThemeMode = "light" | "dark";
@@ -34,8 +35,8 @@ function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Load saved theme on mount
   useEffect(() => {
-    const savedMode = (localStorage.getItem(THEME_MODE_KEY) as ThemeMode | null) || DEFAULT_MODE;
-    const savedDesign = (localStorage.getItem(THEME_DESIGN_KEY) as ThemeDesign | null) || DEFAULT_DESIGN;
+    const savedMode = (safeStorage.getItem(THEME_MODE_KEY) as ThemeMode | null) || DEFAULT_MODE;
+    const savedDesign = (safeStorage.getItem(THEME_DESIGN_KEY) as ThemeDesign | null) || DEFAULT_DESIGN;
     setModeState(savedMode);
     setDesignState(savedDesign);
     applyThemeAttrs(savedDesign, savedMode);
@@ -44,8 +45,8 @@ function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply theme + save to localStorage
   useEffect(() => {
     applyThemeAttrs(design, mode);
-    localStorage.setItem(THEME_MODE_KEY, mode);
-    localStorage.setItem(THEME_DESIGN_KEY, design);
+    safeStorage.setItem(THEME_MODE_KEY, mode);
+    safeStorage.setItem(THEME_DESIGN_KEY, design);
   }, [mode, design]);
 
   const setMode = (newMode: ThemeMode) => setModeState(newMode);

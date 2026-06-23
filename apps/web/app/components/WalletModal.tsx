@@ -9,6 +9,7 @@ import {
   useSwitchChain,
 } from "wagmi";
 import { X, ChevronRight, Zap, Globe, Wallet, Shield, Smartphone, ExternalLink } from "lucide-react";
+import { safeStorage } from "@/lib/safeStorage";
 import styles from "./WalletModal.module.css";
 
 interface WalletModalProps {
@@ -118,7 +119,7 @@ export default function WalletModal({
         const resp = await provider.connect();
         const addr = resp.publicKey.toString();
         setSolanaAddress(addr);
-        localStorage.setItem("solanaAddress", addr);
+        safeStorage.setItem("solanaAddress", addr);
         setShowSuccess("phantom");
         
         setTimeout(() => {
