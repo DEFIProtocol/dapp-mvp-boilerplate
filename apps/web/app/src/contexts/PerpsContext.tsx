@@ -23,7 +23,9 @@ export function PerpsProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/perps/db');
+      // Use the same backend URL resolution as admin pages
+      const base = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+      const res = await fetch(`${base}/api/perps/db`);
       const data = await res.json();
       
       if (Array.isArray(data)) {
