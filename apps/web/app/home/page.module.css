@@ -216,6 +216,30 @@
   object-fit: contain;
 }
 
+/* Full-width diagram layout for CME vs IRL section */
+.fullWidthDiagram {
+  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fullWidthDiagramContainer {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.fullWidthDiagramImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+
 .docsHeader p {
   margin: 0.65rem 0 0;
   color: var(--text-muted-strong);

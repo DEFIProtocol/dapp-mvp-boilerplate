@@ -40,6 +40,43 @@ Fraud accusations undergo a 48‑hour Probable Cause Review by randomly drafted 
 		alt: "Governance Structure Diagram"
 	},
 	{
+		title: "Rethinking Commodity Markets: From Centralized Gatekeepers to ironRelay",
+		subtitle: "",
+		text: `Traditional commodity exchanges—such as the Chicago Mercantile Exchange (CME)—operate through hierarchical systems dominated by central authorities, clearinghouses, and tightly controlled access points. While this model provides stability through legal and physical enforcement, it also creates friction, dependency on intermediaries, and significant barriers to participation.
+
+ironRelay reimagines this infrastructure by replacing institutional intermediaries with a decentralized, code‑minimized ecosystem.
+
+Permissionless Access
+Traditional systems require brokers, KYC mandates, and gatekeeper approval.
+ironRelay instead uses a global wallet‑based access layer, enabling participants to engage with the commodity life cycle without intermediary permission.
+
+Trustless Automation
+Smart contracts enforce trade execution and settlement, removing the need for a central clearinghouse to guarantee performance.
+All operations are deterministic, transparent, and governed by code rather than institutional discretion.
+
+Community‑Driven Governance
+Governance is decentralized through a DAO and token‑weighted voting.
+This shifts authority away from centralized regulatory boards and toward the community of users who operate and benefit from the network.
+
+On‑Chain Transparency
+Every stage of the commodity life cycle—from origin to settlement—is recorded through transparent, immutable on‑chain consensus.
+This provides auditability far beyond what siloed institutional databases can offer.
+
+The Outcome
+By migrating commodity infrastructure from regulation‑heavy, centralized models to an on‑chain, DAO‑governed network, ironRelay:
+
+reduces operational costs
+
+eliminates single points of failure
+
+democratizes access to global commodity markets
+
+It becomes not just an alternative to traditional exchanges, but a structurally superior model built for resilience, openness, and global participation.`,
+		diagram: "/diagrams/CMEvsIRL.jpg",
+		alt: "CME vs IRL Comparison Diagram"
+	},
+
+	{
 		title: "Node Layer",
 		subtitle: "The Real‑World Translation Layer: Asynchronous State Oracles & Franchise Nodes",
 		text: `The Node Infrastructure Layer is the foundation that differentiates ironRelay from purely digital DeFi protocols, transforming open‑source servers and client apps into a decentralized delivery network.
@@ -140,14 +177,25 @@ export default function HomeMissionPage() {
 		<section className={styles.architectureSection}>
 			<h2>System Architecture</h2>
 			<div className={styles.archList}>
-				{architecture.map((layer, index) => (
-					<article key={layer.title} className={`${styles.archRow} ${index % 2 === 1 ? styles.reverse : ''}`}>
+				{architecture.map((layer, index) => {
+					const isCMESection = layer.title.includes("Rethinking Commodity Markets");
+					return (
+					<article key={layer.title} className={`${styles.archRow} ${index % 2 === 1 && !isCMESection ? styles.reverse : ''} ${isCMESection ? styles.fullWidthDiagram : ''}`}>
+						{isCMESection && layer.diagram && (
+							<div className={styles.fullWidthDiagramContainer}>
+								<img 
+									src={layer.diagram} 
+									alt={layer.alt} 
+									className={styles.fullWidthDiagramImage}
+								/>
+							</div>
+						)}
 						<div className={styles.archContent}>
 							<h3>{layer.title}</h3>
 							{layer.subtitle && <h4 className={styles.archSubtitle}>{layer.subtitle}</h4>}
 							<p className={styles.archText}>{layer.text}</p>
 						</div>
-						{layer.diagram && (
+						{!isCMESection && layer.diagram && (
 							<div className={styles.diagramContainer}>
 								<img 
 									src={layer.diagram} 
@@ -157,7 +205,9 @@ export default function HomeMissionPage() {
 							</div>
 						)}
 					</article>
-				))}
+				);
+
+				})}
 			</div>
 		</section>
 
