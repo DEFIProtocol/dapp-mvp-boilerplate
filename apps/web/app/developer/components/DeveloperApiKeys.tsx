@@ -45,6 +45,8 @@ export default function DeveloperApiKeys() {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedKeyForDeposit, setSelectedKeyForDeposit] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedKeyForDelete, setSelectedKeyForDelete] = useState<ApiKey | null>(null);
 
   // Form state
   const [projectName, setProjectName] = useState("");
@@ -191,6 +193,45 @@ export default function DeveloperApiKeys() {
     }
   };
 
+  const handleDeleteKey = async () => {
+    if (!address || !selectedKeyForDelete) return;
+
+    try {
+      setLoading(true);
+      setFeedback(null);
+
+      const message = JSON.stringify({
+        action: "DELETE_API_KEY",
+        wallet_address: address.toLowerCase(),
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
+      const signature = await signMessageAsync({ message });
+
+      const res = await fetch(`/api/developer/api-keys/${selectedKeyForDelete.id}/revoke`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet_address: address,
+          message,
+          signature,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete API key");
+
+      setFeedback(`✅ API key "${selectedKeyForDelete.owner_name}" has been revoked successfully`);
+      setShowDeleteModal(false);
+      setSelectedKeyForDelete(null);
+      loadMyKeys();
+    } catch (error: any) {
+      setFeedback(`❌ ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getTierBadgeClass = (tier: string) => {
     if (tier === "SANDBOX") return styles.tierSandbox;
     if (tier === "PRODUCTION_LITE") return styles.tierLite;
@@ -287,6 +328,15 @@ export default function DeveloperApiKeys() {
                       Add Credits
                     </button>
                   )}
+                  <button
+                    className={styles.dangerButton}
+                    onClick={() => {
+                      setSelectedKeyForDelete(key);
+                      setShowDeleteModal(true);
+                    }}
+                  >
+                    🗑️ Delete Key
+                  </button>
                 </div>
               </div>
             ))}
@@ -374,6 +424,40 @@ export default function DeveloperApiKeys() {
                 disabled={loading || !projectName}
               >
                 {loading ? "Requesting..." : "Request Key"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className={styles.modal} onClick={() => setShowDeleteModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>⚠️ Delete API Key</h3>
+            <p className={styles.modalDescription}>
+              Are you sure you want to delete the API key for <strong>{selectedKeyForDelete?.owner_name}</strong>?
+            </p>
+            <div className={styles.warningBox}>
+              <p>⚠️ This action cannot be undone!</p>
+              <p>The API key will be permanently revoked and will no longer work for API requests.</p>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.secondaryButton}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedKeyForDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.dangerButton}
+                onClick={handleDeleteKey}
+                disabled={loading}
+              >
+                {loading ? "Deleting..." : "Yes, Delete Key"}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DeveloperApiKeys from "./components/DeveloperApiKeys";
+import CodeExampleTabs from "./components/CodeExampleTabs";
 import styles from "./developer.module.css";
 
 export default function DeveloperPage() {
@@ -8,14 +9,17 @@ export default function DeveloperPage() {
       {/* Self-Service API Keys Section */}
       <DeveloperApiKeys />
 
+      {/* Test Your API Key Section */}
+      <CodeExampleTabs />
+
       {/* Documentation Section */}
       <div className={styles.hero}>
         <div>
           <p className={styles.label}>Developer Portal</p>
           <h1>Unified API Key Access</h1>
           <p className={styles.description}>
-            One developer API key gives you access to our pricing and market data endpoints.
-            Use it with the `x-api-key` header or `Authorization: ApiKey &lt;key&gt;`.
+            One developer API key gives you access to our pricing and market data endpoints at{" "}
+            <code>https://dapp-mvp-boilerplate.onrender.com</code>. Use it with the `x-api-key` header or `Authorization: ApiKey &lt;key&gt;`.
           </p>
         </div>
       </div>
@@ -69,24 +73,24 @@ export default function DeveloperPage() {
         <pre className={styles.codeBlock}>
           <code>
 {`GET /api/binance/prices HTTP/1.1
-Host: api.example.com
+Host: dapp-mvp-boilerplate.onrender.com
 x-api-key: <your_api_key>
 
 # Example with curl:
 curl -H "x-api-key: YOUR_API_KEY" \\
-  https://api.example.com/api/binance/prices`}
+  https://dapp-mvp-boilerplate.onrender.com/api/binance/prices`}
           </code>
         </pre>
         <p><strong>Using Authorization header:</strong></p>
         <pre className={styles.codeBlock}>
           <code>
 {`GET /api/coinbase/prices HTTP/1.1
-Host: api.example.com
+Host: dapp-mvp-boilerplate.onrender.com
 Authorization: ApiKey <your_api_key>
 
 # Example with curl:
 curl -H "Authorization: ApiKey YOUR_API_KEY" \\
-  https://api.example.com/api/coinbase/prices`}
+  https://dapp-mvp-boilerplate.onrender.com/api/coinbase/prices`}
           </code>
         </pre>
       </section>

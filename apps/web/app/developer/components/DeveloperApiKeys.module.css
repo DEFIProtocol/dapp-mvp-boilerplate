@@ -83,6 +83,31 @@
   border-color: var(--accent);
 }
 
+.dangerButton {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: #f56565;
+  color: #fff;
+  border-color: #f56565;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Messages */
 .successMessage,
 .errorMessage {
@@ -362,6 +387,26 @@
   color: var(--text-muted);
   margin: 0 0 1.5rem 0;
   font-size: 0.9375rem;
+}
+
+.warningBox {
+  background: rgba(245, 101, 101, 0.1);
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.warningBox p {
+  margin: 0.5rem 0;
+  color: #f56565;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.warningBox p:first-child {
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 .formGroup {

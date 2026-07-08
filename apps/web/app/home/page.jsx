@@ -1,5 +1,6 @@
 import styles from "./page.module.css";
 import DocListClient from "./DocListClient";
+import DonationSection from "./DonationSection";
 
 const principles = [
   {
@@ -223,6 +224,8 @@ export default function HomeMissionPage() {
 					<DocListClient docs={docs} />
 				</div>
 			</section>
+
+			<DonationSection />
 
 			<section className={styles.ctaSection}>
 				<h2>Come build with us.</h2>
