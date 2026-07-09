@@ -81,9 +81,7 @@ export default function DonationSection() {
         <div className={styles.addressList}>
           {foundationAddresses.map((item) => (
             <div key={item.label} className={styles.addressCard}>
-              <div className={styles.addressHeader}>
-                <span className={styles.addressLabel}>{item.label}</span>
-              </div>
+              <span className={styles.addressLabel}>{item.label}</span>
               <div className={styles.addressRow}>
                 <code className={styles.addressText}>{item.address}</code>
                 <button
@@ -126,9 +124,7 @@ export default function DonationSection() {
         <div className={styles.addressList}>
           {creatorAddresses.map((item) => (
             <div key={item.label} className={styles.addressCard}>
-              <div className={styles.addressHeader}>
-                <span className={styles.addressLabel}>{item.label}</span>
-              </div>
+              <span className={styles.addressLabel}>{item.label}</span>
               <div className={styles.addressRow}>
                 <code className={styles.addressText}>{item.address}</code>
                 <button

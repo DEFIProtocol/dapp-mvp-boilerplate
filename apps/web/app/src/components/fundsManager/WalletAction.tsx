@@ -123,7 +123,7 @@ export default function WalletAction({
     },
   });
 
-  const { data: usdcRawBalance, refetch: refetchUsdcBalance } = useReadContract({
+  const { data: usdcRawBalance, refetch: refetchUsdcBalance, error: usdcBalanceError, isLoading: usdcBalanceLoading } = useReadContract({
     address: usdcToken,
     abi: [
       {
@@ -138,9 +138,25 @@ export default function WalletAction({
     args: [walletAddress ?? zeroAddress],
     chainId: selectedChain,
     query: {
-      enabled: Boolean(isConnected && walletAddress && usdcToken),
+      enabled: Boolean(isConnected && walletAddress && usdcToken && usdcToken !== PLACEHOLDER_USDC),
     },
   });
+
+  // Debug logging for USDC balance
+  useEffect(() => {
+    console.log('[WalletAction] USDC Balance Debug:', {
+      selectedChain,
+      usdcToken,
+      isPlaceholder: usdcToken === PLACEHOLDER_USDC,
+      walletAddress,
+      isConnected,
+      queryEnabled: Boolean(isConnected && walletAddress && usdcToken && usdcToken !== PLACEHOLDER_USDC),
+      usdcRawBalance: usdcRawBalance?.toString(),
+      usdcBalanceError,
+      usdcBalanceLoading,
+      envVar: process.env.NEXT_PUBLIC_PAPER_TRADING_USDC_ADDRESS,
+    });
+  }, [selectedChain, usdcToken, walletAddress, isConnected, usdcRawBalance, usdcBalanceError, usdcBalanceLoading]);
 
   const formatDisplayAmount = (raw: string | null, maxFractionDigits: number) => {
     if (!raw) return "0.00";
@@ -447,7 +463,8 @@ export default function WalletAction({
     setPaperTradingMessage(null);
 
     try {
-      const challengePayload = await createPaperTradingChallenge({
+      // Create challenge
+      let challengePayload = await createPaperTradingChallenge({
         walletAddress,
         chainId: PAPER_TRADING_CHAIN_ID,
       });
@@ -456,12 +473,45 @@ export default function WalletAction({
         throw new Error("Challenge payload is missing");
       }
 
+      // Get user signature
       const signature = await signMessageAsync({ message: challengePayload.challenge });
-      const grantPayload = await grantPaperTradingFunds({
-        walletAddress,
-        chainId: PAPER_TRADING_CHAIN_ID,
-        signature,
-      });
+      
+      // Try to grant funds with the signature
+      let grantPayload;
+      try {
+        grantPayload = await grantPaperTradingFunds({
+          walletAddress,
+          chainId: PAPER_TRADING_CHAIN_ID,
+          signature,
+        });
+      } catch (error) {
+        // If challenge expired, retry once with a fresh challenge
+        if (error instanceof Error && error.message.toLowerCase().includes("challenge expired")) {
+          setPaperTradingMessage("Challenge expired, retrying with fresh challenge...");
+          
+          // Create a new challenge
+          challengePayload = await createPaperTradingChallenge({
+            walletAddress,
+            chainId: PAPER_TRADING_CHAIN_ID,
+          });
+
+          if (!challengePayload.challenge) {
+            throw new Error("Challenge payload is missing on retry");
+          }
+
+          // Get new signature
+          const newSignature = await signMessageAsync({ message: challengePayload.challenge });
+          
+          // Try again with new signature
+          grantPayload = await grantPaperTradingFunds({
+            walletAddress,
+            chainId: PAPER_TRADING_CHAIN_ID,
+            signature: newSignature,
+          });
+        } else {
+          throw error;
+        }
+      }
 
       const txLabel = grantPayload.usdcTxHash ? `${grantPayload.usdcTxHash.slice(0, 10)}...` : "submitted";
       setPaperTradingMessage(`Paper trading funds granted (${txLabel})`);

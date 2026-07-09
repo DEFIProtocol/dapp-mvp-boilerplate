@@ -128,15 +128,15 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
       competency_status VARCHAR(20) DEFAULT 'NOT_STARTED',
       is_verified_by_coinbase BOOLEAN DEFAULT FALSE,
       paper_trading_grant_count INTEGER DEFAULT 0,
-      paper_trading_last_grant_at TIMESTAMP,
+      paper_trading_last_grant_at TIMESTAMPTZ,
       paper_trading_last_grant_tx_hash VARCHAR(100),
       paper_trading_last_grant_chain_id INTEGER,
       paper_trading_challenge_nonce VARCHAR(128),
-      paper_trading_challenge_expires_at TIMESTAMP,
-      paper_trading_admin_override_at TIMESTAMP,
+      paper_trading_challenge_expires_at TIMESTAMPTZ,
+      paper_trading_admin_override_at TIMESTAMPTZ,
       paper_trading_admin_override_by VARCHAR(66),
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
 
@@ -147,12 +147,12 @@ export async function ensureUsersTable(pool: Pool): Promise<void> {
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS competency_status VARCHAR(20) DEFAULT 'NOT_STARTED'");
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_grant_count INTEGER DEFAULT 0');
-  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_at TIMESTAMPTZ');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_tx_hash VARCHAR(100)');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_last_grant_chain_id INTEGER');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_nonce VARCHAR(128)');
-  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_expires_at TIMESTAMP');
-  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_at TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_challenge_expires_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_at TIMESTAMPTZ');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS paper_trading_admin_override_by VARCHAR(66)');
 
   tableReady = true;

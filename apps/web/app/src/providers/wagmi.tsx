@@ -13,7 +13,11 @@ const config = createConfig({
         ? `https://base-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
         : undefined
     ),
-    [baseSepolia.id]: http('https://base-sepolia.blockpi.network/v1/rpc/public'),
+    [baseSepolia.id]: http(
+      process.env.NEXT_PUBLIC_INFURA_API_KEY
+        ? `https://base-sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
+        : 'https://sepolia.base.org'
+    ),
     [mainnet.id]: http(
       process.env.NEXT_PUBLIC_INFURA_API_KEY
         ? `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
