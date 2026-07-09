@@ -7,7 +7,7 @@ import TokenSelector from "./TokenSelector";
 import TradingView from "./TradingView";
 import styles from "./page.module.css";
 
-const BASE_CHAIN_ID = 8453;
+const BASE_CHAIN_ID = 84532;
 
 export default function FuturesPage() {
   const [selectedToken, setSelectedToken] = useState<any>(null);

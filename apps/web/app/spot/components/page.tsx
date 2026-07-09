@@ -8,7 +8,7 @@ import SpotSelector from "./SpotSelector";
 import SpotTradingView from "./SpotTradingView";
 import styles from "../page.module.css";
 
-const BASE_CHAIN_ID = 8453;
+const BASE_CHAIN_ID = 84532;
 
 export default function SpotDashboardPage() {
   const [selectedToken, setSelectedToken] = useState<SpotMarket | null>(null);
