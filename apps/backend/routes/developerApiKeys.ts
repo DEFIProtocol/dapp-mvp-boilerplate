@@ -353,5 +353,51 @@ export default function developerApiKeysRouter(pool: Pool) {
     }
   });
 
+  // Revoke/Delete API key
+  router.patch("/:keyId/revoke", async (req: Request, res: Response) => {
+    try {
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
+      if (!validateSignedWalletProof(
+        walletAddress,
+        req.body?.message,
+        req.body?.signature,
+        "DELETE_API_KEY",
+        res
+      )) {
+        return;
+      }
+
+      const keyId = getParam(req.params.keyId);
+      const apiKey = await apiKeyHelpers.getApiKeyById(pool, keyId);
+
+      if (!apiKey) {
+        return res.status(404).json({ success: false, error: "API key not found" });
+      }
+
+      if (apiKey.requester_wallet?.toLowerCase() !== walletAddress) {
+        return res.status(403).json({ success: false, error: "Unauthorized to revoke this API key" });
+      }
+
+      // Update the API key status to REVOKED
+      await pool.query(
+        `UPDATE api_keys 
+         SET status = 'REVOKED', 
+             updated_at = NOW() 
+         WHERE id = $1`,
+        [keyId]
+      );
+
+      res.json({
+        success: true,
+        message: "API key has been revoked successfully",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
   return router;
 }
