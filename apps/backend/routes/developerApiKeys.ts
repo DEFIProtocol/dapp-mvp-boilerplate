@@ -353,8 +353,8 @@ export default function developerApiKeysRouter(pool: Pool) {
     }
   });
 
-  // Revoke/Delete API key
-  router.patch("/:keyId/revoke", async (req: Request, res: Response) => {
+  // Delete API key (user-initiated hard delete)
+  router.delete("/:keyId", async (req: Request, res: Response) => {
     try {
       const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
       if (!walletAddress) return;
@@ -377,10 +377,55 @@ export default function developerApiKeysRouter(pool: Pool) {
       }
 
       if (apiKey.requester_wallet?.toLowerCase() !== walletAddress) {
+        return res.status(403).json({ success: false, error: "Unauthorized to delete this API key" });
+      }
+
+      // Hard delete: Remove the API key completely from the database
+      await pool.query(
+        `DELETE FROM api_keys WHERE id = $1`,
+        [keyId]
+      );
+
+      res.json({
+        success: true,
+        message: "API key has been deleted successfully",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ success: false, error: message });
+    }
+  });
+
+  // Revoke API key (admin-initiated soft delete for audit trail)
+  router.patch("/:keyId/revoke", async (req: Request, res: Response) => {
+    try {
+      const walletAddress = validateWalletAddress(req.body?.wallet_address, res);
+      if (!walletAddress) return;
+
+      if (!validateSignedWalletProof(
+        walletAddress,
+        req.body?.message,
+        req.body?.signature,
+        "REVOKE_API_KEY",
+        res
+      )) {
+        return;
+      }
+
+      const keyId = getParam(req.params.keyId);
+      const apiKey = await apiKeyHelpers.getApiKeyById(pool, keyId);
+
+      if (!apiKey) {
+        return res.status(404).json({ success: false, error: "API key not found" });
+      }
+
+      // Check if user is admin (you can add admin check here later)
+      // For now, only allow the owner to revoke
+      if (apiKey.requester_wallet?.toLowerCase() !== walletAddress) {
         return res.status(403).json({ success: false, error: "Unauthorized to revoke this API key" });
       }
 
-      // Update the API key status to REVOKED
+      // Soft delete: Mark as REVOKED for audit trail
       await pool.query(
         `UPDATE api_keys 
          SET status = 'REVOKED', 

@@ -208,8 +208,8 @@ export default function DeveloperApiKeys() {
 
       const signature = await signMessageAsync({ message });
 
-      const res = await fetch(`/api/developer/api-keys/${selectedKeyForDelete.id}/revoke`, {
-        method: "PATCH",
+      const res = await fetch(`/api/developer/api-keys/${selectedKeyForDelete.id}`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wallet_address: address,
@@ -221,7 +221,7 @@ export default function DeveloperApiKeys() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete API key");
 
-      setFeedback(`✅ API key "${selectedKeyForDelete.owner_name}" has been revoked successfully`);
+      setFeedback(`✅ API key "${selectedKeyForDelete.owner_name}" has been deleted successfully`);
       setShowDeleteModal(false);
       setSelectedKeyForDelete(null);
       loadMyKeys();
@@ -436,11 +436,11 @@ export default function DeveloperApiKeys() {
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>⚠️ Delete API Key</h3>
             <p className={styles.modalDescription}>
-              Are you sure you want to delete the API key for <strong>{selectedKeyForDelete?.owner_name}</strong>?
+              Are you sure you want to permanently delete the API key for <strong>{selectedKeyForDelete?.owner_name}</strong>?
             </p>
             <div className={styles.warningBox}>
               <p>⚠️ This action cannot be undone!</p>
-              <p>The API key will be permanently revoked and will no longer work for API requests.</p>
+              <p>The API key will be completely removed from the database and will immediately stop working for all API requests.</p>
             </div>
             <div className={styles.modalActions}>
               <button
