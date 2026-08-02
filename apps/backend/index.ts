@@ -3,6 +3,11 @@ import { Pool } from "pg";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+
+// IMPORTANT: Load .env BEFORE importing environment config
+// This ensures process.env is populated when environment.ts reads it
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
 import { connectRedis } from "./redis";
 import { ENV, logConfiguration, getServerMode, getDatabaseType } from "./config/environment";
 import infuraRouter from "./routes/infura";
@@ -33,9 +38,6 @@ import { bigintSerializer } from './middleware/bigintSerializer';
 import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 import { initializeOracleKeeper, getOracleKeeper } from "./services/oracleKeeperService";
 import { initializeMatchingEngine, getMatchingEngine } from "./services/orderMatchingService";
-
-// Load .env from root directory (two levels up from apps/backend)
-dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const app = express();
 const port = process.env.PORT || 3001;
