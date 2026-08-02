@@ -27,10 +27,17 @@ Thank you for your interest in contributing to Iron Relay! This guide will help 
    - Request a SANDBOX tier API key (it's free!)
    - Copy the API key
 
-4. **Add the API key to your `.env` file**
+4. **Configure your `.env` file**
    ```bash
-   # Open .env and add your key:
+   # Open .env and add:
    IRON_RELAY_API_KEY=your_api_key_here
+   
+   # For full database features, use read-only production database:
+   DATABASE_URL=postgresql://readonly_contributor:password@host:5432/gridlockdb
+   # (Get the connection string from the project maintainers)
+   
+   # OR use SQLite for quick start (limited features):
+   DATABASE_URL=sqlite:./dev.db
    ```
 
 5. **Install dependencies and run**
@@ -48,29 +55,45 @@ Thank you for your interest in contributing to Iron Relay! This guide will help 
 
 ## 📊 What You Get
 
-With the Iron Relay API key, your local development server automatically gets:
+With the Iron Relay API key and read-only database, your local development server gets:
 
 - ✅ **Real-time pricing data** from Binance, Coinbase, and more
 - ✅ **Historical candlestick data** for charts
 - ✅ **Oracle price feeds** for smart contracts
-- ✅ **Token information** from multiple sources
-- ✅ **SQLite database** (auto-created, no setup needed)
+- ✅ **Real tokens and users** from production database (read-only)
+- ✅ **Trading history and market data**
+- ✅ **Full frontend functionality** with real data
 - ✅ **All trading features** working out of the box
+
+**Note:** With read-only database access, you can view all data but cannot create/modify/delete records. This is perfect for frontend development and testing!
 
 ## 🔧 How It Works
 
-Your local server runs in **PROXY MODE**:
+Your local server runs in **PROXY MODE** with **READ-ONLY DATABASE**:
 
 ```
-Your Local Server → Iron Relay Production API → External APIs
-                    (using your API key)
+┌─────────────────────────────────────┐
+│  Your Local Development Server      │
+│                                     │
+│  Frontend ←→ Backend                │
+│              ↓                      │
+│         ┌────┴────┐                │
+│         │         │                 │
+│    Pricing API   Database           │
+│         │         │                 │
+└─────────┼─────────┼─────────────────┘
+          │         │
+          ↓         ↓
+   Production API   Read-Only DB
+   (via API key)    (real data)
 ```
 
 This means:
-- You don't need Binance, Coinbase, or other API keys
-- You get real, live market data
-- Your local changes are immediately testable
-- No complex API setup required
+- ✅ Real pricing data via proxy
+- ✅ Real database records (tokens, users, etc.)
+- ✅ No external API keys needed
+- ✅ Cannot accidentally modify production data
+- ✅ Perfect for frontend development
 
 ## 📁 Project Structure
 
@@ -169,6 +192,7 @@ Visit http://localhost:3001/api/dev/status to see:
 ## 📚 Additional Resources
 
 - **API Documentation**: See `DEVELOPER_API_README.md`
+- **Read-Only Database Setup**: See `docs/READONLY_DATABASE_SETUP.md`
 - **Development Guide**: See `docs/DEVELOPMENT.md` (coming soon)
 - **Production Deployment**: See `docs/PRODUCTION.md` (coming soon)
 
