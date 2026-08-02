@@ -6,20 +6,37 @@ import {
   startPeriodicRefresh,
   TokenPrice,
 } from '../../pricing/coinbase/pricing';
+import { shouldUseProxy, proxyRequest } from '../../middleware/apiProxy';
+import { getServerMode } from '../../config/environment';
 
 const router = express.Router();
 
-// Initialize on startup
-initializeTokenPrices();
-startPeriodicRefresh();
+// Only initialize if we have API keys (production mode)
+const mode = getServerMode();
+if (mode === 'production') {
+  initializeTokenPrices();
+  startPeriodicRefresh();
+  console.log('✅ Coinbase: Using direct API connection');
+} else if (mode === 'proxy') {
+  console.log('🔗 Coinbase: Using proxy mode (Iron Relay API)');
+} else {
+  console.log('⚠️  Coinbase: No API keys configured');
+}
 
 /**
  * @route   GET /api/coinbase/prices
  * @desc    Get all Coinbase token prices (updated via WebSocket)
  * @access  Public
  */
-router.get('/prices', (req: Request, res: Response) => {
+router.get('/prices', async (req: Request, res: Response) => {
   try {
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const data = await proxyRequest('/api/coinbase/prices');
+      return res.json(data);
+    }
+    
+    // Otherwise use local data
     const prices = getAllTokenPrices();
     
     res.json({
@@ -43,16 +60,31 @@ router.get('/prices', (req: Request, res: Response) => {
  * @desc    Simple health check
  * @access  Public
  */
-router.get('/health', (req: Request, res: Response) => {
-  const prices = getAllTokenPrices();
-  
-  res.json({
-    success: true,
-    exchange: 'coinbase',
-    status: 'online',
-    tokensTracked: prices.length,
-    timestamp: Date.now()
-  });
+router.get('/health', async (req: Request, res: Response) => {
+  try {
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const data = await proxyRequest('/api/coinbase/health');
+      return res.json(data);
+    }
+    
+    // Otherwise use local data
+    const prices = getAllTokenPrices();
+    
+    res.json({
+      success: true,
+      exchange: 'coinbase',
+      status: 'online',
+      tokensTracked: prices.length,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error fetching health:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch health status' 
+    });
+  }
 });
 
 export default router;
@@ -69,6 +101,17 @@ router.get('/candles', async (req: Request, res: Response) => {
       });
     }
 
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const queryString = new URLSearchParams({
+        product_id: String(product_id),
+        granularity: String(granularity)
+      }).toString();
+      const data = await proxyRequest(`/api/coinbase/candles?${queryString}`);
+      return res.json(data);
+    }
+
+    // Otherwise call Coinbase directly
     const response = await axios.get(
       `https://api.exchange.coinbase.com/products/${product_id}/candles`, {
         params: {

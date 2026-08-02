@@ -2,8 +2,9 @@ import express from "express";
 import { Pool } from "pg";
 import cors from "cors";
 import dotenv from "dotenv";
-import path from "path"; // Add this import
+import path from "path";
 import { connectRedis } from "./redis";
+import { ENV, logConfiguration, getServerMode, getDatabaseType } from "./config/environment";
 import infuraRouter from "./routes/infura";
 import usersRouter from "./routes/database/users";
 import tokensRouter from "./routes/database/tokens";
@@ -168,8 +169,36 @@ app.get("/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, './public/dashboard.html'));
 });
 
+// Development status endpoint
+app.get("/api/dev/status", (_req, res) => {
+  const mode = getServerMode();
+  const dbType = getDatabaseType();
+  
+  res.json({
+    success: true,
+    environment: ENV.NODE_ENV,
+    mode: mode,
+    database: dbType,
+    configuration: {
+      hasIronRelayApiKey: !!ENV.IRON_RELAY_API_KEY,
+      hasBinanceApiKey: !!ENV.BINANCE_API_KEY,
+      hasCoinbaseApiKey: !!ENV.COINBASE_API_KEY,
+      hasRapidApiKey: !!ENV.RAPID_API_KEY,
+      hasOneInchApiKey: !!ENV.ONEINCH_API_KEY,
+      productionApiUrl: ENV.PRODUCTION_API_URL,
+    },
+    message: mode === 'proxy' 
+      ? 'Using Iron Relay API for pricing data'
+      : mode === 'production'
+      ? 'Using direct API connections'
+      : 'No API keys configured',
+  });
+});
+
 // Update console logs
 app.listen(port, () => {
+  logConfiguration();
+  
   console.log(`🚀 Server running on port ${port}`);
   console.log(`📊 Dashboard: http://localhost:${port}/`);
   console.log(`💰 Binance prices: http://localhost:${port}/api/binance/prices`);
@@ -180,4 +209,5 @@ app.listen(port, () => {
   console.log(`🔮 Oracle priority: http://localhost:${port}/api/oracle/priority`);
   console.log(`🌀 Pyth Oracle: http://localhost:${port}/api/pyth/health`);
   console.log(`🏥 Health check: http://localhost:${port}/health`);
+  console.log(`🔧 Dev status: http://localhost:${port}/api/dev/status`);
 });

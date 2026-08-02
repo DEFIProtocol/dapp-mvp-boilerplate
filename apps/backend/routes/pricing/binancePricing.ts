@@ -6,20 +6,37 @@ import {
   startPeriodicRefresh,
   TokenPrice,
 } from '../../pricing/binance/pricing';
+import { shouldUseProxy, proxyRequest } from '../../middleware/apiProxy';
+import { getServerMode } from '../../config/environment';
 
 const router = express.Router();
 
-// Initialize on startup
-initializeTokenPrices();
-startPeriodicRefresh();
+// Only initialize if we have API keys (production mode)
+const mode = getServerMode();
+if (mode === 'production') {
+  initializeTokenPrices();
+  startPeriodicRefresh();
+  console.log('✅ Binance: Using direct API connection');
+} else if (mode === 'proxy') {
+  console.log('🔗 Binance: Using proxy mode (Iron Relay API)');
+} else {
+  console.log('⚠️  Binance: No API keys configured');
+}
 
 /**
  * @route   GET /api/binance/prices
  * @desc    Get all token prices (updated via WebSocket)
  * @access  Public
  */
-router.get('/prices', (req: Request, res: Response) => {
+router.get('/prices', async (req: Request, res: Response) => {
   try {
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const data = await proxyRequest('/api/binance/prices');
+      return res.json(data);
+    }
+    
+    // Otherwise use local data
     const prices = getAllTokenPrices();
     
     res.json({
@@ -42,16 +59,31 @@ router.get('/prices', (req: Request, res: Response) => {
  * @desc    Simple health check
  * @access  Public
  */
-router.get('/health', (req: Request, res: Response) => {
-  const prices = getAllTokenPrices();
-  
-  res.json({
-    success: true,
-    exchange: 'binance',
-    status: 'online',
-    tokensTracked: prices.length,
-    timestamp: Date.now()
-  });
+router.get('/health', async (req: Request, res: Response) => {
+  try {
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const data = await proxyRequest('/api/binance/health');
+      return res.json(data);
+    }
+    
+    // Otherwise use local data
+    const prices = getAllTokenPrices();
+    
+    res.json({
+      success: true,
+      exchange: 'binance',
+      status: 'online',
+      tokensTracked: prices.length,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error fetching health:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch health status' 
+    });
+  }
 });
 
 export default router;
@@ -68,6 +100,18 @@ router.get('/klines', async (req: Request, res: Response) => {
       });
     }
 
+    // If in proxy mode, forward to production API
+    if (shouldUseProxy()) {
+      const queryString = new URLSearchParams({
+        symbol: String(symbol),
+        interval: String(interval),
+        limit: String(limit)
+      }).toString();
+      const data = await proxyRequest(`/api/binance/klines?${queryString}`);
+      return res.json(data);
+    }
+
+    // Otherwise call Binance directly
     const response = await axios.get(
       `https://api.binance.us/api/v3/klines`, {
         params: {
