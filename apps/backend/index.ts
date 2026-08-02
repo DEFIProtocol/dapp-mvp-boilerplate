@@ -34,7 +34,8 @@ import { ensureCoreTables, ensureDatabaseExists } from "./postgres/initDb";
 import { initializeOracleKeeper, getOracleKeeper } from "./services/oracleKeeperService";
 import { initializeMatchingEngine, getMatchingEngine } from "./services/orderMatchingService";
 
-dotenv.config();
+// Load .env from root directory (two levels up from apps/backend)
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -69,14 +70,14 @@ app.use(bigintSerializer);
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, './public')));
 
-// Database connection
-if (!process.env.DATABASE_URL) {
+// Database connection - use ENV.DATABASE_URL which has a default fallback
+if (!ENV.DATABASE_URL) {
   console.error('❌ DATABASE_URL environment variable is not set');
   process.exit(1);
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: ENV.DATABASE_URL,
 });
 
 void (async () => {
