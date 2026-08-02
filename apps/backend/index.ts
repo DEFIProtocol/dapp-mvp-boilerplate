@@ -91,8 +91,12 @@ if (isSQLiteMode) {
     max: 0, // No connections
   });
 } else {
+  // PostgreSQL connection with SSL support (required for Render and most cloud providers)
   pool = new Pool({
     connectionString: ENV.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false, // Required for Render and most cloud PostgreSQL
+    },
   });
 }
 
