@@ -1,10 +1,12 @@
 // backend/oneinch/tokenPricing.ts
 
 import axios from 'axios';
+import { shouldUseProxy, proxyRequest } from '../middleware/apiProxy';
+import { ENV } from '../config/environment';
 
 // 1inch API configuration
 const ONEINCH_TOKEN_BASE_URL = 'https://api.1inch.com/token';
-const ONEINCH_API_KEY = process.env.ONEINCH_API_KEY || '';
+const ONEINCH_API_KEY = ENV.ONEINCH_API_KEY || '';
 
 // Cache for token data
 interface TokenCacheEntry {
@@ -28,6 +30,27 @@ export const fetchOneInchTokens = async (
     return cached.data;
   }
 
+  // Use proxy if in proxy mode
+  if (shouldUseProxy()) {
+    try {
+      console.log(`🔗 1inch: Using proxy mode for chain ${chainId}`);
+      const queryParams = provider ? `?provider=${provider}` : '';
+      const data = await proxyRequest(`/api/1inch/tokens?chainId=${chainId}${queryParams}`);
+      
+      tokenCache.set(cacheKey, {
+        data: data.data || data,
+        timestamp: Date.now(),
+        chainId
+      });
+      
+      return data.data || data;
+    } catch (error) {
+      console.error(`❌ 1inch proxy error for chain ${chainId}:`, error);
+      throw error;
+    }
+  }
+
+  // Direct API call (production mode)
   const url = `${ONEINCH_TOKEN_BASE_URL}/v1.2/${chainId}`;
   
   try {
