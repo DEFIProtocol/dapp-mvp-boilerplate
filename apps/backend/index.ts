@@ -78,15 +78,36 @@ if (!ENV.DATABASE_URL) {
   process.exit(1);
 }
 
-const pool = new Pool({
-  connectionString: ENV.DATABASE_URL,
-});
+// Check if using SQLite (which requires different setup)
+const isSQLiteMode = ENV.DATABASE_URL.startsWith('sqlite:');
+
+let pool: Pool;
+if (isSQLiteMode) {
+  console.warn('⚠️  SQLite mode detected - Database features will be limited');
+  console.warn('💡 For full database features, use PostgreSQL in production');
+  // Create a dummy pool that won't actually connect
+  pool = new Pool({
+    connectionString: 'postgresql://dummy:dummy@localhost:5432/dummy',
+    max: 0, // No connections
+  });
+} else {
+  pool = new Pool({
+    connectionString: ENV.DATABASE_URL,
+  });
+}
 
 void (async () => {
   try {
     await connectRedis();
   } catch (error) {
     console.warn('⚠️ Redis connection failed:', error);
+  }
+
+  // Skip database initialization in SQLite mode
+  if (isSQLiteMode) {
+    console.log('⚠️  Skipping database initialization (SQLite mode)');
+    console.log('💡 Database-dependent features will return empty data');
+    return;
   }
 
   try {
@@ -98,6 +119,7 @@ void (async () => {
   pool.query('SELECT NOW()', async (err, res) => {
     if (err) {
       console.error('❌ Database connection failed:', err.message);
+      console.warn('💡 Continuing without database - some features will be limited');
       return;
     }
 
