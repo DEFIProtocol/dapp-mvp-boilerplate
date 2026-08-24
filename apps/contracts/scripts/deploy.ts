@@ -92,12 +92,12 @@ async function resolveCoreDependencyAddresses(
 
   let collateralToken = process.env.COLLATERAL_TOKEN;
   if (!collateralToken && autoDeploy) {
-    console.log("COLLATERAL_TOKEN not set. Deploying MockERC20...");
-    const MockUSDC = await ethersLike.getContractFactory("MockERC20");
+    console.log("COLLATERAL_TOKEN not set. Deploying MockUSDCFaucet...");
+    const MockUSDC = await ethersLike.getContractFactory("MockUSDCFaucet");
     const usdc = await MockUSDC.deploy("USD Coin", "USDC", 6);
     await usdc.waitForDeployment();
     collateralToken = await usdc.getAddress();
-    console.log(`MockERC20: ${collateralToken}`);
+    console.log(`MockUSDCFaucet: ${collateralToken}`);
   }
   if (!collateralToken) {
     throw new Error("Missing required env var: COLLATERAL_TOKEN");

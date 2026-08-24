@@ -58,42 +58,6 @@ export interface TransferExecuteResponse {
   error?: string;
 }
 
-export interface PaperTradingStatusResponse {
-  success: boolean;
-  chainId?: number;
-  status?: {
-    eligibleNow: boolean;
-    nextEligibleAt: string | null;
-    lastGrantAt: string | null;
-    grantCount: number;
-    lastGrantTxHash: string | null;
-    lastGrantChainId: number | null;
-    challengeExpiresAt: string | null;
-  };
-  error?: string;
-}
-
-export interface PaperTradingChallengeResponse {
-  success: boolean;
-  chainId?: number;
-  expiresAt?: string;
-  challenge?: string;
-  error?: string;
-}
-
-export interface PaperTradingGrantResponse {
-  success: boolean;
-  chainId?: number;
-  walletAddress?: string;
-  amount?: string;
-  usdcTxHash?: string;
-  ethTxHash?: string | null;
-  ethDripError?: string | null;
-  status?: PaperTradingStatusResponse["status"];
-  nextEligibleAt?: string;
-  error?: string;
-}
-
 export async function getSupportedTokens(chainId: number): Promise<SupportedToken[]> {
   const response = await fetch(`${API_BASE}/1inch/tokens?chainId=${chainId}`, {
     cache: "no-store",
@@ -209,55 +173,4 @@ export async function createCoinbasePaySession(input: {
   };
 }
 
-export async function getPaperTradingStatus(walletAddress: string, chainId: number): Promise<PaperTradingStatusResponse> {
-  const response = await fetch(`${API_BASE}/paper-trading/faucet/status/${walletAddress}?chainId=${chainId}`, {
-    cache: "no-store",
-  });
 
-  const payload = (await response.json()) as PaperTradingStatusResponse;
-
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || "Failed to fetch paper trading status");
-  }
-
-  return payload;
-}
-
-export async function createPaperTradingChallenge(input: {
-  walletAddress: string;
-  chainId: number;
-}): Promise<PaperTradingChallengeResponse> {
-  const response = await fetch(`${API_BASE}/paper-trading/faucet/challenge`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-
-  const payload = (await response.json()) as PaperTradingChallengeResponse;
-
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || "Failed to create paper trading challenge");
-  }
-
-  return payload;
-}
-
-export async function grantPaperTradingFunds(input: {
-  walletAddress: string;
-  chainId: number;
-  signature: string;
-}): Promise<PaperTradingGrantResponse> {
-  const response = await fetch(`${API_BASE}/paper-trading/faucet/grant`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-
-  const payload = (await response.json()) as PaperTradingGrantResponse;
-
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || payload.nextEligibleAt || "Failed to grant paper trading funds");
-  }
-
-  return payload;
-}

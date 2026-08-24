@@ -2,16 +2,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useAccount, useBalance, useReadContract, useSendTransaction, useSignMessage, useSwitchChain } from "wagmi";
+import { useAccount, useBalance, useReadContract, useSendTransaction, useSignMessage, useSwitchChain, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits, isAddress, type Address } from "viem";
 import { Plus, ArrowUpRight, ArrowLeftRight, X, ChevronDown, Wallet, Copy, Check } from "lucide-react";
 import { useChainContext } from "@/contexts/ChainContext";
 import {
-  createPaperTradingChallenge,
   createCoinbasePaySession,
   executeTransfer,
-  getPaperTradingStatus,
-  grantPaperTradingFunds,
   getSupportedTokens,
   quoteTransfer,
   type SupportedToken,
@@ -59,14 +56,8 @@ export default function WalletAction({
   const [onRampAmount, setOnRampAmount] = useState("100");
   const [onRampAsset, setOnRampAsset] = useState("USDC");
   const [isCreatingOnRampSession, setIsCreatingOnRampSession] = useState(false);
-  const [paperTradingStatus, setPaperTradingStatus] = useState<{
-    eligibleNow: boolean;
-    nextEligibleAt: string | null;
-    grantCount: number;
-  } | null>(null);
   const [paperTradingMessage, setPaperTradingMessage] = useState<string | null>(null);
   const [paperTradingError, setPaperTradingError] = useState<string | null>(null);
-  const [isLoadingPaperTradingStatus, setIsLoadingPaperTradingStatus] = useState(false);
   const [isClaimingPaperTradingFunds, setIsClaimingPaperTradingFunds] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -109,6 +100,17 @@ export default function WalletAction({
   const { switchChainAsync } = useSwitchChain();
   const { sendTransactionAsync } = useSendTransaction();
   const { signMessageAsync } = useSignMessage();
+  const { writeContractAsync } = useWriteContract();
+
+  const FAUCET_MINT_ABI = [
+    {
+      type: "function",
+      name: "mint",
+      stateMutability: "nonpayable",
+      inputs: [{ name: "amount", type: "uint256" }],
+      outputs: [],
+    },
+  ] as const;
 
   const fromChainTokens = useMemo(
     () => supportedTransferTokens[transferFromChain] || [],
@@ -252,36 +254,6 @@ export default function WalletAction({
       setTransferTokenDecimals(selectedToken.decimals);
     }
   }, [transferTokenAddress, fromChainTokens]);
-
-  const refreshPaperTradingStatus = async () => {
-    if (!walletAddress || !isPaperTradingSelectedChain) {
-      setPaperTradingStatus(null);
-      return;
-    }
-
-    setIsLoadingPaperTradingStatus(true);
-    try {
-      const payload = await getPaperTradingStatus(walletAddress, PAPER_TRADING_CHAIN_ID);
-      setPaperTradingStatus(
-        payload.status
-          ? {
-              eligibleNow: payload.status.eligibleNow,
-              nextEligibleAt: payload.status.nextEligibleAt,
-              grantCount: payload.status.grantCount,
-            }
-          : null
-      );
-      setPaperTradingError(null);
-    } catch (error) {
-      setPaperTradingError(error instanceof Error ? error.message : "Failed to load faucet status");
-    } finally {
-      setIsLoadingPaperTradingStatus(false);
-    }
-  };
-
-  useEffect(() => {
-    void refreshPaperTradingStatus();
-  }, [walletAddress, selectedChain, chain?.id]);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
@@ -463,64 +435,21 @@ export default function WalletAction({
     setPaperTradingMessage(null);
 
     try {
-      // Create challenge
-      let challengePayload = await createPaperTradingChallenge({
-        walletAddress,
+      // Permissionless client-side mint: the test USDC faucet contract lets
+      // any wallet mint directly to itself, so no backend round-trip or
+      // signature challenge is needed here.
+      const mintAmount = parseUnits("10000", 6);
+      const txHash = await writeContractAsync({
+        address: usdcToken,
+        abi: FAUCET_MINT_ABI,
+        functionName: "mint",
+        args: [mintAmount],
         chainId: PAPER_TRADING_CHAIN_ID,
       });
 
-      if (!challengePayload.challenge) {
-        throw new Error("Challenge payload is missing");
-      }
-
-      // Get user signature
-      const signature = await signMessageAsync({ message: challengePayload.challenge });
-      
-      // Try to grant funds with the signature
-      let grantPayload;
-      try {
-        grantPayload = await grantPaperTradingFunds({
-          walletAddress,
-          chainId: PAPER_TRADING_CHAIN_ID,
-          signature,
-        });
-      } catch (error) {
-        // If challenge expired, retry once with a fresh challenge
-        if (error instanceof Error && error.message.toLowerCase().includes("challenge expired")) {
-          setPaperTradingMessage("Challenge expired, retrying with fresh challenge...");
-          
-          // Create a new challenge
-          challengePayload = await createPaperTradingChallenge({
-            walletAddress,
-            chainId: PAPER_TRADING_CHAIN_ID,
-          });
-
-          if (!challengePayload.challenge) {
-            throw new Error("Challenge payload is missing on retry");
-          }
-
-          // Get new signature
-          const newSignature = await signMessageAsync({ message: challengePayload.challenge });
-          
-          // Try again with new signature
-          grantPayload = await grantPaperTradingFunds({
-            walletAddress,
-            chainId: PAPER_TRADING_CHAIN_ID,
-            signature: newSignature,
-          });
-        } else {
-          throw error;
-        }
-      }
-
-      const txLabel = grantPayload.usdcTxHash ? `${grantPayload.usdcTxHash.slice(0, 10)}...` : "submitted";
-      setPaperTradingMessage(`Paper trading funds granted (${txLabel})`);
-      if (grantPayload.ethDripError) {
-        setPaperTradingError(`USDC granted, but gas drip failed: ${grantPayload.ethDripError}`);
-      }
+      setPaperTradingMessage(`Paper trading funds minted (${txHash.slice(0, 10)}...)`);
 
       await Promise.all([refetchNativeBalance(), refetchUsdcBalance()]);
-      await refreshPaperTradingStatus();
     } catch (error) {
       setPaperTradingError(error instanceof Error ? error.message : "Failed to claim paper trading funds");
     } finally {
@@ -667,17 +596,6 @@ export default function WalletAction({
                   </>
                 )}
 
-                {isLoadingPaperTradingStatus && <p className={styles.infoText}>Loading faucet status...</p>}
-                {paperTradingStatus && (
-                  <div className={styles.paperTradingStatus}>
-                    <span>Claims used: {paperTradingStatus.grantCount}</span>
-                    <span>
-                      {paperTradingStatus.eligibleNow
-                        ? "Eligible now"
-                        : `Next claim: ${paperTradingStatus.nextEligibleAt || "cooldown active"}`}
-                    </span>
-                  </div>
-                )}
                 {paperTradingMessage && <p className={styles.successText}>{paperTradingMessage}</p>}
                 {paperTradingError && <p className={styles.errorText}>{paperTradingError}</p>}
               </div>

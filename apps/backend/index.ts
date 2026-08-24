@@ -27,7 +27,6 @@ import fiatOnRampRouter from "./routes/fiatOnRamp";
 import transfersRouter from "./routes/transfers";
 import smartContractsRouter from "./routes/SmartContracts/smartContracts";
 import contractSimulationRouter from "./routes/contractSim/simulation";
-import paperTradingRouter from "./routes/paperTrading";
 import onboardingRouter from "./routes/onboarding";
 import apiKeysRouter from "./routes/apiKeys";
 import developerApiKeysRouter from "./routes/developerApiKeys";
@@ -170,7 +169,6 @@ app.use("/api/pyth", apiKeyAuth(pool, { optional: true }), pythRouter); // Add P
 app.use("/api/aggregator", apiKeyAuth(pool, { optional: true }), priceAggregatorRouter); // Validated index+mark prices
 app.use("/api/coinbase-onramp", fiatOnRampRouter);
 app.use("/api/transfers", transfersRouter);
-app.use("/api/paper-trading", paperTradingRouter(pool));
 app.use("/api/onboarding", onboardingRouter(pool));
 app.use("/api/api-keys", apiKeysRouter(pool));
 app.use("/api/developer/api-keys", developerApiKeysRouter(pool));
