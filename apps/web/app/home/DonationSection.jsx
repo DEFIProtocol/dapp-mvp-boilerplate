@@ -23,12 +23,9 @@ export default function DonationSection() {
     },
     {
       label: 'Bitcoin (Native SegWit)',
-      address: 'bc1qcp7dy40ecyfaufehgft5c48vluacw7r6unjldd',
+      address: 'bc1qmyz54wckaa4r4kyjy5ln5fr3ya9lytap6vh8ur',
     },
-    {
-      label: 'Solana',
-      address: '4kdKbJkZuTnFrkz6GojD3uRYH2SGc1Qo21GNVJuUyfKv',
-    },
+   
   ];
 
   const creatorAddresses = [
@@ -36,14 +33,7 @@ export default function DonationSection() {
       label: 'Ethereum (Personal)',
       address: '0xdf9df71AA92d9fDB58DCfC23b16a6e779776E085',
     },
-    {
-      label: 'Bitcoin (Native SegWit)',
-      address: 'bc1qy27kt9sy2qrevmw5sedgsevnlkt30j4er2nzq7',
-    },
-    {
-      label: 'Solana',
-      address: 'BTcS6CnTtLvhv82tnT9BvJwxYmFuq4E2ZaJ4CGT65hJ7',
-    },
+    
   ];
 
   return (
