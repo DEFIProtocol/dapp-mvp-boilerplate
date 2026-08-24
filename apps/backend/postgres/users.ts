@@ -566,7 +566,14 @@ export async function setPaperTradingChallenge(
     [walletAddress, nonce, expiresAt]
   );
 
-  return mapUserRow(result.rows[0]);
+  const user = mapUserRow(result.rows[0]);
+  if (user) {
+    await cacheUserRecord(walletAddress, user);
+  } else {
+    await clearUserCache(walletAddress);
+  }
+
+  return user;
 }
 
 /**
@@ -595,7 +602,14 @@ export async function commitPaperTradingGrant(
     [walletAddress, txHash, chainId]
   );
 
-  return mapUserRow(result.rows[0]);
+  const user = mapUserRow(result.rows[0]);
+  if (user) {
+    await cacheUserRecord(walletAddress, user);
+  } else {
+    await clearUserCache(walletAddress);
+  }
+
+  return user;
 }
 
 /**
@@ -621,5 +635,12 @@ export async function setPaperTradingAdminOverride(
     [walletAddress, overrideAddress]
   );
 
-  return mapUserRow(result.rows[0]);
+  const user = mapUserRow(result.rows[0]);
+  if (user) {
+    await cacheUserRecord(walletAddress, user);
+  } else {
+    await clearUserCache(walletAddress);
+  }
+
+  return user;
 }
