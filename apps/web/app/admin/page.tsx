@@ -9,6 +9,7 @@ import MarketManager from "./components/MarketManager";
 import AdminKeyManager from "./AdminKeyManager";
 import KycReviewManager from "./components/KycReviewManager";
 import AdminApiKeysManager from "./components/AdminApiKeysManager";
+import TradingMonitor from "./components/TradingMonitor";
 import styles from "./admin.module.css";
 
 function AdminPageContent() {
@@ -69,6 +70,13 @@ function AdminPageContent() {
         >
           <span>📋</span> KYC Review
         </button>
+
+        <button
+          className={`${styles.tabButton} ${activeTab === "trading" ? styles.active : ""}`}
+          onClick={() => setActiveTab("trading")}
+        >
+          <span>📡</span> Trading Monitor
+        </button>
       </div>
 
       <div className={styles.adminContent}>
@@ -87,6 +95,8 @@ function AdminPageContent() {
         {activeTab === "developer" && <AdminApiKeysManager />}
 
         {activeTab === "kyc" && <KycReviewManager />}
+
+        {activeTab === "trading" && <TradingMonitor />}
       </div>
     </div>
   );

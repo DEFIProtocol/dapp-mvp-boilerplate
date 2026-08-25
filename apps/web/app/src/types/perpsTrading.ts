@@ -11,6 +11,9 @@ export type PlacePerpOrderRequest = {
   exposureUsd: number;
   leverage: number;
   limitPrice?: number;
+  expiry: number;
+  nonce: string;
+  signature: string;
 };
 
 export type PendingPerpOrder = {

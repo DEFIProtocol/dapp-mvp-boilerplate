@@ -16,7 +16,11 @@ export interface PerpOrder {
   filled_size: string;
   leverage: string;
   limit_price?: string;
-  status: 'pending' | 'partial' | 'filled' | 'cancelled';
+  status: 'pending' | 'partial' | 'filled' | 'cancelled' | 'rejected';
+  expiry: string;
+  nonce: string;
+  signature: string;
+  reject_reason?: string;
   created_at: string;
   updated_at: string;
 }
@@ -98,6 +102,12 @@ export async function ensurePerpOrderTables(pool: Pool): Promise<void> {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_perp_order_fills_order ON perp_order_fills(order_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_perp_order_history_order ON perp_order_history(order_id)');
 
+  // Columns required for on-chain EIP-712 order settlement (OrderLib.Order struct parity).
+  await pool.query('ALTER TABLE perp_orders ADD COLUMN IF NOT EXISTS expiry NUMERIC(20, 0)');
+  await pool.query('ALTER TABLE perp_orders ADD COLUMN IF NOT EXISTS nonce NUMERIC(30, 0)');
+  await pool.query('ALTER TABLE perp_orders ADD COLUMN IF NOT EXISTS signature TEXT');
+  await pool.query('ALTER TABLE perp_orders ADD COLUMN IF NOT EXISTS reject_reason TEXT');
+
   tableReady = true;
 }
 
@@ -105,8 +115,8 @@ export async function ensurePerpOrderTables(pool: Pool): Promise<void> {
 export async function createOrder(pool: Pool, order: Omit<PerpOrder, 'id' | 'created_at' | 'updated_at'>): Promise<PerpOrder> {
   const result = await pool.query(
     `INSERT INTO perp_orders 
-      (order_id, trader_address, symbol, market_id, side, order_type, original_size, remaining_size, filled_size, leverage, limit_price, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      (order_id, trader_address, symbol, market_id, side, order_type, original_size, remaining_size, filled_size, leverage, limit_price, status, expiry, nonce, signature)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *`,
     [
       order.order_id,
@@ -121,9 +131,41 @@ export async function createOrder(pool: Pool, order: Omit<PerpOrder, 'id' | 'cre
       order.leverage,
       order.limit_price,
       order.status,
+      order.expiry,
+      order.nonce,
+      order.signature,
     ]
   );
   return result.rows[0];
+}
+
+// Mark an order as rejected (e.g. on-chain settlement reverted permanently)
+export async function markOrderRejected(pool: Pool, orderId: string, reason: string): Promise<void> {
+  await pool.query(
+    `UPDATE perp_orders
+     SET status = 'rejected', reject_reason = $2, updated_at = NOW()
+     WHERE order_id = $1`,
+    [orderId, reason]
+  );
+}
+
+// Get all orders across all traders (admin monitoring view)
+export async function getAllOrders(pool: Pool, statuses?: string[], limit: number = 200): Promise<PerpOrder[]> {
+  const values: any[] = [];
+  let where = '';
+
+  if (statuses && statuses.length > 0) {
+    values.push(statuses);
+    where = `WHERE status = ANY($${values.length})`;
+  }
+
+  values.push(limit);
+
+  const result = await pool.query(
+    `SELECT * FROM perp_orders ${where} ORDER BY created_at DESC LIMIT $${values.length}`,
+    values
+  );
+  return result.rows;
 }
 
 // Get pending orders for a market

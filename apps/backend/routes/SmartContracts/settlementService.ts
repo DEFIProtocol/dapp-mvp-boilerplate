@@ -99,6 +99,20 @@ export class SettlementService {
     );
   }
 
+  /**
+   * Expose the deployed contract addresses relevant to order signing/settlement.
+   * The frontend needs the SettlementEngine address to build a matching EIP-712
+   * domain (SettlementEngine is the contract that verifies OrderLib signatures).
+   */
+  getContractAddresses() {
+    return {
+      chainId: 84532,
+      perpEngine: this.deployment.addresses.perpEngine,
+      settlementEngine: this.deployment.addresses.settlementEngine,
+      collateralToken: this.deployment.initialConfig.collateralToken,
+    };
+  }
+
   async liquidate(positionId: number) {
     const tx = await this.contract.liquidate(positionId);
     await tx.wait();
@@ -241,6 +255,91 @@ export class SettlementService {
 
   async getSubAccountEquity(trader: string, subAccountId: bigint): Promise<bigint> {
     return await this.contract.getSubAccountEquity(trader, subAccountId);
+  }
+
+  /**
+   * Admin monitoring helper: enumerate every position ever created on-chain
+   * by walking PerpStorage's nextPositionId counter. Positions are returned
+   * as raw structs annotated with a resolved `active` flag so callers can
+   * split them into "open" vs "closed" without a second contract call.
+   */
+  async getAllPositionsFromChain(): Promise<any[]> {
+    const perpStorageAbi = [
+      "function nextPositionId() view returns (uint256)",
+      "function getPosition(uint256) view returns (tuple(address trader, uint8 side, uint256 exposure, uint256 margin, uint256 entryPrice, uint256 liquidationPrice, uint256 bankruptcyPrice, int256 entryFunding, uint8 marginMode, bytes32 marketId, uint256 subAccountId, address collateralToken, bool active))",
+    ];
+    const perpStorage = new ethers.Contract(this.deployment.addresses.perpStorage, perpStorageAbi, this.provider);
+
+    const nextId: bigint = await perpStorage.nextPositionId();
+    const total = Number(nextId);
+
+    if (total <= 1) return [];
+
+    const ids = Array.from({ length: total - 1 }, (_, i) => i + 1);
+    const positions = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const position = await perpStorage.getPosition(id);
+          if (!position || String(position.trader) === ethers.ZeroAddress) return null;
+
+          const sideValue = Number(position.side);
+          return {
+            positionId: id.toString(),
+            trader: String(position.trader),
+            side: sideValue === 0 ? "LONG" : "SHORT",
+            marketId: String(position.marketId),
+            subAccountId: position.subAccountId.toString(),
+            exposureUsd: ethers.formatUnits(position.exposure, 18),
+            marginUsd: ethers.formatUnits(position.margin, 18),
+            entryPriceUsd: ethers.formatUnits(position.entryPrice, 18),
+            liquidationPriceUsd: ethers.formatUnits(position.liquidationPrice, 18),
+            active: Boolean(position.active),
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return positions.filter((p): p is NonNullable<typeof p> => p !== null);
+  }
+
+  /**
+   * Admin monitoring helper: query PositionManager's `PositionClosed` events
+   * to build a realized-PnL history. Closed positions are removed from the
+   * trader's active position array on-chain, so events are the only durable
+   * source of realized PnL.
+   */
+  async getClosedPositionsFromChain(fromBlock?: number, toBlock?: number): Promise<any[]> {
+    const positionManagerAbi = [
+      "event PositionClosed(uint256 indexed positionId, address indexed trader, int256 pnl, int256 fundingPayment, int256 totalReturn)",
+    ];
+    const positionManager = new ethers.Contract(
+      this.deployment.addresses.positionManager,
+      positionManagerAbi,
+      this.provider
+    );
+
+    const latestBlock = await this.provider.getBlockNumber();
+    const startBlock = fromBlock ?? Math.max(latestBlock - 100_000, 0);
+    const endBlock = toBlock ?? latestBlock;
+
+    const filter = positionManager.filters.PositionClosed();
+    const events = await positionManager.queryFilter(filter, startBlock, endBlock);
+
+    return events.map((event) => {
+      const log = event as ethers.EventLog;
+      const args = log.args;
+      return {
+        positionId: args?.positionId?.toString() ?? "",
+        trader: args?.trader ?? "",
+        realizedPnlUsd: ethers.formatUnits(args?.pnl ?? 0n, 18),
+        fundingPaymentUsd: ethers.formatUnits(args?.fundingPayment ?? 0n, 18),
+        totalReturnUsd: ethers.formatUnits(args?.totalReturn ?? 0n, 18),
+        txHash: log.transactionHash,
+        blockNumber: log.blockNumber,
+      };
+    });
   }
 
   async getSubAccounts(trader: string): Promise<unknown[]> {

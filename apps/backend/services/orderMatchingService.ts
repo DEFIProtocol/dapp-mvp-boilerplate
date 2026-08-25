@@ -64,13 +64,15 @@ export class OrderMatchingEngine {
         for (const shortOrder of shortOrders) {
           if (parseFloat(shortOrder.remaining_size) <= 0) continue;
 
-          // Check if prices overlap
+          // Check if prices overlap. A missing/zero limit price means "market
+          // order" and always crosses (mirrors OrderLib.doOrdersCross on-chain).
           const longPrice = parseFloat(longOrder.limit_price || '0');
           const shortPrice = parseFloat(shortOrder.limit_price || '0');
+          const crosses = longPrice === 0 || shortPrice === 0 || longPrice >= shortPrice;
 
-          if (longPrice >= shortPrice) {
+          if (crosses) {
             // Match found! Execute at maker's price (better for taker)
-            const matchPrice = longOrder.created_at < shortOrder.created_at ? longPrice : shortPrice;
+            const matchPrice = this.resolveMatchPrice(longOrder, shortOrder, longPrice, shortPrice);
             const matchSize = Math.min(
               parseFloat(longOrder.remaining_size),
               parseFloat(shortOrder.remaining_size)
@@ -93,7 +95,20 @@ export class OrderMatchingEngine {
 
               console.log(`[OrderMatching] Matched ${matchSize} @ $${matchPrice} - LONG: ${longOrder.order_id.slice(0, 10)}... SHORT: ${shortOrder.order_id.slice(0, 10)}...`);
             } catch (error) {
-              console.error(`[OrderMatching] Failed to execute match:`, error);
+              const message = error instanceof Error ? error.message : String(error);
+              console.error(`[OrderMatching] Failed to execute match between ${longOrder.order_id} and ${shortOrder.order_id}:`, message);
+
+              // Permanent/validation failures should not be retried forever -
+              // reject the order(s) that are structurally invalid so they stop
+              // clogging the book. Transient/network failures are left as
+              // 'pending' so the next matching cycle retries them.
+              const permanent = /invalid signature|expired|nonce|market mismatch|not tradeable|missing signature|missing expiry/i.test(message);
+              if (permanent) {
+                await orderHelpers.markOrderRejected(this.pool, longOrder.order_id, message);
+                await orderHelpers.markOrderRejected(this.pool, shortOrder.order_id, message);
+                longOrder.remaining_size = '0';
+                shortOrder.remaining_size = '0';
+              }
             }
           }
 
@@ -110,7 +125,50 @@ export class OrderMatchingEngine {
   }
 
   /**
-   * Execute a match on-chain and update database
+   * Resolve the price a crossing match should settle at. Mirrors
+   * OrderLib.getMatchPrice: if both sides posted a limit price, use the
+   * midpoint; otherwise fall back to the maker's limit price (a pure
+   * market/market cross is priced by the contract's own mark price, so we
+   * just pass 0 through and let matchSize/price be recomputed on-chain).
+   */
+  private resolveMatchPrice(
+    longOrder: orderHelpers.PerpOrder,
+    shortOrder: orderHelpers.PerpOrder,
+    longPrice: number,
+    shortPrice: number
+  ): number {
+    if (longPrice > 0 && shortPrice > 0) {
+      return (longPrice + shortPrice) / 2;
+    }
+    // One side is a market order - use whichever side actually posted a limit,
+    // otherwise fall back to maker priority (earlier order).
+    if (longPrice > 0) return longPrice;
+    if (shortPrice > 0) return shortPrice;
+    return longOrder.created_at < shortOrder.created_at ? longPrice : shortPrice;
+  }
+
+  /**
+   * Build an OrderLib.Order-compatible struct from a stored order row.
+   */
+  private toOnChainOrder(order: orderHelpers.PerpOrder, sideValue: 0 | 1) {
+    return {
+      trader: order.trader_address,
+      side: sideValue,
+      exposure: ethers.parseUnits(order.original_size, 18),
+      limitPrice: ethers.parseUnits(order.limit_price || '0', 18),
+      expiry: BigInt(order.expiry),
+      nonce: BigInt(order.nonce),
+      marketId: order.market_id,
+    };
+  }
+
+  /**
+   * Execute a match on-chain and update database.
+   *
+   * The SettlementEngine contract verifies a real EIP-712 signature per
+   * order (OrderLib.verifySignature), so the signature stored with each
+   * order at placement time (signed client-side by the trader's wallet)
+   * must be passed through untouched here - the backend cannot forge it.
    */
   private async executeMatch(
     longOrder: orderHelpers.PerpOrder,
@@ -118,40 +176,26 @@ export class OrderMatchingEngine {
     matchSize: number,
     matchPrice: number
   ): Promise<MatchResult> {
+    if (!longOrder.signature || !shortOrder.signature) {
+      throw new Error('Order missing signature - cannot settle on-chain');
+    }
+    if (!longOrder.expiry || !shortOrder.expiry || !longOrder.nonce || !shortOrder.nonce) {
+      throw new Error('Order missing expiry/nonce - cannot settle on-chain');
+    }
+
     const settlement = new SettlementService();
     const matchId = ethers.id(`${longOrder.order_id}-${shortOrder.order_id}-${Date.now()}`);
 
-    // Prepare order objects for smart contract
-    // Note: You'll need to adjust this based on your actual order structure
-    const longOrderData = {
-      trader: longOrder.trader_address,
-      marketId: longOrder.market_id,
-      side: 0, // LONG
-      size: ethers.parseUnits(longOrder.original_size, 18),
-      price: ethers.parseUnits(longOrder.limit_price || '0', 18),
-      // Add other required fields
-    };
-
-    const shortOrderData = {
-      trader: shortOrder.trader_address,
-      marketId: shortOrder.market_id,
-      side: 1, // SHORT
-      size: ethers.parseUnits(shortOrder.original_size, 18),
-      price: ethers.parseUnits(shortOrder.limit_price || '0', 18),
-      // Add other required fields
-    };
-
-    // For now, we'll use empty signatures (paper trading)
-    const longSignature = '0x';
-    const shortSignature = '0x';
+    const longOrderData = this.toOnChainOrder(longOrder, 0);
+    const shortOrderData = this.toOnChainOrder(shortOrder, 1);
 
     // Execute on-chain
     const txHash = await settlement.settleMatchWithRolesForMarket(
       longOrder.market_id,
       longOrderData,
-      longSignature,
+      longOrder.signature,
       shortOrderData,
-      shortSignature,
+      shortOrder.signature,
       ethers.parseUnits(matchSize.toString(), 18),
       shortOrder.created_at > longOrder.created_at // shortIsTaker
     );

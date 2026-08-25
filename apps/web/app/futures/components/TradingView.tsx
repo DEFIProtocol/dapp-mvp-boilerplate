@@ -53,7 +53,6 @@ export default function TradingView({
 }: TradingViewProps) {
   const { address } = useAccount();
   const [positions, setPositions] = useState<any[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   
   const feedId = PYTH_FEED_IDS[selectedSymbol];
 
@@ -69,7 +68,6 @@ export default function TradingView({
       try {
         const snapshot = await getTraderPerpPositions(address, selectedSymbol, selectedToken.token_address!);
         setPositions(snapshot.positions ?? []);
-        setPendingOrders(snapshot.pendingOrders ?? []);
       } catch (error) {
         console.error('Error fetching positions:', error);
       }
@@ -135,7 +133,6 @@ console.log("Selected Symbol:", selectedSymbol);
             address={address}
             symbol={selectedSymbol}
             positions={positions}
-            pendingOrders={pendingOrders}
           />
         </div>
       </div>

@@ -1,8 +1,17 @@
 // components/trading/PerpetualCard.tsx
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSignTypedData } from 'wagmi';
+import { parseUnits } from 'viem';
 import { getTraderPerpPositions, placePerpOrder } from '@/lib/api/perpsTrading';
+import {
+  ORDER_TYPES,
+  buildOrderDomain,
+  generateOrderExpiry,
+  generateOrderNonce,
+  getOrderSigningConfig,
+  resolveMarketIdBytes32,
+} from '@/lib/api/perpOrderSigning';
 import type { OrderType, TraderPositionSnapshot, PendingPerpOrder } from '@/types/perpsTrading';
 import { TrendingUp, TrendingDown, Settings, Lock, Edit2, Zap } from 'lucide-react';
 import styles from './styles/PerpetualCard.module.css';
@@ -23,6 +32,7 @@ export default function PerpetualCard({
   fundingRate = 0.001,
 }: PerpetualCardProps) {
   const { address } = useAccount();
+  const { signTypedDataAsync } = useSignTypedData();
   const [leverage, setLeverage] = useState(10);
   const [isEditingLeverage, setIsEditingLeverage] = useState(false);
   const [leverageInput, setLeverageInput] = useState('10');
@@ -139,7 +149,39 @@ export default function PerpetualCard({
 
     try {
       const exposureUsd = positionSize * leverage;
-      
+      const hasLimitPrice = orderType === 'limit' && limitPrice !== null && limitPrice > 0;
+
+      // Build the on-chain OrderLib.Order struct and ask the trader's wallet
+      // to sign it via EIP-712. The order matching engine can only settle
+      // this on-chain once matched against an opposing order if it carries
+      // a real signature from `trader` - the backend cannot forge this.
+      const signingConfig = await getOrderSigningConfig();
+      const marketId = resolveMarketIdBytes32(symbol);
+      const expiry = generateOrderExpiry();
+      const nonce = generateOrderNonce();
+      // Contracts store USD amounts as 18-decimal fixed point. Use viem's
+      // parseUnits (string-based) rather than floating point math to avoid
+      // precision loss once values are scaled by 1e18.
+      const exposureWei = parseUnits(exposureUsd.toFixed(6), 18);
+      const limitPriceWei = hasLimitPrice ? parseUnits((limitPrice as number).toFixed(6), 18) : 0n;
+
+      const orderMessage = {
+        trader: address as `0x${string}`,
+        side: side === 'LONG' ? 0 : 1,
+        exposure: exposureWei,
+        limitPrice: limitPriceWei,
+        expiry,
+        nonce,
+        marketId,
+      };
+
+      const signature = await signTypedDataAsync({
+        domain: buildOrderDomain(signingConfig),
+        types: ORDER_TYPES,
+        primaryType: 'Order',
+        message: orderMessage,
+      });
+
       // Build the order request
       const orderRequest: any = {
         chainId: 84532, // Base Sepolia testnet
@@ -150,10 +192,13 @@ export default function PerpetualCard({
         orderType,
         exposureUsd,
         leverage,
+        expiry: Number(expiry),
+        nonce: nonce.toString(),
+        signature,
       };
       
       // Only include limitPrice if it's a limit order AND has a valid price
-      if (orderType === 'limit' && limitPrice !== null && limitPrice > 0) {
+      if (hasLimitPrice) {
         orderRequest.limitPrice = limitPrice;
       }
       

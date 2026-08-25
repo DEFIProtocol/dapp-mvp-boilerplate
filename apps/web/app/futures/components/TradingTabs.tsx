@@ -9,10 +9,9 @@ interface TradingTabsProps {
   address?: string;
   symbol?: string;
   positions: any[];
-  pendingOrders: any[];
 }
 
-export default function TradingTabs({ address, symbol, positions, pendingOrders }: TradingTabsProps) {
+export default function TradingTabs({ address, symbol, positions }: TradingTabsProps) {
   const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history'>('positions');
 
   return (

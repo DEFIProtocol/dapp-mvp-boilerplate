@@ -25,8 +25,6 @@ type OrderIntent = {
   status: "queued";
 };
 
-const orderIntentStore = new Map<string, OrderIntent[]>();
-
 function getSettlementService() {
   try {
     return { settlement: new SettlementService() };
@@ -45,15 +43,26 @@ function resolveMarketId(symbol: string, provided?: string): string {
   return ethers.encodeBytes32String(`${symbol.toUpperCase()}/USD`);
 }
 
-function getOrderIntentsForTrader(trader: string): OrderIntent[] {
-  return orderIntentStore.get(trader.toLowerCase()) ?? [];
-}
-
-function pushOrderIntent(intent: OrderIntent) {
-  const key = intent.trader.toLowerCase();
-  const existing = orderIntentStore.get(key) ?? [];
-  existing.unshift(intent);
-  orderIntentStore.set(key, existing.slice(0, 50));
+/**
+ * Map a Postgres perp_orders row (the real source of truth, also consumed
+ * by the order matching engine) into the PendingPerpOrder shape the
+ * frontend already expects from earlier in-memory-store days.
+ */
+function toOrderIntent(row: orderHelpers.PerpOrder): OrderIntent {
+  return {
+    id: row.order_id,
+    createdAt: new Date(row.created_at).toISOString(),
+    symbol: row.symbol,
+    marketId: row.market_id,
+    perpAddress: row.symbol, // resolved by caller when a token lookup is available
+    trader: row.trader_address,
+    side: row.side,
+    orderType: row.order_type,
+    exposureUsd: Number(row.remaining_size),
+    leverage: Number(row.leverage),
+    limitPrice: row.limit_price != null ? Number(row.limit_price) : undefined,
+    status: "queued",
+  };
 }
 
 export default function perpsPaperTradingRouter(pool: Pool) {
@@ -78,6 +87,9 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         exposureUsd,
         leverage,
         limitPrice,
+        expiry,
+        nonce,
+        signature,
       } = req.body ?? {};
 
       const chainGuard = ensurePaperTradingChain(chainId);
@@ -121,6 +133,20 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         return res.status(400).json({ success: false, error: "limitPrice must be a positive number for limit orders" });
       }
 
+      if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+        return res.status(400).json({ success: false, error: "signature must be a valid 65-byte EIP-712 signature" });
+      }
+
+      const expiryValue = parseNumeric(expiry);
+      if (expiryValue === null || expiryValue <= Math.floor(Date.now() / 1000)) {
+        return res.status(400).json({ success: false, error: "expiry must be a future unix timestamp" });
+      }
+
+      const nonceValue = parseNumeric(nonce);
+      if (nonceValue === null || nonceValue < 0) {
+        return res.status(400).json({ success: false, error: "nonce must be a non-negative number" });
+      }
+
       const perpToken = await perpsHelpers.getPerpsTokenBySymbol(pool, symbol);
       if (!perpToken) {
         return res.status(404).json({ success: false, error: `Unknown perp symbol: ${symbol}` });
@@ -155,6 +181,9 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         leverage: leverageValue.toString(),
         limit_price: limitPriceValue?.toString(),
         status: orderType === 'market' ? 'pending' : 'pending',
+        expiry: expiryValue.toString(),
+        nonce: nonceValue.toString(),
+        signature,
       });
 
       // Log order creation
@@ -167,7 +196,10 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         limitPrice: limitPriceValue,
       });
 
-      // Also keep in memory for backward compatibility
+      // Response shape kept identical to the pre-existing PendingPerpOrder
+      // contract the frontend already expects (order is now durably
+      // persisted in Postgres via orderHelpers.createOrder above, and is
+      // what the OrderMatchingEngine actually reads from to settle on-chain).
       const intent: OrderIntent = {
         id: orderId,
         createdAt: dbOrder.created_at,
@@ -183,8 +215,6 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         limitPrice: limitPriceValue === null ? undefined : limitPriceValue,
         status: "queued",
       };
-
-      pushOrderIntent(intent);
 
       res.json({
         success: true,
@@ -259,12 +289,15 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         settlement.getMarkPrice(),
       ]);
 
-      const intents = getOrderIntentsForTrader(trader).filter((intent) => {
-        if (symbol && intent.symbol !== symbol.toUpperCase()) return false;
-        if (marketId && intent.marketId.toLowerCase() !== marketId.toLowerCase()) return false;
-        if (subAccountId && intent.subAccountId !== subAccountId) return false;
-        return true;
-      });
+      const pendingOrderRows = await orderHelpers.getOrdersByTrader(pool, trader.toLowerCase());
+      const intents = pendingOrderRows
+        .filter((order) => order.status === "pending" || order.status === "partial")
+        .filter((order) => {
+          if (symbol && order.symbol !== symbol.toUpperCase()) return false;
+          if (marketId && order.market_id.toLowerCase() !== marketId.toLowerCase()) return false;
+          return true;
+        })
+        .map((order) => ({ ...toOrderIntent(order), perpAddress: perpAddress ?? tokenAddress ?? order.symbol }));
 
       res.json({
         success: true,
@@ -368,6 +401,90 @@ export default function perpsPaperTradingRouter(pool: Pool) {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Contract addresses/chain info the frontend needs to build the EIP-712
+  // domain for order signing (SettlementEngine verifies OrderLib signatures).
+  router.get("/orders/config", async (_req, res) => {
+    const { settlement, error } = getSettlementService();
+    if (!settlement) {
+      return res.status(503).json({ success: false, error });
+    }
+
+    try {
+      const addresses = settlement.getContractAddresses();
+      res.json({ success: true, ...addresses });
+    } catch (routeError) {
+      console.error("Error fetching order signing config:", routeError);
+      res.status(500).json({
+        success: false,
+        error: routeError instanceof Error ? routeError.message : "Unknown error",
+      });
+    }
+  });
+
+  // Admin monitoring: every open order across all traders (Postgres, the
+  // same table the matching engine reads from).
+  router.get("/admin/orders", async (req, res) => {
+    try {
+      const statusParam = typeof req.query.status === "string" ? req.query.status : undefined;
+      const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()) : undefined;
+      const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 200;
+
+      const orders = await orderHelpers.getAllOrders(pool, statuses, Number.isFinite(limit) ? limit : 200);
+
+      res.json({ success: true, orders });
+    } catch (routeError) {
+      console.error("Error fetching admin order list:", routeError);
+      res.status(500).json({
+        success: false,
+        error: routeError instanceof Error ? routeError.message : "Unknown error",
+      });
+    }
+  });
+
+  // Admin monitoring: every position that exists on-chain right now
+  // (PerpStorage, walked by positionId), split into open/closed.
+  router.get("/admin/positions", async (_req, res) => {
+    const { settlement, error } = getSettlementService();
+    if (!settlement) {
+      return res.status(503).json({ success: false, error });
+    }
+
+    try {
+      const positions = await settlement.getAllPositionsFromChain();
+      res.json({
+        success: true,
+        open: positions.filter((p) => p.active),
+        closed: positions.filter((p) => !p.active),
+      });
+    } catch (routeError) {
+      console.error("Error fetching admin position list:", routeError);
+      res.status(500).json({
+        success: false,
+        error: routeError instanceof Error ? routeError.message : "Unknown error",
+      });
+    }
+  });
+
+  // Admin monitoring: realized PnL history sourced from PositionClosed events.
+  router.get("/admin/closed-positions", async (req, res) => {
+    const { settlement, error } = getSettlementService();
+    if (!settlement) {
+      return res.status(503).json({ success: false, error });
+    }
+
+    try {
+      const fromBlock = typeof req.query.fromBlock === "string" ? parseInt(req.query.fromBlock, 10) : undefined;
+      const closed = await settlement.getClosedPositionsFromChain(fromBlock);
+      res.json({ success: true, closed });
+    } catch (routeError) {
+      console.error("Error fetching closed position history:", routeError);
+      res.status(500).json({
+        success: false,
+        error: routeError instanceof Error ? routeError.message : "Unknown error",
       });
     }
   });
