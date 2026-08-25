@@ -1,5 +1,5 @@
 {
-  "network": "baseSepolia",
+  "network": "sepolia",
   "timestamp": "2026-08-25T00:30:19.117Z",
   "deployer": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
   "addresses": {

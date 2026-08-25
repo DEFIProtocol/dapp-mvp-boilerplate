@@ -27,6 +27,8 @@ services:
         value: production
       - key: NEXT_PUBLIC_API_BASE_URL
         value: https://dapp-backend.onrender.com
+      - key: NEXT_PUBLIC_PAPER_TRADING_USDC_ADDRESS
+        value: "0xa8ca857605523931e3b39cC947080C403F4B4FB8"
 
 databases:
   - name: dapp-postgres
