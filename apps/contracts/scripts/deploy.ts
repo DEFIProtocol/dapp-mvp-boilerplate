@@ -14,6 +14,13 @@ type DeployConfig = {
   oracle: string;
   feedId: string;
   verify: boolean;
+  /** Set when this run freshly deployed MockUSDCFaucet as the collateral token, so it can be verified too. */
+  newlyDeployedFaucet?: {
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
 };
 
 type ModuleAddresses = {
@@ -87,17 +94,28 @@ async function resolveCoreDependencyAddresses(
   insuranceFund: string;
   protocolTreasury: string;
   oracle: string;
+  newlyDeployedFaucet?: DeployConfig["newlyDeployedFaucet"];
 }> {
   const autoDeploy = shouldAutoDeployPrereqs(networkName);
 
   let collateralToken = process.env.COLLATERAL_TOKEN;
+  let newlyDeployedFaucet: DeployConfig["newlyDeployedFaucet"];
   if (!collateralToken && autoDeploy) {
+    const faucetName = process.env.FAUCET_TOKEN_NAME ?? "USD Coin";
+    const faucetSymbol = process.env.FAUCET_TOKEN_SYMBOL ?? "USDC";
+    const faucetDecimals = Number(process.env.FAUCET_TOKEN_DECIMALS ?? "6");
     console.log("COLLATERAL_TOKEN not set. Deploying MockUSDCFaucet...");
     const MockUSDC = await ethersLike.getContractFactory("MockUSDCFaucet");
-    const usdc = await MockUSDC.deploy("USD Coin", "USDC", 6);
+    const usdc = await MockUSDC.deploy(faucetName, faucetSymbol, faucetDecimals);
     await usdc.waitForDeployment();
     collateralToken = await usdc.getAddress();
     console.log(`MockUSDCFaucet: ${collateralToken}`);
+    newlyDeployedFaucet = {
+      address: collateralToken,
+      name: faucetName,
+      symbol: faucetSymbol,
+      decimals: faucetDecimals,
+    };
   }
   if (!collateralToken) {
     throw new Error("Missing required env var: COLLATERAL_TOKEN");
@@ -151,6 +169,7 @@ async function resolveCoreDependencyAddresses(
     insuranceFund,
     protocolTreasury,
     oracle,
+    newlyDeployedFaucet,
   };
 }
 
@@ -162,6 +181,7 @@ async function loadConfig(networkName: string, ethersLike: any, deployerAddress:
     insuranceFund,
     protocolTreasury,
     oracle,
+    newlyDeployedFaucet,
   } = await resolveCoreDependencyAddresses(networkName, ethersLike, deployerAddress);
 
   const feedId = process.env.MARKET_FEED_ID ?? "";
@@ -185,6 +205,7 @@ async function loadConfig(networkName: string, ethersLike: any, deployerAddress:
     oracle,
     feedId: resolvedFeedId,
     verify,
+    newlyDeployedFaucet,
   };
 }
 
@@ -303,7 +324,21 @@ async function verifyContracts(
 ): Promise<void> {
   console.log("\nVerifying contracts...");
 
-  const verifyJobs: Array<{ name: string; address: string; constructorArguments: unknown[] }> = [
+  const verifyJobs: Array<{ name: string; address: string; constructorArguments: unknown[] }> = [];
+
+  if (config.newlyDeployedFaucet) {
+    verifyJobs.push({
+      name: "MockUSDCFaucet",
+      address: config.newlyDeployedFaucet.address,
+      constructorArguments: [
+        config.newlyDeployedFaucet.name,
+        config.newlyDeployedFaucet.symbol,
+        config.newlyDeployedFaucet.decimals,
+      ],
+    });
+  }
+
+  verifyJobs.push(
     {
       name: "PerpEngine",
       address: perpEngineAddress,
@@ -395,7 +430,7 @@ async function verifyContracts(
         modules.positionManager,
       ],
     },
-  ];
+  );
 
   for (const job of verifyJobs) {
     try {

@@ -58,4 +58,20 @@ export default defineConfig({
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
   },
+  // Etherscan's V2 API is unified across all supported chains (including Base
+  // and Base Sepolia) behind a single API key - no separate Basescan key or
+  // customChains entry is needed. Set ETHERSCAN_API_KEY in apps/contracts/.env,
+  // then run deploy.ts with VERIFY=true (or `npx hardhat verify --network
+  // baseSepolia <address> <constructorArgs...>`).
+  //
+  // Blockscout verification (Base Sepolia has a Blockscout instance too) needs
+  // no API key at all and is enabled by default as a free fallback.
+  verify: {
+    etherscan: {
+      apiKey: configVariable("ETHERSCAN_API_KEY"),
+    },
+    blockscout: {
+      enabled: true,
+    },
+  },
 });
