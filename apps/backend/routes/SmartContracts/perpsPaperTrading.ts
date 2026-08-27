@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import { SettlementService } from "./settlementService";
 import * as perpsHelpers from "../../postgres/perps";
 import * as orderHelpers from "../../postgres/perpOrders";
-import { ensurePaperTradingChain, parseNumeric } from "./paperTradingGuards";
+import { ensurePaperTradingChain, parseNumeric, parseBigNumeric } from "./paperTradingGuards";
 
 type OrderSide = "LONG" | "SHORT";
 type OrderType = "market" | "limit";
@@ -142,9 +142,13 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         return res.status(400).json({ success: false, error: "expiry must be a future unix timestamp" });
       }
 
-      const nonceValue = parseNumeric(nonce);
-      if (nonceValue === null || nonceValue < 0) {
-        return res.status(400).json({ success: false, error: "nonce must be a non-negative number" });
+      // Nonces are generated client-side as bigint millisecond timestamps
+      // and sent as numeric strings to avoid precision loss beyond
+      // Number.MAX_SAFE_INTEGER, so they can't be validated with the
+      // plain-number parseNumeric() used for the other numeric fields.
+      const nonceValue = parseBigNumeric(nonce);
+      if (nonceValue === null) {
+        return res.status(400).json({ success: false, error: "nonce must be a non-negative integer" });
       }
 
       const perpToken = await perpsHelpers.getPerpsTokenBySymbol(pool, symbol);
@@ -182,7 +186,7 @@ export default function perpsPaperTradingRouter(pool: Pool) {
         limit_price: limitPriceValue?.toString(),
         status: orderType === 'market' ? 'pending' : 'pending',
         expiry: expiryValue.toString(),
-        nonce: nonceValue.toString(),
+        nonce: nonceValue,
         signature,
       });
 
@@ -320,6 +324,29 @@ export default function perpsPaperTradingRouter(pool: Pool) {
     }
   });
 
+  // Contract addresses/chain info the frontend needs to build the EIP-712
+  // domain for order signing (SettlementEngine verifies OrderLib signatures).
+  // NOTE: this must be registered before "/orders/:trader" below, otherwise
+  // Express matches "config" as the :trader param and 400s before this
+  // handler is ever reached.
+  router.get("/orders/config", async (_req, res) => {
+    const { settlement, error } = getSettlementService();
+    if (!settlement) {
+      return res.status(503).json({ success: false, error });
+    }
+
+    try {
+      const addresses = settlement.getContractAddresses();
+      res.json({ success: true, ...addresses });
+    } catch (routeError) {
+      console.error("Error fetching order signing config:", routeError);
+      res.status(500).json({
+        success: false,
+        error: routeError instanceof Error ? routeError.message : "Unknown error",
+      });
+    }
+  });
+
   // Get orders for a trader
   router.get("/orders/:trader", async (req, res) => {
     try {
@@ -401,26 +428,6 @@ export default function perpsPaperTradingRouter(pool: Pool) {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-  // Contract addresses/chain info the frontend needs to build the EIP-712
-  // domain for order signing (SettlementEngine verifies OrderLib signatures).
-  router.get("/orders/config", async (_req, res) => {
-    const { settlement, error } = getSettlementService();
-    if (!settlement) {
-      return res.status(503).json({ success: false, error });
-    }
-
-    try {
-      const addresses = settlement.getContractAddresses();
-      res.json({ success: true, ...addresses });
-    } catch (routeError) {
-      console.error("Error fetching order signing config:", routeError);
-      res.status(500).json({
-        success: false,
-        error: routeError instanceof Error ? routeError.message : "Unknown error",
       });
     }
   });
