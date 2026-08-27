@@ -6,6 +6,14 @@ import path from "path";
 
 // IMPORTANT: Load .env BEFORE importing environment config
 // This ensures process.env is populated when environment.ts reads it
+//
+// NOTE: this project keeps a separate .env per app (apps/backend/.env,
+// apps/contracts/.env, apps/web/.env) - there is no workspace-root .env.
+// Load apps/backend/.env (a sibling of this file) so DATABASE_URL,
+// REDIS_HOST, ONEINCH_API_KEY, etc. are actually picked up in development.
+// Fall back to a workspace-root .env if one is ever added later, without
+// overriding anything apps/backend/.env already set.
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { connectRedis } from "./redis";
@@ -90,12 +98,27 @@ if (isSQLiteMode) {
     max: 0, // No connections
   });
 } else {
-  // PostgreSQL connection with SSL support (required for Render and most cloud providers)
+  // Local Postgres installs (e.g. `localhost`/`127.0.0.1` during development) do
+  // not have SSL enabled by default and will reject SSL-negotiated connections
+  // with "The server does not support SSL connections". Cloud providers like
+  // Render require SSL. Detect the target host and only request SSL when it's
+  // not a local database, so `DATABASE_URL` can point at either without code
+  // changes.
+  let isLocalDatabase = false;
+  try {
+    const { hostname } = new URL(ENV.DATABASE_URL);
+    isLocalDatabase = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch (error) {
+    console.warn('⚠️ Could not parse DATABASE_URL to determine SSL requirement:', error);
+  }
+
   pool = new Pool({
     connectionString: ENV.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // Required for Render and most cloud PostgreSQL
-    },
+    ssl: isLocalDatabase
+      ? false
+      : {
+          rejectUnauthorized: false, // Required for Render and most cloud PostgreSQL
+        },
   });
 }
 

@@ -30,7 +30,21 @@ export async function ensureDatabaseExists(connectionString: string): Promise<vo
     throw new Error("DATABASE_URL does not include a database name");
   }
 
-  const client = new Client({ connectionString: adminUrl });
+  // Mirror the SSL detection used for the main pool in index.ts: local Postgres
+  // installs reject SSL-negotiated connections, while cloud providers (Render,
+  // etc.) require SSL.
+  let isLocalDatabase = false;
+  try {
+    const { hostname } = new URL(adminUrl);
+    isLocalDatabase = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    // If parsing fails, fall back to no SSL (matches previous behavior).
+  }
+
+  const client = new Client({
+    connectionString: adminUrl,
+    ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
+  });
 
   try {
     await client.connect();
