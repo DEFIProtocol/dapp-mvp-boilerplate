@@ -10,6 +10,7 @@ import PerpetualCard from "./PerpetualCard";
 import MarketHeader from "./MarketHeader";
 import TradingTabs from "./TradingTabs";
 import { getTraderPerpPositions } from "@/lib/api/perpsTrading";
+import type { TraderPositionSnapshot, PendingPerpOrder } from "@/types/perpsTrading";
 import styles from "./styles/TradingView.module.css";
 
 interface TradingViewProps {
@@ -52,7 +53,11 @@ export default function TradingView({
   onTimeframeChange
 }: TradingViewProps) {
   const { address } = useAccount();
-  const [positions, setPositions] = useState<any[]>([]);
+  const [positions, setPositions] = useState<TraderPositionSnapshot[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<PendingPerpOrder[]>([]);
+  const [markPriceUsd, setMarkPriceUsd] = useState<number>(0);
+  const [positionsError, setPositionsError] = useState<string | null>(null);
+  const [refreshingPositions, setRefreshingPositions] = useState(false);
   
   const feedId = PYTH_FEED_IDS[selectedSymbol];
 
@@ -60,21 +65,37 @@ export default function TradingView({
   const { data: priceData } = usePythPriceWithConfidence(feedId, 400);
   const { data: fundingData } = usePythFundingRate(feedId, 400);
 
-  // Fetch positions
+  // Fetch positions once here and share the result with PerpetualCard below
+  // (via props) instead of each component polling the backend/RPC
+  // independently on its own 15s timer - that duplication was doubling our
+  // on-chain read traffic for no benefit.
+  const refreshPositions = async () => {
+    if (!address || !selectedToken.token_address) {
+      setPositions([]);
+      setPendingOrders([]);
+      return;
+    }
+
+    setRefreshingPositions(true);
+    try {
+      const snapshot = await getTraderPerpPositions(address, selectedSymbol, selectedToken.token_address);
+      setPositions(snapshot.positions ?? []);
+      setPendingOrders(snapshot.pendingOrders ?? []);
+      setMarkPriceUsd(snapshot.markPriceUsd ?? 0);
+      setPositionsError(null);
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      setPositionsError(error instanceof Error ? error.message : 'Failed to load trader positions');
+    } finally {
+      setRefreshingPositions(false);
+    }
+  };
+
   useEffect(() => {
     if (!address || !selectedToken.token_address) return;
 
-    const fetchPositions = async () => {
-      try {
-        const snapshot = await getTraderPerpPositions(address, selectedSymbol, selectedToken.token_address!);
-        setPositions(snapshot.positions ?? []);
-      } catch (error) {
-        console.error('Error fetching positions:', error);
-      }
-    };
-
-    fetchPositions();
-    const interval = setInterval(fetchPositions, 15000);
+    refreshPositions();
+    const interval = setInterval(refreshPositions, 15000);
     return () => clearInterval(interval);
   }, [address, selectedSymbol, selectedToken.token_address]);
   
@@ -124,6 +145,12 @@ console.log("Selected Symbol:", selectedSymbol);
               perpAddress={selectedToken.token_address}
               price={priceData?.price || 0}
               fundingRate={fundingData?.funding_rate || 0.0085}
+              positions={positions}
+              pendingOrders={pendingOrders}
+              markPriceUsd={markPriceUsd}
+              positionsError={positionsError}
+              refreshingPositions={refreshingPositions}
+              refreshPositions={refreshPositions}
             />
           </div>
         </div>

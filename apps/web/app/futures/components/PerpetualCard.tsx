@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAccount, useSignTypedData } from 'wagmi';
 import { parseUnits } from 'viem';
-import { getTraderPerpPositions, placePerpOrder } from '@/lib/api/perpsTrading';
+import { placePerpOrder } from '@/lib/api/perpsTrading';
 import {
   ORDER_TYPES,
   buildOrderDomain,
@@ -22,6 +22,12 @@ interface PerpetualCardProps {
   perpAddress?: string;
   price: number;
   fundingRate?: number;
+  positions?: TraderPositionSnapshot[];
+  pendingOrders?: PendingPerpOrder[];
+  markPriceUsd?: number;
+  positionsError?: string | null;
+  refreshingPositions?: boolean;
+  refreshPositions?: () => Promise<void>;
 }
 
 export default function PerpetualCard({ 
@@ -30,6 +36,12 @@ export default function PerpetualCard({
   perpAddress,
   price,
   fundingRate = 0.001,
+  positions = [],
+  pendingOrders = [],
+  markPriceUsd = 0,
+  positionsError = null,
+  refreshingPositions = false,
+  refreshPositions,
 }: PerpetualCardProps) {
   const { address } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
@@ -40,12 +52,8 @@ export default function PerpetualCard({
   const [orderType, setOrderType] = useState<OrderType>('market');
   const [limitPrice, setLimitPrice] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
-  const [positions, setPositions] = useState<TraderPositionSnapshot[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<PendingPerpOrder[]>([]);
-  const [markPriceUsd, setMarkPriceUsd] = useState<number>(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,33 +67,7 @@ export default function PerpetualCard({
     }
   }, [isEditingLeverage]);
 
-  const refreshPositions = async () => {
-    if (!address || !perpAddress) {
-      setPositions([]);
-      setPendingOrders([]);
-      return;
-    }
 
-    setRefreshing(true);
-    try {
-      const snapshot = await getTraderPerpPositions(address, symbol, perpAddress);
-      setPositions(snapshot.positions ?? []);
-      setPendingOrders(snapshot.pendingOrders ?? []);
-      setMarkPriceUsd(snapshot.markPriceUsd ?? 0);
-      setApiError(null);
-    } catch (error) {
-      setApiError(error instanceof Error ? error.message : 'Failed to load trader positions');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!address || !perpAddress) return;
-    refreshPositions();
-    const timer = setInterval(refreshPositions, 15000);
-    return () => clearInterval(timer);
-  }, [address, perpAddress, symbol]);
 
   const calculateLiquidationPrice = () => {
     const maintenanceMargin = 0.005;
@@ -205,7 +187,7 @@ export default function PerpetualCard({
       const response = await placePerpOrder(orderRequest);
 
       setApiMessage(`Order queued at mark $${(response.onChain?.markPriceUsd ?? 0).toFixed(2)}`);
-      await refreshPositions();
+      await refreshPositions?.();
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Failed to place order');
     } finally {
@@ -417,6 +399,7 @@ export default function PerpetualCard({
         </div>
         
         {apiError && <div className={styles.errorText}>{apiError}</div>}
+        {!apiError && positionsError && <div className={styles.errorText}>{positionsError}</div>}
         {apiMessage && <div className={styles.successText}>{apiMessage}</div>}
       </div>
 

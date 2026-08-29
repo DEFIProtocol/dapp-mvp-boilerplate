@@ -13,11 +13,11 @@ const config = createConfig({
         ? `https://base-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
         : undefined
     ),
-    [baseSepolia.id]: http(
-      process.env.NEXT_PUBLIC_INFURA_API_KEY
-        ? `https://base-sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`
-        : 'https://sepolia.base.org'
-    ),
+    // Base Sepolia is this app's actual active chain (paper trading), and
+    // it has a solid free public RPC - use it unconditionally instead of
+    // burning Infura's daily quota for read traffic that doesn't need a
+    // paid provider.
+    [baseSepolia.id]: http('https://sepolia.base.org'),
     [mainnet.id]: http(
       process.env.NEXT_PUBLIC_INFURA_API_KEY
         ? `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_API_KEY}`

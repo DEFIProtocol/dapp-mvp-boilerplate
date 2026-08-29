@@ -59,10 +59,20 @@ function requireEnv(name: string, value: string | undefined): string {
   return value.trim();
 }
 
+// Free, public Base Sepolia RPC. Used for all read-only (view) calls so we
+// don't burn Infura's daily request quota on traffic that never needs to
+// be signed or broadcast (mark price polling, position snapshots, admin
+// monitoring, etc.). Infura is reserved for the wallet/signer below, which
+// is only used for the handful of state-changing transactions this service
+// actually sends.
+const DEFAULT_READ_RPC_URL = "https://sepolia.base.org";
+
 export class SettlementService {
   private contract: ethers.Contract;
+  private readContract: ethers.Contract;
   private wallet: ethers.Wallet;
   private provider: ethers.JsonRpcProvider;
+  private readProvider: ethers.JsonRpcProvider;
   private settlementAddress: string;
   private usdcAddress: string;
   private deployment: DeploymentAddresses;
@@ -82,6 +92,9 @@ export class SettlementService {
     this.provider = new ethers.JsonRpcProvider(`https://${network}.infura.io/v3/${infuraApiKey}`);
     this.wallet = new ethers.Wallet(privateKey, this.provider);
 
+    const readRpcUrl = process.env.SETTLEMENT_READ_RPC_URL || DEFAULT_READ_RPC_URL;
+    this.readProvider = new ethers.JsonRpcProvider(readRpcUrl);
+
     // Cast the imported JSON data to our DeploymentAddresses type
     this.deployment = deploymentData as DeploymentAddresses;
     this.settlementAddress = this.deployment.addresses.perpEngine;
@@ -91,11 +104,21 @@ export class SettlementService {
     console.log(`[SettlementService] Network: ${this.deployment.network}`);
     console.log(`[SettlementService] Using settlement contract: ${this.settlementAddress}`);
     console.log(`[SettlementService] Using collateral token: ${this.usdcAddress}`);
+    console.log(`[SettlementService] Read-only RPC: ${readRpcUrl}`);
 
     this.contract = new ethers.Contract(
       this.settlementAddress,
       PerpEngineArtifact.abi, // Use .abi from the artifact
       this.wallet
+    );
+
+    // Read-only calls (getMarkPrice, position lookups, params, etc.) go
+    // through the free public RPC instead of Infura - see readContract
+    // usages below.
+    this.readContract = new ethers.Contract(
+      this.settlementAddress,
+      PerpEngineArtifact.abi,
+      this.readProvider
     );
   }
 
@@ -176,12 +199,12 @@ export class SettlementService {
   async getParams() {
     const [makerFeeBps, takerFeeBps, insuranceBps, maintenanceMarginBps, liquidationRewardBps, liquidationPenaltyBps] =
       await Promise.all([
-        this.contract.makerFeeBps(),
-        this.contract.takerFeeBps(),
-        this.contract.insuranceBps(),
-        this.contract.maintenanceMarginBps(),
-        this.contract.liquidationRewardBps(),
-        this.contract.liquidationPenaltyBps(),
+        this.readContract.makerFeeBps(),
+        this.readContract.takerFeeBps(),
+        this.readContract.insuranceBps(),
+        this.readContract.maintenanceMarginBps(),
+        this.readContract.liquidationRewardBps(),
+        this.readContract.liquidationPenaltyBps(),
       ]);
 
     return {
@@ -195,15 +218,15 @@ export class SettlementService {
   }
 
   async getMarkPrice(): Promise<bigint> {
-    return await this.contract.getMarkPrice();
+    return await this.readContract.getMarkPrice();
   }
 
   async getTraderPositionIds(trader: string): Promise<bigint[]> {
-    return await this.contract.getTraderPositions(trader);
+    return await this.readContract.getTraderPositions(trader);
   }
 
   async getPositionWithPnl(positionId: bigint): Promise<any> {
-    return await this.contract.getPositionWithPnL(positionId);
+    return await this.readContract.getPositionWithPnL(positionId);
   }
 
   async getTraderPositionSnapshots(
@@ -254,7 +277,7 @@ export class SettlementService {
   }
 
   async getSubAccountEquity(trader: string, subAccountId: bigint): Promise<bigint> {
-    return await this.contract.getSubAccountEquity(trader, subAccountId);
+    return await this.readContract.getSubAccountEquity(trader, subAccountId);
   }
 
   /**
@@ -268,7 +291,7 @@ export class SettlementService {
       "function nextPositionId() view returns (uint256)",
       "function getPosition(uint256) view returns (tuple(address trader, uint8 side, uint256 exposure, uint256 margin, uint256 entryPrice, uint256 liquidationPrice, uint256 bankruptcyPrice, int256 entryFunding, uint8 marginMode, bytes32 marketId, uint256 subAccountId, address collateralToken, bool active))",
     ];
-    const perpStorage = new ethers.Contract(this.deployment.addresses.perpStorage, perpStorageAbi, this.provider);
+    const perpStorage = new ethers.Contract(this.deployment.addresses.perpStorage, perpStorageAbi, this.readProvider);
 
     const nextId: bigint = await perpStorage.nextPositionId();
     const total = Number(nextId);
@@ -317,10 +340,10 @@ export class SettlementService {
     const positionManager = new ethers.Contract(
       this.deployment.addresses.positionManager,
       positionManagerAbi,
-      this.provider
+      this.readProvider
     );
 
-    const latestBlock = await this.provider.getBlockNumber();
+    const latestBlock = await this.readProvider.getBlockNumber();
     const startBlock = fromBlock ?? Math.max(latestBlock - 100_000, 0);
     const endBlock = toBlock ?? latestBlock;
 
@@ -343,7 +366,7 @@ export class SettlementService {
   }
 
   async getSubAccounts(trader: string): Promise<unknown[]> {
-    return await this.contract.getSubAccounts(trader);
+    return await this.readContract.getSubAccounts(trader);
   }
 
   async setFeeParams(makerFeeBps: number, takerFeeBps: number, insuranceBps: number) {
