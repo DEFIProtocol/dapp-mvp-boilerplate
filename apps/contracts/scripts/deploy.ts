@@ -20,6 +20,7 @@ type DeployConfig = {
     name: string;
     symbol: string;
     decimals: number;
+    initialOwner: string;
   };
 };
 
@@ -104,9 +105,36 @@ async function resolveCoreDependencyAddresses(
     const faucetName = process.env.FAUCET_TOKEN_NAME ?? "USD Coin";
     const faucetSymbol = process.env.FAUCET_TOKEN_SYMBOL ?? "USDC";
     const faucetDecimals = Number(process.env.FAUCET_TOKEN_DECIMALS ?? "6");
+
+    // ── Warning: fresh faucet deployment ────────────────────────────────────
+    // Every time this branch runs, a BRAND-NEW MockUSDCFaucet is deployed at
+    // a brand-new address with zero on-chain history. Wallet security
+    // providers (e.g. Blockaid, used by MetaMask) are more likely to flag
+    // brand-new, never-before-seen contracts with a public mint() function
+    // as suspicious - even though this faucet's mint is safely rate-limited.
+    // If COLLATERAL_TOKEN is already pinned from a previous deploy, THIS
+    // BRANCH IS SKIPPED and the existing, already-trusted faucet is reused
+    // instead - which is almost always what you want on baseSepolia.
+    // If you are seeing this message on a redeploy (not a first-time setup),
+    // it means COLLATERAL_TOKEN was not carried over into apps/contracts/.env
+    // and you are about to mint a new faucet the frontend/wallets don't
+    // recognize yet. Set COLLATERAL_TOKEN to the previous faucet address
+    // instead unless you genuinely want a new one.
+    console.warn(
+      "\n" +
+      "=".repeat(78) + "\n" +
+      "WARNING: COLLATERAL_TOKEN is not set - deploying a BRAND-NEW MockUSDCFaucet.\n" +
+      "This is a new contract address with no wallet/Blockaid reputation yet, and\n" +
+      "is the most common cause of the frontend faucet mint being flagged as a\n" +
+      "'malicious contract' warning in MetaMask right after this deploy.\n" +
+      "If you meant to reuse the existing faucet, cancel this run, set\n" +
+      "COLLATERAL_TOKEN=<previous faucet address> in apps/contracts/.env, and\n" +
+      "re-run the deploy.\n" +
+      "=".repeat(78) + "\n"
+    );
     console.log("COLLATERAL_TOKEN not set. Deploying MockUSDCFaucet...");
     const MockUSDC = await ethersLike.getContractFactory("MockUSDCFaucet");
-    const usdc = await MockUSDC.deploy(faucetName, faucetSymbol, faucetDecimals);
+    const usdc = await MockUSDC.deploy(faucetName, faucetSymbol, faucetDecimals, deployerAddress);
     await usdc.waitForDeployment();
     collateralToken = await usdc.getAddress();
     console.log(`MockUSDCFaucet: ${collateralToken}`);
@@ -115,6 +143,7 @@ async function resolveCoreDependencyAddresses(
       name: faucetName,
       symbol: faucetSymbol,
       decimals: faucetDecimals,
+      initialOwner: deployerAddress,
     };
   }
   if (!collateralToken) {
@@ -334,6 +363,7 @@ async function verifyContracts(
         config.newlyDeployedFaucet.name,
         config.newlyDeployedFaucet.symbol,
         config.newlyDeployedFaucet.decimals,
+        config.newlyDeployedFaucet.initialOwner,
       ],
     });
   }
@@ -707,6 +737,24 @@ async function main(): Promise<void> {
       protocolTreasury: resolvedProtocolTreasury,
     });
   }
+
+  // ── Faucet/collateral token address reminder ──────────────────────────────
+  // This is the single most common source of the frontend faucet mint being
+  // flagged as a "malicious contract" in MetaMask: apps/web's
+  // NEXT_PUBLIC_PAPER_TRADING_USDC_ADDRESS silently drifting out of sync
+  // with whatever address is actually live on-chain. Printed unconditionally
+  // (not just when a new faucet was deployed) so it's always easy to find
+  // and copy, whether this run reused the pinned COLLATERAL_TOKEN or minted
+  // a fresh one.
+  console.log("\n" + "=".repeat(78));
+  console.log("COLLATERAL TOKEN / FAUCET ADDRESS - copy this into your deployed frontend:");
+  console.log(`  NEXT_PUBLIC_PAPER_TRADING_USDC_ADDRESS=${config.collateralToken}`);
+  console.log(
+    config.newlyDeployedFaucet
+      ? "  (freshly deployed this run - update Render's env var now, then redeploy the web app)"
+      : "  (reused the address pinned via COLLATERAL_TOKEN - only update Render if this changed)"
+  );
+  console.log("=".repeat(78));
 
   console.log("\nDeployment complete.");
 }

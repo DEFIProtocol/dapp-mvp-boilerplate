@@ -2,6 +2,7 @@ import { Client, Pool } from "pg";
 import { ensureOnboardingTables } from "./onboarding";
 import { ensureApiKeysTable } from "./apiKeys";
 import { ensurePerpOrderTables } from "./perpOrders";
+import { ensureFaucetTables } from "./faucet";
 
 interface ParsedDbUrl {
   dbName: string;
@@ -104,6 +105,7 @@ export async function ensureCoreTables(pool: Pool): Promise<void> {
   await ensureOnboardingTables(pool);
   await ensureApiKeysTable(pool);
   await ensurePerpOrderTables(pool);
+  await ensureFaucetTables(pool);
 
   // Tokens
   await pool.query(`

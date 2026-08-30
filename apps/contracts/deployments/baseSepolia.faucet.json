@@ -1,0 +1,18 @@
+{
+  "network": "baseSepolia",
+  "timestamp": "2026-08-30T16:05:13.927Z",
+  "deployer": "0x911158658d4530710F6d6D59156db174BEfD4Dac",
+  "address": "0x283340702FA7FFf3e8268b009781921F90816B87",
+  "transactionHash": "0xb12ca26d60898c811302ff7b5c693143ca12a4857a5ccfd9c1b7b3bf819756cd",
+  "blockNumber": 46168812,
+  "constructorArgs": {
+    "name": "USD Coin",
+    "symbol": "USDC",
+    "decimals": 6,
+    "initialOwner": "0x911158658d4530710F6d6D59156db174BEfD4Dac"
+  },
+  "treasuryMint": {
+    "amount": "10000000",
+    "txHash": "0xa15c5a6570fdf293070c1a8969c11031e6a91c733a65af41c5e01469d92ff956"
+  }
+}

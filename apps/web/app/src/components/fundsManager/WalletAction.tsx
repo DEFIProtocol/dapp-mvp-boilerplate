@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useAccount, useBalance, useReadContract, useSendTransaction, useSignMessage, useSwitchChain, useWriteContract } from "wagmi";
-import { formatUnits, parseUnits, isAddress, BaseError, ContractFunctionRevertedError, type Address } from "viem";
+import { useAccount, useBalance, useReadContract, useSendTransaction, useSignMessage, useSwitchChain } from "wagmi";
+import { formatUnits, parseUnits, isAddress, type Address } from "viem";
 import { Plus, ArrowUpRight, ArrowLeftRight, X, ChevronDown, Wallet, Copy, Check } from "lucide-react";
 import { useChainContext } from "@/contexts/ChainContext";
 import {
@@ -13,37 +13,15 @@ import {
   quoteTransfer,
   type SupportedToken,
 } from "@/lib/api/fundsManager";
+import { claimFaucetFunds } from "@/lib/api/faucet";
 import styles from "./WalletAction.module.css";
 
-/**
- * Turn a faucet `mint()` revert into a friendly message. The faucet enforces a
- * rolling 24h/10,000 USDC-per-wallet cap (`DailyMintLimitExceeded`), which is the
- * most common expected revert here - everything else falls back to viem's own
- * shortMessage or the raw error message.
- */
-function describeFaucetError(error: unknown): string {
-  if (error instanceof BaseError) {
-    const revertError = error.walk((err) => err instanceof ContractFunctionRevertedError);
-    if (revertError instanceof ContractFunctionRevertedError) {
-      const errorName = revertError.data?.errorName;
-      if (errorName === "DailyMintLimitExceeded") {
-        const args = revertError.data?.args as [bigint, bigint, bigint] | undefined;
-        if (args) {
-          const [, alreadyMinted, limit] = args;
-          const already = formatUnits(alreadyMinted, 6);
-          const cap = formatUnits(limit, 6);
-          return `Daily faucet limit reached (${already}/${cap} USDC claimed in the last 24h). Try again later.`;
-        }
-        return "Daily faucet limit reached (10,000 USDC per wallet per 24h). Try again later.";
-      }
-      if (errorName === "AmountMustBePositive") {
-        return "Mint amount must be greater than zero.";
-      }
-    }
-    return error.shortMessage || error.message;
-  }
-  return error instanceof Error ? error.message : "Failed to claim paper trading funds";
-}
+// Faucet claims are now fulfilled entirely server-side (see
+// handleClaimPaperTradingFunds below and lib/api/faucet.ts) - the user's
+// wallet never calls the faucet contract directly, so there's no
+// contract-revert error to translate here anymore. Errors from the backend
+// (e.g. the 24h-per-wallet claim limit) already arrive as plain, friendly
+// messages in the API response.
 
 interface WalletActionProps {
   balance?: string;
@@ -130,31 +108,6 @@ export default function WalletAction({
   const { switchChainAsync } = useSwitchChain();
   const { sendTransactionAsync } = useSendTransaction();
   const { signMessageAsync } = useSignMessage();
-  const { writeContractAsync } = useWriteContract();
-
-  const FAUCET_MINT_ABI = [
-    {
-      type: "function",
-      name: "mint",
-      stateMutability: "nonpayable",
-      inputs: [{ name: "amount", type: "uint256" }],
-      outputs: [],
-    },
-    {
-      type: "error",
-      name: "DailyMintLimitExceeded",
-      inputs: [
-        { name: "requested", type: "uint256" },
-        { name: "alreadyMinted", type: "uint256" },
-        { name: "limit", type: "uint256" },
-      ],
-    },
-    {
-      type: "error",
-      name: "AmountMustBePositive",
-      inputs: [],
-    },
-  ] as const;
 
   const fromChainTokens = useMemo(
     () => supportedTransferTokens[transferFromChain] || [],
@@ -479,23 +432,20 @@ export default function WalletAction({
     setPaperTradingMessage(null);
 
     try {
-      // Permissionless client-side mint: the test USDC faucet contract lets
-      // any wallet mint directly to itself, so no backend round-trip or
-      // signature challenge is needed here.
-      const mintAmount = parseUnits("10000", 6);
-      const txHash = await writeContractAsync({
-        address: usdcToken,
-        abi: FAUCET_MINT_ABI,
-        functionName: "mint",
-        args: [mintAmount],
-        chainId: PAPER_TRADING_CHAIN_ID,
-      });
+      // Claims are fulfilled server-side: the backend's own pre-funded
+      // treasury wallet sends a plain transfer() to the user, so the
+      // user's wallet never has to sign or interact with the faucet
+      // contract directly. A brand-new contract exposing a public mint()
+      // is exactly what wallet security providers (Blockaid/MetaMask)
+      // flag as a likely scam token, regardless of on-chain rate limits -
+      // routing through the backend avoids that warning entirely.
+      const data = await claimFaucetFunds(walletAddress, PAPER_TRADING_CHAIN_ID);
 
-      setPaperTradingMessage(`Paper trading funds minted (${txHash.slice(0, 10)}...)`);
+      setPaperTradingMessage(`Paper trading funds sent (${(data.txHash ?? "").slice(0, 10)}...)`);
 
       await Promise.all([refetchNativeBalance(), refetchUsdcBalance()]);
     } catch (error) {
-      setPaperTradingError(describeFaucetError(error));
+      setPaperTradingError(error instanceof Error ? error.message : "Failed to claim paper trading funds");
     } finally {
       setIsClaimingPaperTradingFunds(false);
     }

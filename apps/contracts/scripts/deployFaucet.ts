@@ -32,9 +32,12 @@ async function main(): Promise<void> {
   const name = process.env.FAUCET_TOKEN_NAME ?? "USD Coin";
   const symbol = process.env.FAUCET_TOKEN_SYMBOL ?? "USDC";
   const decimals = Number(process.env.FAUCET_TOKEN_DECIMALS ?? "6");
+  const treasuryMintAmount = process.env.FAUCET_TREASURY_MINT_AMOUNT ?? "10000000";
 
   const MockUSDCFaucet = await ethers.getContractFactory("MockUSDCFaucet");
-  const faucet = await MockUSDCFaucet.deploy(name, symbol, decimals);
+  // deployer is the initial owner - the only address allowed to call
+  // ownerMint() to top up the backend's treasury balance.
+  const faucet = await MockUSDCFaucet.deploy(name, symbol, decimals, deployer.address);
   const deployTx = faucet.deploymentTransaction();
   console.log(`Deploy tx submitted: ${deployTx?.hash ?? "unknown"}`);
 
@@ -43,6 +46,14 @@ async function main(): Promise<void> {
 
   await faucet.waitForDeployment();
   const faucetAddress = await faucet.getAddress();
+
+  console.log(`\nMinting initial treasury balance: ${treasuryMintAmount} ${symbol} to ${deployer.address}`);
+  const mintTx = await faucet.ownerMint(
+    deployer.address,
+    ethers.parseUnits(treasuryMintAmount, decimals),
+  );
+  await mintTx.wait();
+  console.log(`Treasury mint tx: ${mintTx.hash}`);
 
   // Public testnet RPCs can lag slightly right after the tx is mined; retry
   // getCode a few times before giving up.
@@ -77,7 +88,8 @@ async function main(): Promise<void> {
         address: faucetAddress,
         transactionHash: deployTx?.hash ?? null,
         blockNumber: receipt ? Number(receipt.blockNumber) : null,
-        constructorArgs: { name, symbol, decimals },
+        constructorArgs: { name, symbol, decimals, initialOwner: deployer.address },
+        treasuryMint: { amount: treasuryMintAmount, txHash: mintTx.hash },
       },
       null,
       2,
